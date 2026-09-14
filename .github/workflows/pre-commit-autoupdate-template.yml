@@ -1,0 +1,57 @@
+# Weekly (and manual) autoupdate of rev pins in the Cookiecutter template's
+# .pre-commit-config.yaml. The template lives under a directory whose name
+# contains Jinja markers, so we locate the file with find instead of hardcoding.
+name: Autoupdate template pre-commit
+
+on:
+  schedule:
+    - cron: "0 12 * * 1" # Weekly: Monday 12:00 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: pre-commit-autoupdate-template
+  cancel-in-progress: true
+
+jobs:
+  autoupdate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pre-commit
+        run: python -m pip install pre-commit
+
+      - name: Autoupdate template .pre-commit-config.yaml
+        run: |
+          set -euo pipefail
+          CONFIG="$(find . -type f -name '.pre-commit-config.yaml' ! -path './.git/*' | head -n 1)"
+          if [ -z "${CONFIG}" ]; then
+            echo "No .pre-commit-config.yaml found under the repository."
+            exit 1
+          fi
+          echo "Using config: ${CONFIG}"
+          pre-commit autoupdate --config "${CONFIG}"
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "chore(template): autoupdate pre-commit hooks"
+          title: "chore(template): autoupdate pre-commit hooks"
+          body: |
+            This PR was opened automatically by the [Autoupdate template pre-commit](.github/workflows/pre-commit-autoupdate-template.yml) workflow.
+
+            It updates `rev` pins in the Cookiecutter template `.pre-commit-config.yaml` (the file under the templated project directory) using `pre-commit autoupdate`.
+
+            Review hook changelogs before merging.
+          branch: chore/autoupdate-precommit-template
+          delete-branch: true

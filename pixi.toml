@@ -1,0 +1,17 @@
+[project]
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "linux-64"]
+description = "Cookiecutter template for Python data science projects"
+version = "0.1.0"
+
+[dependencies]
+python = ">=3.10"
+pytest = "*"
+pytest-cov = "*"
+pyyaml = "*"
+toml = "*"
+cookiecutter = "*"
+
+[tasks]
+test = "pytest tests/ -v"
+test-cov = "pytest tests/ --cov=. --cov-report=term-missing"
