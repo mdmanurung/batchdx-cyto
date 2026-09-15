@@ -1,0 +1,279 @@
+# Acceptance gates, one entry per stage of the implementation plan.
+#
+# Every gate names the test identifiers that decide it.  `scripts/generate_status.py`
+# reads a machine-readable pytest report and derives docs/implementation_status.md from
+# it, so a status line without a corresponding executed test cannot exist.
+#
+# `blocked_reason` records an obstacle that is external to this package (an
+# uninstallable dependency, a licence restriction).  A gate with a blocked reason can
+# never be reported as PASSED, even if every unblocked test in it passes.
+
+schema_version: 1
+
+gates:
+
+  - stage: "X"
+    tier: A
+    title: Cross-stage contracts (typed, versioned, round-tripped across the R boundary)
+    tests:
+      - "tests/unit/test_contracts.py::test_all_seven_contracts_exist_and_are_versioned"
+      - "tests/unit/test_contracts.py::test_contracts_reject_unknown_keys"
+      - "tests/unit/test_contracts.py::test_contracts_round_trip_through_json"
+      - "tests/unit/test_contracts.py::test_metric_record_carries_every_field_the_contract_requires"
+      - "tests/unit/test_contracts.py::test_correction_record_distinguishes_success_ineligible_and_failed"
+      - "tests/unit/test_contracts.py::test_json_schemas_are_exported_for_the_r_side"
+      - "tests/unit/test_contracts.py::test_r_reads_every_contract_and_the_binary_matrix_format"
+      - "tests/unit/test_contracts.py::test_binary_matrix_rejects_a_shape_mismatch"
+      - "tests/unit/test_contracts.py::test_downstream_never_infers_success_from_a_directory"
+      - "tests/unit/test_contracts.py::test_contract_schema_version_is_stamped_on_every_record"
+
+  - stage: "0"
+    tier: A
+    title: Audit upstream resources and establish contracts
+    tests:
+      - "tests/integration/test_stage0_audit.py::test_lock_lists_a_commit_licence_and_strategy_for_every_resource"
+      - "tests/integration/test_stage0_audit.py::test_fetch_script_pins_the_same_commits_as_the_lock"
+      - "tests/integration/test_stage0_audit.py::test_python_audit_runs_and_reconciles_commits_and_metrics"
+      - "tests/integration/test_stage0_audit.py::test_python_audit_fails_on_a_commit_mismatch"
+      - "tests/integration/test_stage0_audit.py::test_r_audit_runs_and_finds_every_adapter_referenced_function"
+      - "tests/integration/test_stage0_audit.py::test_audit_output_documents_the_facts_the_adapters_rely_on"
+      - "tests/integration/test_stage0_audit.py::test_cytobatchflagr_licence_forbids_vendoring_and_the_adapter_says_so"
+      - "tests/integration/test_stage0_audit.py::test_every_adapter_referenced_r_function_appears_in_the_lock"
+
+  - stage: "1"
+    tier: A
+    title: Runnable package and minimal Snakemake workflow
+    tests:
+      - "tests/integration/test_stage1_slice.py::test_cli_module_entry_point_is_importable_and_reports_what_it_ships"
+      - "tests/integration/test_stage1_slice.py::test_example_initialises_every_file_it_references"
+      - "tests/integration/test_stage1_slice.py::test_snakemake_runs_the_slice_and_a_second_invocation_does_no_analytical_work"
+      - "tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code"
+      - "tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate"
+      - "tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout"
+      - "tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped"
+
+  - stage: "2"
+    tier: A
+    title: Ingestion, immutable data, optional preprocessing
+    tests:
+      - "tests/unit/test_stage2_io.py::test_h5ad_roundtrip_preserves_marker_and_channel_order"
+      - "tests/unit/test_stage2_io.py::test_cell_identity_is_stable_and_unique"
+      - "tests/unit/test_stage2_io.py::test_baseline_is_immutable_under_read_operations"
+      - "tests/unit/test_stage2_io.py::test_duplicate_sample_ids_are_rejected"
+      - "tests/unit/test_stage2_io.py::test_ambiguous_channel_mapping_is_rejected"
+      - "tests/unit/test_stage2_io.py::test_undeclared_scale_is_rejected"
+      - "tests/unit/test_stage2_io.py::test_double_transformation_is_rejected"
+      - "tests/unit/test_stage2_io.py::test_already_corrected_input_is_refused"
+      - "tests/unit/test_stage2_io.py::test_missing_marker_is_not_treated_as_zero"
+      - "tests/unit/test_stage2_io.py::test_nonfinite_values_are_rejected"
+      - "tests/unit/test_stage2_io.py::test_missing_expression_layer_names_what_is_available"
+      - "tests/unit/test_stage2_io.py::test_multiple_panels_must_be_run_separately"
+      - "tests/unit/test_stage2_io.py::test_qc_history_and_transformation_provenance_are_carried"
+      - "tests/unit/test_stage2_io.py::test_fcs_write_read_roundtrip_and_keyword_policy"
+      - "tests/unit/test_stage2_io.py::test_fcs_export_refuses_to_overwrite_a_source_file"
+      - "tests/unit/test_stage2_io.py::test_uninvertible_transformation_keeps_transformed_values_and_says_so"
+    partial_reason: >-
+      SPiSCy-style preprocessing (declared gating, PeacoQC, required technical channel
+      validation, per-removed-event QC tracking) is NOT implemented. The configuration
+      schema declares it and refuses an undeclared cofactor, and already-QCed data
+      bypasses preprocessing, which is the path Tier A uses.
+
+  - stage: "3"
+    tier: A
+    title: Design audit and correction eligibility
+    tests:
+      - "tests/scientific/test_stage3_design.py::test_balanced_design_with_references_is_reference_supported"
+      - "tests/scientific/test_stage3_design.py::test_partial_reference_overlap_is_reported_per_pair"
+      - "tests/scientific/test_stage3_design.py::test_perfect_confounding_is_non_identifiable_and_blocks_correction"
+      - "tests/scientific/test_stage3_design.py::test_two_batch_design_makes_the_cluster_detector_ineligible"
+      - "tests/scientific/test_stage3_design.py::test_thirty_one_batches_exceeds_the_cluster_detector_range"
+      - "tests/scientific/test_stage3_design.py::test_cytobatchflagr_needs_controls_in_every_batch_and_four_batches"
+      - "tests/scientific/test_stage3_design.py::test_iqr_fence_cannot_flag_with_three_values"
+      - "tests/scientific/test_stage3_design.py::test_repeated_stimulation_and_timepoints_do_not_become_technical_replicates"
+      - "tests/scientific/test_stage3_design.py::test_missing_donor_ids_permit_descriptive_diagnosis_only"
+      - "tests/scientific/test_stage3_design.py::test_population_specific_lack_of_support_is_reported"
+      - "tests/scientific/test_stage3_design.py::test_nested_technical_structure_is_represented_and_the_target_named"
+      - "tests/scientific/test_stage3_design.py::test_below_floor_is_a_configuration_value_with_a_declared_origin"
+
+  - stage: "4"
+    tier: B
+    title: Freeze evaluation populations, sampling and splits
+    tests:
+      - "tests/unit/test_stage4_partitions.py::test_sampling_manifest_is_reproducible"
+      - "tests/unit/test_stage4_partitions.py::test_sampling_is_balanced_at_the_sample_level_and_reports_coverage"
+      - "tests/unit/test_stage4_partitions.py::test_gating_labels_are_medium_confidence_and_recorded"
+      - "tests/unit/test_stage4_partitions.py::test_clustering_labels_are_flagged_lowest_confidence"
+      - "tests/unit/test_stage4_partitions.py::test_unmatched_cells_are_labelled_not_dropped"
+      - "tests/unit/test_stage4_partitions.py::test_rare_population_generates_a_coverage_warning"
+      - "tests/unit/test_stage4_partitions.py::test_candidate_order_does_not_change_labels_or_comparisons"
+      - "tests/unit/test_stage4_partitions.py::test_every_metric_record_carries_label_tier_and_representation"
+      - "tests/unit/test_stage4_partitions.py::test_non_identifiable_comparisons_are_excluded_from_the_frozen_pairs"
+      - "tests/unit/test_stage4_partitions.py::test_sampling_does_not_redefine_population_frequency"
+    partial_reason: >-
+      Training / tuning / validation splits at the biospecimen or donor level are NOT
+      implemented. They matter only for a backend with a verified fit-and-apply
+      interface, and no such backend is executable in this build; the manifest carries
+      an empty `splits` field rather than a fabricated one.
+
+  - stage: "5"
+    tier: A
+    title: Detection adapters and diagnosis report
+    tests:
+      - "tests/integration/test_stage5_detectors.py::test_drift_detector_finds_an_injected_within_file_trend"
+      - "tests/integration/test_stage5_detectors.py::test_drift_detector_is_ineligible_without_an_acquisition_order"
+      - "tests/integration/test_stage5_detectors.py::test_composition_detector_separates_frequency_from_intensity"
+      - "tests/integration/test_stage5_detectors.py::test_composition_detector_reports_insufficient_data_rather_than_a_p_value"
+      - "tests/integration/test_stage5_detectors.py::test_two_batch_fixture_makes_the_cluster_detector_ineligible_not_uninformative"
+      - "tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects"
+      - "tests/integration/test_stage5_detectors.py::test_cytobatchflagr_without_a_checkout_is_not_available_with_a_stated_remedy"
+      - "tests/integration/test_stage5_detectors.py::test_cytobatchflagr_refuses_to_choose_thresholds_itself"
+      - "tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call"
+      - "tests/integration/test_stage5_detectors.py::test_detector_results_round_trip_through_json"
+      - "tests/integration/test_stage5_detectors.py::test_flag_counts_are_not_presented_as_probabilities"
+    blocked_reason: >-
+      Neither native detection system can be EXECUTED here: cyCombine needs sva
+      (Bioconductor) and kohonen (CRAN), and CytoBatchFlagR needs a dozen CRAN packages;
+      the development environment's egress policy blocks CRAN, Bioconductor and conda
+      mirrors (docs/blocked.md). The adapters, their eligibility rules and their
+      unavailable paths are tested; the "outputs match a direct upstream call within a
+      documented tolerance" clause is NOT satisfied.
+
+  - stage: "6"
+    tier: A
+    title: Correction backends and output validation
+    tests:
+      - "tests/integration/test_stage6_backends.py::test_identity_backend_is_numerically_unchanged"
+      - "tests/integration/test_stage6_backends.py::test_every_backend_declares_its_capabilities_explicitly"
+      - "tests/integration/test_stage6_backends.py::test_cycombine_refuses_the_count_data_route"
+      - "tests/integration/test_stage6_backends.py::test_the_r_script_would_refuse_a_non_combat_method"
+      - "tests/integration/test_stage6_backends.py::test_unsupported_arguments_are_rejected_not_ignored"
+      - "tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped"
+      - "tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason"
+      - "tests/integration/test_stage6_backends.py::test_cytonorm_is_declared_but_explicitly_deferred"
+      - "tests/integration/test_stage6_backends.py::test_cytonorm_refuses_an_artificial_aggregate_control"
+      - "tests/integration/test_stage6_backends.py::test_output_validation_catches_a_changed_excluded_marker"
+      - "tests/integration/test_stage6_backends.py::test_output_validation_catches_shape_and_finiteness_problems"
+      - "tests/integration/test_stage6_backends.py::test_a_runtime_failure_never_returns_unchanged_data_as_success"
+      - "tests/integration/test_stage6_backends.py::test_correction_magnitude_is_reported_by_marker_sample_and_population"
+      - "tests/integration/test_stage6_backends.py::test_candidate_identity_is_stable_under_parameter_reordering"
+      - "tests/integration/test_stage6_backends.py::test_cycombine_smoke_test"
+    blocked_reason: >-
+      The cycombine backend cannot be smoke-tested here: the package and its
+      Bioconductor dependencies are not installable in this environment
+      (docs/blocked.md). The identity backend, the parameter contract, the count-model
+      refusal, output validation and the failure path are all tested. cytonorm is
+      declared and deliberately deferred.
+
+  - stage: "7"
+    tier: A
+    title: Native and common comparative metrics
+    tests:
+      - "tests/scientific/test_stage7_metrics.py::test_identical_distributions_give_near_zero_emd"
+      - "tests/scientific/test_stage7_metrics.py::test_a_known_shift_moves_emd_by_the_size_of_the_shift"
+      - "tests/scientific/test_stage7_metrics.py::test_scale_change_alone_is_visible_in_dispersion_not_only_in_emd"
+      - "tests/scientific/test_stage7_metrics.py::test_constant_marker_yields_undefined_not_zero"
+      - "tests/scientific/test_stage7_metrics.py::test_rare_population_returns_insufficient_data_with_a_reason"
+      - "tests/scientific/test_stage7_metrics.py::test_unequal_sample_sizes_do_not_change_the_weighting"
+      - "tests/scientific/test_stage7_metrics.py::test_zero_denominator_makes_the_reduction_undefined_not_infinite"
+      - "tests/scientific/test_stage7_metrics.py::test_composition_only_change_moves_composition_and_not_within_population_emd"
+      - "tests/scientific/test_stage7_metrics.py::test_mad_uses_the_normal_consistency_constant"
+      - "tests/scientific/test_stage7_metrics.py::test_empirical_and_binned_emd_are_named_differently"
+      - "tests/scientific/test_stage7_metrics.py::test_no_local_metric_claims_to_be_an_upstream_component"
+      - "tests/scientific/test_stage7_metrics.py::test_unsupported_metrics_report_reasons_rather_than_zero_scores"
+      - "tests/scientific/test_stage7_metrics.py::test_missing_metrics_cannot_improve_a_candidate"
+      - "tests/scientific/test_stage7_metrics.py::test_sampling_manifest_round_trips_through_json"
+    blocked_reason: >-
+      The NATIVE namespace (cyCombine::evaluate_emd and evaluate_mad) is registered and
+      documented but cannot be executed here, so the "compatibility components match
+      pinned implementations within documented tolerances" clause is NOT satisfied. The
+      common-namespace metrics, including the required joint-structure row, are
+      implemented and tested. Every OpenProblems metric row remains deferred.
+
+  - stage: "8"
+    tier: B
+    title: Biological preservation and uncertainty
+    tests:
+      - "tests/scientific/test_stage8_preservation.py::test_a_correct_offset_removal_improves_alignment_without_distortion"
+      - "tests/scientific/test_stage8_preservation.py::test_a_collapsing_correction_is_rejected_despite_perfect_alignment"
+      - "tests/scientific/test_stage8_preservation.py::test_marginal_preserving_joint_destroying_corruption_is_detected"
+      - "tests/scientific/test_stage8_preservation.py::test_biology_only_differences_are_not_labelled_technical"
+      - "tests/scientific/test_stage8_preservation.py::test_stage8_is_marked_unimplemented_rather_than_quietly_missing"
+    partial_reason: >-
+      Prespecified biological contrasts, paired and repeated-measure models, donor-block
+      bootstrap and restricted permutation, and the OpenProblems functional-marker
+      compatibility component are NOT implemented. Three of the four clauses of the
+      Stage 8 gate are met by the joint-structure metric and the distortion guardrails;
+      the "synthetic biological effect survives correction within predeclared
+      tolerances" clause is only partially met, because no biological contrast model
+      exists to state a tolerance against.
+
+  - stage: "9"
+    tier: B
+    title: Candidate assessment and recommendation rules
+    tests:
+      - "tests/scientific/test_stage9_decisions.py::test_absent_batch_effect_yields_not_needed"
+      - "tests/scientific/test_stage9_decisions.py::test_successful_correction_reaches_review_but_not_automatic_approval"
+      - "tests/scientific/test_stage9_decisions.py::test_a_calibrated_policy_can_recommend"
+      - "tests/scientific/test_stage9_decisions.py::test_information_destroying_correction_is_rejected"
+      - "tests/scientific/test_stage9_decisions.py::test_sparse_validation_coverage_yields_insufficient_evidence"
+      - "tests/scientific/test_stage9_decisions.py::test_confounded_design_is_non_identifiable_for_every_candidate"
+      - "tests/scientific/test_stage9_decisions.py::test_below_floor_design_blocks_every_recommendation"
+      - "tests/scientific/test_stage9_decisions.py::test_failed_and_unavailable_backends_get_distinct_states"
+      - "tests/scientific/test_stage9_decisions.py::test_dropping_a_failed_metric_cannot_improve_a_recommendation"
+      - "tests/scientific/test_stage9_decisions.py::test_clustering_labels_alone_cannot_support_a_recommendation"
+      - "tests/scientific/test_stage9_decisions.py::test_policy_settings_and_threshold_origins_are_published"
+      - "tests/scientific/test_stage9_decisions.py::test_overrides_are_recorded_beside_the_original_assessment"
+
+  - stage: "10"
+    tier: A
+    title: Reporting and safe exports
+    tests:
+      - "tests/integration/test_stage10_report.py::test_report_is_self_contained_and_offline"
+      - "tests/integration/test_stage10_report.py::test_every_headline_number_is_traceable_to_a_record"
+      - "tests/integration/test_stage10_report.py::test_failed_and_unavailable_candidates_stay_visible"
+      - "tests/integration/test_stage10_report.py::test_missing_preservation_evidence_is_not_presented_as_preservation"
+      - "tests/integration/test_stage10_report.py::test_identifiers_are_redacted_and_the_mapping_is_stored_separately"
+      - "tests/integration/test_stage10_report.py::test_regeneration_triggers_no_correction"
+      - "tests/integration/test_stage10_report.py::test_diagnosis_only_report_renders_before_any_correction"
+      - "tests/integration/test_stage10_report.py::test_exports_round_trip_with_preserved_ids_and_declared_scale"
+      - "tests/integration/test_stage10_report.py::test_status_file_reports_every_planned_unit_not_just_the_ones_that_ran"
+      - "tests/integration/test_stage10_report.py::test_report_settings_do_not_change_the_analytical_fingerprint"
+    partial_reason: >-
+      Minimal form, as Tier A specifies. Embeddings and independently fitted layout
+      panels are not rendered, and the narrative summary is the rule-derived text in the
+      template rather than a generated narrative section.
+
+  - stage: "11"
+    tier: C
+    title: Snakemake execution, performance, deployment
+    tests:
+      - "tests/integration/test_stage11_workflow.py::test_clean_execution_then_a_no_op_rerun"
+      - "tests/integration/test_stage11_workflow.py::test_deleting_a_real_artifact_forces_recomputation"
+      - "tests/integration/test_stage11_workflow.py::test_changing_the_configuration_invalidates_downstream_results"
+      - "tests/integration/test_stage11_workflow.py::test_diagnose_mode_stops_before_any_correction"
+      - "tests/integration/test_stage11_workflow.py::test_correct_mode_runs_only_the_selected_candidate"
+      - "tests/integration/test_stage11_workflow.py::test_correct_mode_without_a_candidate_fails_at_parse_time"
+      - "tests/integration/test_stage11_workflow.py::test_an_unavailable_method_produces_a_partial_report_not_a_failed_run"
+      - "tests/integration/test_stage11_workflow.py::test_no_rule_hides_a_failure_behind_true_or_blanket_suppression"
+      - "tests/integration/test_stage11_workflow.py::test_rules_declare_logs_threads_resources_and_benchmarks"
+      - "tests/integration/test_stage11_workflow.py::test_the_candidate_roster_comes_from_the_configuration_not_the_results_tree"
+      - "tests/integration/test_stage11_workflow.py::test_slurm_profile_is_present_but_labelled_untested"
+    partial_reason: >-
+      Deferred as Tier C, with the execution behaviour the Tier A slice depends on
+      implemented and tested. NOT done: interruption-recovery testing, checkpoint-driven
+      data-dependent branches (none are needed, because expansion is static), a built
+      and digest-pinned Apptainer image, environment prefetching for offline nodes, and
+      any cluster execution. The SLURM profile is shipped labelled UNTESTED.
+
+  - stage: "12"
+    tier: C
+    title: Scientific validation, documentation, release readiness
+    tests: []
+    partial_reason: >-
+      Deferred as Tier C. Deterministic synthetic fixtures, a scientific suite covering
+      technical-only shifts, biology-only differences, confounding, rare populations,
+      constant markers, dispersion collapse, joint-structure corruption, within-batch
+      drift and composition-only change DO exist and run. NOT done: a permissibly usable
+      real cytometry example with provenance and checksums, multi-seed stochastic
+      checks, R-side unit tests, a Snakemake lint step in CI, a compatibility matrix, and
+      a release checklist. CITATION.cff and third-party notices are present.

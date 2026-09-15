@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ title }}</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1b1f24; --muted: #5b6673; --line: #d9dee5;
+    --ok: #1a7f4b; --warn: #9a6700; --bad: #a3282d; --accent: #1f4f8b;
+    --panel: #f6f8fa;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 0 16px 64px; background: var(--bg); color: var(--fg);
+         font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; }
+  header { padding: 24px 0 8px; border-bottom: 2px solid var(--line); }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 32px 0 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  h3 { font-size: 14px; margin: 18px 0 6px; color: var(--muted); text-transform: uppercase;
+       letter-spacing: .04em; }
+  .sub { color: var(--muted); font-size: 12px; }
+  nav ul { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px 16px; }
+  nav a { color: var(--accent); text-decoration: none; font-size: 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; }
+  th, td { border-bottom: 1px solid var(--line); padding: 4px 8px; text-align: left;
+           vertical-align: top; }
+  th { background: var(--panel); position: sticky; top: 0; }
+  .scroll { max-height: 460px; overflow: auto; border: 1px solid var(--line); }
+  .wide { overflow-x: auto; }
+  .pill { display: inline-block; padding: 1px 7px; border-radius: 9px; font-size: 11px;
+          border: 1px solid var(--line); }
+  .ok { color: var(--ok); border-color: var(--ok); }
+  .warn { color: var(--warn); border-color: var(--warn); }
+  .bad { color: var(--bad); border-color: var(--bad); }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px;
+           padding: 10px 14px; margin: 10px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+  figure { margin: 0; }
+  figcaption { font-size: 11px; color: var(--muted); }
+  input[type=search] { width: 100%; max-width: 420px; padding: 5px 8px; font-size: 13px;
+                       border: 1px solid var(--line); border-radius: 4px; }
+  a.download { font-size: 12px; }
+  code { background: var(--panel); padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+  ul.reasons { margin: 4px 0; padding-left: 18px; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14171a; --fg: #e6e9ec; --muted: #9aa4b0; --line: #2b3138; --panel: #1b1f24;
+            --accent: #6fa8ff; --ok: #4cc38a; --warn: #d9a441; --bad: #f2777a; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>{{ title }}</h1>
+  <div class="sub">
+    batchdx-cyto {{ version }} &middot; run <code>{{ dataset.dataset_id }}</code> &middot;
+    analytical fingerprint <code>{{ fingerprint[:16] }}</code>
+    {% if diagnosis_only %}&middot; <span class="pill warn">diagnosis only, before any correction</span>{% endif %}
+    {% if redacted %}&middot; <span class="pill">identifiers redacted</span>{% endif %}
+  </div>
+  <nav><ul>
+    <li><a href="#decision">Decision summary</a></li>
+    <li><a href="#design">Design &amp; reference audit</a></li>
+    <li><a href="#processing">Preprocessing &amp; QC</a></li>
+    <li><a href="#explorer">Marker &amp; batch explorer</a></li>
+    <li><a href="#diagnostics">Drift &amp; composition</a></li>
+    <li><a href="#populations">Population diagnostics</a></li>
+    <li><a href="#comparison">Method comparison</a></li>
+    <li><a href="#preservation">Biological preservation</a></li>
+    <li><a href="#failures">Failures &amp; limitations</a></li>
+    <li><a href="#repro">Reproducibility &amp; exports</a></li>
+  </ul></nav>
+</header>
+
+<h2 id="decision">Decision summary</h2>
+{% if decision %}
+  <div class="panel">
+    <strong>Policy:</strong> {{ decision.policy }}.
+    {% if decision.recommended_candidate_id %}
+      Recommended under policy: <code>{{ decision.recommended_candidate_id }}</code>.
+    {% else %}
+      <span class="pill warn">no recommendation</span>
+      {{ decision.recommendation_withheld_reason }}
+    {% endif %}
+  </div>
+  <table>
+    <tr><th>Candidate</th><th>State</th><th>Reason</th><th>EMD reduction</th>
+        <th>Joint-structure change</th><th>MAD compression</th><th>Coverage</th></tr>
+    {% for a in decision.assessments %}
+    <tr>
+      <td><code>{{ a.candidate_id }}</code></td>
+      <td><span class="pill {{ 'ok' if a.state.value in ('recommended_under_policy','not_needed') else ('bad' if a.state.value in ('rejected_distortion','execution_failed','non_identifiable','below_design_floor') else 'warn') }}">{{ a.state.value }}</span></td>
+      <td>{{ a.reason }}</td>
+      {% set red = a.evidence.get('emd_relative_reduction') %}
+      {% set joint = a.evidence.get('joint_structure_distance_median') %}
+      {% set comp = a.evidence.get('mad_compression_fraction') %}
+      {% set cov = a.coverage.get('emd_comparisons') %}
+      <td>{{ '%.3g'|format(red) if red is not none else '—' }}</td>
+      <td>{{ '%.3g'|format(joint) if joint is not none else '—' }}</td>
+      <td>{{ '%.3g'|format(comp) if comp is not none else '—' }}</td>
+      <td>{{ '%.2f'|format(cov) if cov is not none else '—' }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <h3>Policy settings and threshold origins</h3>
+  <table>
+    <tr><th>Setting</th><th>Value</th><th>Origin</th></tr>
+    {% for key, value in decision.policy_settings.items() %}
+    <tr><td>{{ key }}</td><td>{{ value }}</td>
+        <td>{{ decision.threshold_origins.get(key, 'not a threshold') }}</td></tr>
+    {% endfor %}
+  </table>
+  {% if decision.pareto_comparable %}
+    <p class="sub">Pareto front over candidates evaluated on comparable evidence:
+      {{ decision.pareto_front|join(', ') }}</p>
+  {% else %}
+    <p class="sub">No Pareto comparison is shown: the candidates were not evaluated on
+      comparable evidence.</p>
+  {% endif %}
+  {% for w in decision.warnings %}<p class="sub">⚠ {{ w }}</p>{% endfor %}
+{% else %}
+  <div class="panel">No decision layer ran for this report.
+    {% if diagnosis_only %}This is a diagnosis-only report produced before any correction
+    exists.{% endif %}</div>
+{% endif %}
+
+<h2 id="design">Design and reference audit</h2>
+<div class="panel">
+  Correction factor <code>{{ design.correction_factor }}</code>
+  {% if design.nested_within %}nested within <code>{{ design.nested_within }}</code>{% endif %};
+  {{ design.n_batches }} batch(es); protected factors {{ design.protected_factors|join(', ') or 'none' }}.
+  Design matrix rank {{ design.design_rank }}{% if design.design_full_rank is false %}
+  (<span class="pill warn">not full rank</span>){% endif %}.
+  {% if design.below_design_floor %}
+    <br><span class="pill bad">below design floor</span> {{ design.design_floor_reason }}
+    <br><span class="sub">Floor origin: {{ design.design_floor_origin }}</span>
+  {% endif %}
+  {% if design.confounded_factors %}
+    <br><span class="pill bad">perfect confounding</span>
+    {{ design.confounded_factors|join(', ') }} — adding the same factor as a covariate does
+    not resolve this.
+  {% endif %}
+</div>
+<h3>Batch comparisons</h3>
+<div class="scroll"><table>
+  <tr><th>Comparison</th><th>Population</th><th>Support</th><th>Shared references</th>
+      <th>Reason</th></tr>
+  {% for c in design.comparisons %}
+  <tr>
+    <td><code>{{ c.batch_a }} vs {{ c.batch_b }}</code></td>
+    <td>{{ c.population or 'all' }}</td>
+    <td><span class="pill {{ 'ok' if c.support.value == 'reference_supported' else ('bad' if c.support.value == 'non_identifiable' else 'warn') }}">{{ c.support.value }}</span></td>
+    <td>{{ c.n_shared_reference_ids }}</td>
+    <td>{{ c.reason }}</td>
+  </tr>
+  {% endfor %}
+</table></div>
+<h3>Method and metric eligibility</h3>
+<table>
+  <tr><th>Name</th><th>Kind</th><th>Eligible</th><th>Reason code</th><th>Reason</th></tr>
+  {% for e in design.eligibility %}
+  <tr><td><code>{{ e.name }}</code></td><td>{{ e.kind }}</td>
+      <td><span class="pill {{ 'ok' if e.eligible else 'bad' }}">{{ 'yes' if e.eligible else 'no' }}</span></td>
+      <td><code>{{ e.reason_code }}</code></td><td>{{ e.reason }}</td></tr>
+  {% endfor %}
+</table>
+{% if design.warnings %}<ul class="reasons">{% for w in design.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
+
+<h2 id="processing">Preprocessing and QC</h2>
+<table>
+  <tr><th>Property</th><th>Declared value</th></tr>
+  <tr><td>scale</td><td><code>{{ processing.scale }}</code></td></tr>
+  <tr><td>transformation</td><td>{{ processing.transformation or 'none declared' }}
+      {{ processing.transformation_parameters }}</td></tr>
+  <tr><td>compensated / unmixed</td><td>{{ processing.compensated }} / {{ processing.unmixed }}</td></tr>
+  <tr><td>compensation source</td><td>{{ processing.compensation_source or '—' }}</td></tr>
+  <tr><td>units</td><td>{{ processing.units or '—' }}</td></tr>
+  <tr><td>QC history</td><td>{{ processing.qc_history|join('; ') or 'none recorded' }}</td></tr>
+  <tr><td>corrected</td><td>{{ processing.corrected }}</td></tr>
+</table>
+<h3>Samples</h3>
+<div class="scroll"><table>
+  <tr><th>Sample</th><th>Donor</th><th>Batch</th><th>Group</th><th>Stim</th><th>Timepoint</th>
+      <th>Reference</th><th>Role</th><th>Cells</th></tr>
+  {% for s in samples %}
+  <tr><td><code>{{ s.sample_id }}</code></td><td>{{ s.donor_id }}</td><td>{{ s.batch }}</td>
+      <td>{{ s.group }}</td><td>{{ s.stimulation }}</td><td>{{ s.timepoint }}</td>
+      <td>{{ s.reference_id }}</td><td>{{ s.reference_role }}</td><td>{{ s.n_cells }}</td></tr>
+  {% endfor %}
+</table></div>
+
+<h2 id="explorer">Marker and batch explorer</h2>
+<div class="grid">
+  {% for f in figures %}
+  <figure>{{ f.svg|safe }}<figcaption>{{ f.title }} — uncorrected baseline</figcaption></figure>
+  {% endfor %}
+</div>
+
+<h2 id="diagnostics">Drift and composition diagnostics</h2>
+{% for d in detectors %}
+  {% if d.detector in ('acquisition_drift', 'composition') %}
+  <h3>{{ d.detector }} <span class="pill {{ 'ok' if d.status == 'ok' else 'warn' }}">{{ d.status }}</span></h3>
+  {% if d.reason %}<p class="sub">{{ d.reason }}</p>{% endif %}
+  {% for w in d.warnings %}<p class="sub">⚠ {{ w }}</p>{% endfor %}
+  {% set flagged = d.assessments | selectattr('flag') | list %}
+  {% if flagged %}
+  <div class="scroll"><table>
+    <tr><th>Sample</th><th>Marker</th><th>Population</th><th>Statistic</th><th>Value</th>
+        <th>Threshold</th><th>Reason</th></tr>
+    {% for a in flagged[:250] %}
+    <tr><td>{{ a.sample_id or '' }}</td><td>{{ a.marker or '' }}</td>
+        <td>{{ a.population or '' }}</td><td>{{ a.statistic }}</td>
+        <td>{{ '%.4g'|format(a.value) if a.value is not none else '—' }}</td>
+        <td>{{ a.threshold if a.threshold is not none else '—' }}</td><td>{{ a.reason }}</td></tr>
+    {% endfor %}
+  </table></div>
+  {% else %}<p class="sub">No assessment crossed its reported threshold.</p>{% endif %}
+  {% endif %}
+{% endfor %}
+{% if composition_figure %}
+<figure>{{ composition_figure|safe }}
+  <figcaption>Population frequencies per sample, labelled by batch. A frequency shift is
+    not evidence that marker intensities require correction.</figcaption></figure>
+{% endif %}
+
+<h2 id="populations">Population diagnostics</h2>
+{% if sampling %}
+<div class="panel">
+  Evaluation labels: <code>{{ sampling.label_source.value }}</code>
+  (confidence <strong>{{ sampling.label_confidence }}</strong>).
+  {% if sampling.label_source.value == 'clustering' %}
+  <span class="pill warn">clustering-derived</span> These labels come from the uncorrected
+  baseline and may themselves be batch-driven; they never support a recommendation alone.
+  {% endif %}
+  <br>Representation: space <code>{{ sampling.representation.space }}</code>,
+  mask <code>{{ sampling.representation.marker_mask }}</code>,
+  scaling <code>{{ sampling.representation.scaling }}</code>,
+  distance <code>{{ sampling.representation.distance }}</code>,
+  k = {{ sampling.representation.k }}.
+  <br>Sampling unit <code>{{ sampling.unit }}</code>, cap
+  {{ sampling.max_cells_per_sample or 'none' }} cells per sample, seed {{ sampling.seed }}.
+</div>
+<table>
+  <tr><th>Population</th><th>Evaluation cells</th></tr>
+  {% for pop, n in sampling.population_counts.items() %}
+  <tr><td>{{ pop }}</td><td>{{ n }}</td></tr>
+  {% endfor %}
+</table>
+{% if sampling.population_coverage_warnings %}
+<ul class="reasons">{% for w in sampling.population_coverage_warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+{% endif %}
+{% else %}<p class="sub">No frozen partition is available.</p>{% endif %}
+
+<h2 id="comparison">Method comparison</h2>
+{% if corrections %}
+<table>
+  <tr><th>Candidate</th><th>Backend</th><th>Status</th><th>Markers changed</th>
+      <th>Samples changed</th><th>Output scale</th><th>Reason</th></tr>
+  {% for cid, c in corrections.items() %}
+  <tr><td><code>{{ cid }}</code></td><td>{{ c.candidate.backend }}</td>
+      <td><span class="pill {{ 'ok' if c.status.value == 'success' else 'bad' }}">{{ c.status.value }}</span></td>
+      <td>{{ c.markers_changed|length }}</td><td>{{ c.samples_changed|length }}</td>
+      <td>{{ c.output_scale or '—' }}</td><td>{{ c.reason or '' }}</td></tr>
+  {% endfor %}
+</table>
+{% endif %}
+{% if comparison_figures %}
+<div class="grid">
+  {% for f in comparison_figures %}
+  <figure>{{ f.svg|safe }}
+    <figcaption>{{ f.candidate }} — {{ f.marker }}; both panels share identical axes.</figcaption>
+  </figure>
+  {% endfor %}
+</div>
+{% endif %}
+<h3>Metric records</h3>
+<p><input type="search" id="metricFilter" placeholder="filter metric records…">
+   <a class="download" href="{{ metric_csv }}" download="metric_records.csv">download metric records (CSV)</a></p>
+<div class="scroll wide"><table id="metricTable">
+  <tr>{% for col in metric_columns %}<th>{{ col }}</th>{% endfor %}</tr>
+  {% for row in metric_rows %}
+  <tr>{% for col in metric_columns %}<td>{{ row[col] }}</td>{% endfor %}</tr>
+  {% endfor %}
+</table></div>
+<h3>Metric definitions</h3>
+<div class="scroll"><table>
+  <tr><th>Metric</th><th>Namespace</th><th>Direction</th><th>Scale</th><th>Grouping</th>
+      <th>Formula</th><th>Notes</th></tr>
+  {% for name, spec in registered_metrics %}
+  <tr><td><code>{{ name }}</code></td><td>{{ spec.namespace }}</td>
+      <td>{{ spec.direction.value }}</td><td>{{ spec.scale }}</td><td>{{ spec.grouping }}</td>
+      <td>{{ spec.formula }}</td><td>{{ spec.notes }}</td></tr>
+  {% endfor %}
+</table></div>
+
+<h2 id="preservation">Biological preservation</h2>
+<div class="panel">
+  Stage 8 (prespecified biological contrasts, donor-level uncertainty, and the
+  OpenProblems functional-marker compatibility component) is <strong>not implemented</strong>
+  in this build. Missing preservation evidence is not evidence of preservation: no
+  candidate in this report has been shown to preserve biology.
+  The joint-structure metric below is the only preservation-adjacent evidence available,
+  and it tests within-population co-expression, not a biological contrast.
+</div>
+{% set joint = metric_rows | selectattr('metric', 'equalto', 'joint_structure_distance') | list %}
+{% if joint %}
+<div class="scroll"><table>
+  <tr><th>Candidate</th><th>Population</th><th>Comparison</th><th>Value</th><th>Status</th></tr>
+  {% for r in joint[:200] %}
+  <tr><td>{{ r.candidate_id }}</td><td>{{ r.population }}</td><td>{{ r.comparison }}</td>
+      <td>{{ r.value }}</td><td>{{ r.status }}</td></tr>
+  {% endfor %}
+</table></div>
+{% endif %}
+
+<h2 id="failures">Failures and limitations</h2>
+{% if failures %}
+<table>
+  <tr><th>Kind</th><th>Unit</th><th>Status</th><th>Reason</th></tr>
+  {% for f in failures %}
+  <tr><td>{{ f.kind }}</td><td><code>{{ f.unit }}</code></td>
+      <td><span class="pill bad">{{ f.status }}</span></td><td>{{ f.reason }}</td></tr>
+  {% endfor %}
+</table>
+{% else %}<p class="sub">Nothing failed or was skipped.</p>{% endif %}
+<h3>Metrics named in the plan but not produced by this build</h3>
+<table>
+  <tr><th>Metric</th><th>Why it is absent</th></tr>
+  {% for name, reason in deferred_metrics.items() %}
+  <tr><td><code>{{ name }}</code></td><td>{{ reason }}</td></tr>
+  {% endfor %}
+  {% for name, reason in upstream_not_found.items() %}
+  <tr><td><code>{{ name }}</code></td><td>{{ reason }}</td></tr>
+  {% endfor %}
+</table>
+
+<h2 id="repro">Reproducibility and exports</h2>
+<div class="panel">
+  Analytical fingerprint <code>{{ fingerprint }}</code>. Report settings are excluded from
+  the fingerprint, so changing the report title does not invalidate a correction.
+</div>
+<h3>Resolved configuration</h3>
+<pre><code>{{ config | tojson(indent=2) }}</code></pre>
+<h3>Citation</h3>
+<p class="sub">Cite the components actually enabled in this run. See
+  <code>CITATION.cff</code> and <code>docs/upstream_audit.md</code> for the pinned commits
+  and licences of every upstream tool.</p>
+
+<script>
+(function () {
+  var input = document.getElementById('metricFilter');
+  if (!input) return;
+  var table = document.getElementById('metricTable');
+  input.addEventListener('input', function () {
+    var q = input.value.toLowerCase();
+    var rows = table.rows;
+    for (var i = 1; i < rows.length; i++) {
+      rows[i].style.display = rows[i].textContent.toLowerCase().indexOf(q) === -1 ? 'none' : '';
+    }
+  });
+})();
+</script>
+</body>
+</html>

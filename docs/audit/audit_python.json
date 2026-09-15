@@ -1,0 +1,234 @@
+{
+  "generated_by": "scripts/audit_upstream.py",
+  "environment": {
+    "python": "3.11.15",
+    "platform": "Linux-6.18.44-fc-v33-x86_64-with-glibc2.39"
+  },
+  "python_dependencies": {
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scipy": "1.17.1",
+    "anndata": "0.12.19",
+    "h5py": "3.16.0",
+    "pydantic": "2.13.5",
+    "typer": "0.27.2",
+    "jinja2": "3.1.6",
+    "pyyaml": "6.0.3",
+    "flowio": "1.4.0",
+    "pyarrow": "25.0.1",
+    "matplotlib": "3.11.2",
+    "snakemake": "9.27.0"
+  },
+  "upstream_dir": ".upstream",
+  "lock": "/home/user/batchdx-cyto/config/upstream_lock.yaml",
+  "resources": {
+    "cycombine": {
+      "repository": "https://github.com/biosurf/cyCombine",
+      "checkout": ".upstream/cyCombine",
+      "checkout_present": true,
+      "pinned_commit": "fcd42dbbe92bfa6bffa6094bf9b4de536e71c249",
+      "observed_commit": "fcd42dbbe92bfa6bffa6094bf9b4de536e71c249",
+      "commit_matches": true,
+      "declared_licence": "MIT",
+      "observed_licence": {
+        "file": "LICENSE.md",
+        "detected": "MIT",
+        "first_line": "# MIT License"
+      },
+      "adapter_strategy": "Call the installed package from a separate R process.  Nothing is vendored. The correction route is pinned to ComBat; ComBat_seq is refused by the adapter because it is a negative-binomial count model and transformed cytometry expression is not counts."
+    },
+    "cytonorm": {
+      "repository": "https://github.com/saeyslab/CytoNorm",
+      "checkout": ".upstream/CytoNorm",
+      "checkout_present": true,
+      "pinned_commit": "278f352d8edffd7a5d3e6b0b76c402d991a1e7a9",
+      "observed_commit": "278f352d8edffd7a5d3e6b0b76c402d991a1e7a9",
+      "commit_matches": true,
+      "declared_licence": "GPL (>= 2)",
+      "observed_licence": {
+        "file": "DESCRIPTION",
+        "detected": "GPL (>= 2)",
+        "first_line": "License: GPL (>= 2)"
+      },
+      "adapter_strategy": "Arm's-length invocation of the installed package from a separate R process, if and when the backend is implemented.  No source is copied."
+    },
+    "cytobatchflagr": {
+      "repository": "https://github.com/AndorfLab/CytoBatchFlagR",
+      "checkout": ".upstream/CytoBatchFlagR",
+      "checkout_present": true,
+      "pinned_commit": "ad21e3b104126783044351eb11fa24622a0da2f7",
+      "observed_commit": "ad21e3b104126783044351eb11fa24622a0da2f7",
+      "commit_matches": true,
+      "declared_licence": "GPL-3.0",
+      "observed_licence": {
+        "file": "LICENSE",
+        "detected": "GPL-3.0",
+        "first_line": "                    GNU GENERAL PUBLIC LICENSE"
+      },
+      "adapter_strategy": "source() the upstream scripts UNMODIFIED from a checkout the user supplies, in a separate R process, and call the analysis functions directly with configured values.  The upstream entry point (R/CytoBatchFlagR_workflow.R) is deliberately not sourced because it calls rstudioapi::selectDirectory and Shiny helpers. Nothing is copied or refactored into this package."
+    },
+    "openproblems_cyto_batch_integration": {
+      "repository": "https://github.com/openproblems-bio/task_cyto_batch_integration",
+      "checkout": ".upstream/task_cyto_batch_integration",
+      "checkout_present": true,
+      "pinned_commit": "37151479aaa89edf37ae23068de8fbb41a1b7bb4",
+      "observed_commit": "37151479aaa89edf37ae23068de8fbb41a1b7bb4",
+      "commit_matches": true,
+      "declared_licence": "MIT",
+      "observed_licence": {
+        "file": "LICENSE",
+        "detected": "MIT",
+        "first_line": "MIT License"
+      },
+      "adapter_strategy": "Reference only in this build.  The metric implementations live inside Viash components with their own container and Nextflow runtime; extracting them without that runtime has not been attempted or verified here, so no metric in this package claims to be an upstream compatibility component.",
+      "metrics": {
+        "present": true,
+        "components": {
+          "average_batch_r2": [
+            {
+              "name": "average_batch_r2_ct",
+              "label": "Average Batch R-squared",
+              "maximize": false,
+              "min": -0.001,
+              "max": 1,
+              "implementation": [
+                "script.py"
+              ]
+            }
+          ],
+          "emd": [
+            {
+              "name": "emd_mean_ct_horiz",
+              "label": "EMD Mean Horizontal",
+              "maximize": false,
+              "min": 0,
+              "max": Infinity,
+              "implementation": [
+                "script.py"
+              ]
+            },
+            {
+              "name": "emd_mean_ct_vert",
+              "label": "EMD Mean Vertical",
+              "maximize": false,
+              "min": 0,
+              "max": Infinity,
+              "implementation": [
+                "script.py"
+              ]
+            }
+          ],
+          "flowsom_mapping_similarity": [
+            {
+              "name": "flowsom_mean_mapping_similarity",
+              "label": "FlowSOM Mean Mapping Similarity",
+              "maximize": true,
+              "min": -1e-10,
+              "max": 100,
+              "implementation": [
+                "script.R"
+              ]
+            }
+          ],
+          "functional_marker_preservation": [
+            {
+              "name": "functional_marker_preservation_wilcoxon",
+              "label": "Functional Marker Preservation (Wilcoxon)",
+              "maximize": true,
+              "min": 0,
+              "max": 1,
+              "implementation": [
+                "script.py"
+              ]
+            },
+            {
+              "name": "functional_marker_preservation_cohens_d",
+              "label": "Functional Marker Preservation (Cohen's d)",
+              "maximize": false,
+              "min": 0,
+              "max": Infinity,
+              "implementation": [
+                "script.py"
+              ]
+            }
+          ],
+          "lisi": [
+            {
+              "name": "iLisi",
+              "label": "iLisi",
+              "maximize": true,
+              "min": -0.0001,
+              "max": 1.0001,
+              "implementation": [
+                "script.py"
+              ]
+            },
+            {
+              "name": "cLisi",
+              "label": "cLisi",
+              "maximize": true,
+              "min": -0.0001,
+              "max": 1.0001,
+              "implementation": [
+                "script.py"
+              ]
+            }
+          ],
+          "ratio_consistent_peaks": [
+            {
+              "name": "ratio_consistent_peaks",
+              "label": "Ratio Consistent Peaks",
+              "maximize": true,
+              "min": 0,
+              "max": 1,
+              "implementation": [
+                "script.py"
+              ]
+            }
+          ]
+        },
+        "metric_names": [
+          "average_batch_r2_ct",
+          "cLisi",
+          "emd_mean_ct_horiz",
+          "emd_mean_ct_vert",
+          "flowsom_mean_mapping_similarity",
+          "functional_marker_preservation_cohens_d",
+          "functional_marker_preservation_wilcoxon",
+          "iLisi",
+          "ratio_consistent_peaks"
+        ]
+      },
+      "metric_reconciliation": {
+        "declared_but_absent": [],
+        "present_but_undeclared": []
+      }
+    },
+    "spiscy": {
+      "repository": "https://github.com/emilier17/spiscy",
+      "checkout": ".upstream/spiscy",
+      "checkout_present": true,
+      "pinned_commit": "a6e55c8f722112bf01d5364996b1867844efbd02",
+      "observed_commit": "a6e55c8f722112bf01d5364996b1867844efbd02",
+      "commit_matches": true,
+      "declared_licence": "MIT",
+      "observed_licence": {
+        "file": "LICENSE",
+        "detected": "MIT",
+        "first_line": "MIT License"
+      },
+      "adapter_strategy": "Reference reading for workflow layout and PeacoQC integration patterns.  No Tier A capability depends on it and nothing is built against it as a contract."
+    }
+  },
+  "registered_metrics": [
+    "common.emd_relative_reduction",
+    "common.emd_within_population",
+    "common.joint_structure_distance",
+    "common.mad_compression_fraction",
+    "common.mad_signed_change",
+    "common.population_frequency_shift",
+    "native.cycombine_evaluate_emd",
+    "native.cycombine_evaluate_mad"
+  ],
+  "failures": []
+}

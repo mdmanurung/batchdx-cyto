@@ -1,0 +1,95 @@
+cff-version: 1.2.0
+message: >-
+  If you use batchdx-cyto, please cite this software *and* the upstream components that
+  were actually enabled in your run. The run's resolved configuration and
+  `docs/upstream_audit.md` record which those were; citing a component this build only
+  declares, but could not execute, would misstate what produced your results.
+title: "batchdx-cyto: batch-effect diagnosis, correction and evaluation for cytometry"
+abstract: >-
+  A Snakemake-orchestrated system that diagnoses batch-associated differences in mass,
+  conventional and spectral flow cytometry, assesses whether a technical interpretation
+  is supported by the design, runs eligible correction methods independently against an
+  identity baseline, and evaluates technical improvement separately from structural
+  distortion.
+type: software
+version: 0.1.0.dev0
+license: MIT
+repository-code: "https://github.com/mdmanurung/batchdx-cyto"
+keywords:
+  - cytometry
+  - batch effect
+  - CyTOF
+  - spectral flow cytometry
+  - reproducible workflows
+authors:
+  - name: "batchdx-cyto contributors"
+
+references:
+  - type: software
+    title: cyCombine
+    version: 0.3.0
+    repository-code: "https://github.com/biosurf/cyCombine"
+    notes: "pinned commit fcd42dbbe92bfa6bffa6094bf9b4de536e71c249; MIT"
+    authors:
+      - family-names: Pedersen
+        given-names: "Christina Bligaard"
+      - family-names: Dam
+        given-names: "Søren Helweg"
+      - family-names: Olsen
+        given-names: "Lars Rønn"
+  - type: article
+    title: >-
+      cyCombine allows for robust integration of single-cell cytometry datasets within
+      and across technologies
+    journal: Nature Communications
+    year: 2022
+    doi: 10.1038/s41467-022-29383-5
+    authors:
+      - family-names: Pedersen
+        given-names: "Christina Bligaard"
+  - type: software
+    title: CytoNorm
+    version: 2.0.12
+    repository-code: "https://github.com/saeyslab/CytoNorm"
+    notes: "pinned commit 278f352d8edffd7a5d3e6b0b76c402d991a1e7a9; GPL (>= 2)"
+    authors:
+      - family-names: "Van Gassen"
+        given-names: Sofie
+      - family-names: Quintelier
+        given-names: Katrien
+  - type: software
+    title: CytoBatchFlagR
+    repository-code: "https://github.com/AndorfLab/CytoBatchFlagR"
+    notes: >-
+      pinned commit ad21e3b104126783044351eb11fa24622a0da2f7; GPL-3.0. First released
+      as cytoFlagR (bioRxiv 2025, doi 10.1101/2025.05.27.656370); cite the published
+      CytoBatchFlagR name and record the earlier cytoFlagR identifier.
+    authors:
+      - family-names: Eswar
+        given-names: ""
+  - type: article
+    title: CytoBatchFlagR
+    journal: "Cytometry Part A"
+    year: 2026
+    doi: 10.1002/cyto.a.70024
+    authors:
+      - family-names: Eswar
+        given-names: ""
+  - type: software
+    title: "OpenProblems: cytometry batch integration task"
+    repository-code: "https://github.com/openproblems-bio/task_cyto_batch_integration"
+    notes: "pinned commit 37151479aaa89edf37ae23068de8fbb41a1b7bb4; MIT; reference only"
+    authors:
+      - name: "Open Problems in Single-Cell Analysis"
+  - type: software
+    title: SPiSCy
+    repository-code: "https://github.com/emilier17/spiscy"
+    notes: "pinned commit a6e55c8f722112bf01d5364996b1867844efbd02; MIT; reference reading only"
+    authors:
+      - name: "SPiSCy contributors"
+  - type: software
+    title: Snakemake
+    repository-code: "https://github.com/snakemake/snakemake"
+    notes: "workflow engine; version resolved at run time and recorded in the run's environment report"
+    authors:
+      - name: "Snakemake contributors"

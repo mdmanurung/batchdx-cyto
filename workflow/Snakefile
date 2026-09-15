@@ -1,0 +1,267 @@
+"""batchdx-cyto workflow.
+
+Snakemake owns scheduling, dependencies, resources, restart behaviour and provenance.
+The rule bodies are one-line calls into :mod:`batchdx.cyto.pipeline`, so the analytical
+logic stays importable and unit-testable and the Snakefile stays readable.
+
+The candidate roster and the detector roster come from the validated configuration, so
+expansion is static: nothing here reads a not-yet-generated output at parse time, and
+nothing infers the roster from whatever folders happen to exist in the results tree.
+
+Invoke directly, without the command-line wrapper, with:
+
+    snakemake --snakefile workflow/Snakefile --cores 4 \
+        --config config=config/example_paired_reference.yaml outdir=results/run1 mode=benchmark
+"""
+
+from pathlib import Path
+
+from batchdx.cyto.config import load_config
+from batchdx.cyto.pipeline import DETECTOR_FLAGS, RunLayout
+
+CONFIG_PATH = Path(config["config"]).resolve()
+BASE_DIR = Path(config.get("base_dir", ".")).resolve()
+OUTDIR = Path(config["outdir"]).resolve()
+MODE = config.get("mode", "benchmark")
+SELECTED_CANDIDATE = config.get("candidate")
+
+CFG = load_config(CONFIG_PATH)
+LAYOUT = RunLayout(OUTDIR)
+
+CANDIDATES = [c.id for c in CFG.correction.candidates]
+DETECTORS = [name for name, flag in DETECTOR_FLAGS.items() if getattr(CFG.detectors, flag)]
+
+if MODE == "correct":
+    if not SELECTED_CANDIDATE:
+        raise WorkflowError(
+            "mode=correct requires an explicitly selected candidate: pass "
+            "--config candidate=<candidate id>"
+        )
+    if SELECTED_CANDIDATE not in CANDIDATES:
+        raise WorkflowError(
+            f"candidate {SELECTED_CANDIDATE!r} is not in the configuration; "
+            f"available candidates: {CANDIDATES}"
+        )
+
+
+def _targets():
+    if MODE == "diagnose":
+        return (
+            [str(LAYOUT.detector_result(d)) for d in DETECTORS]
+            + [str(LAYOUT.status), str(LAYOUT.report)]
+        )
+    if MODE == "correct":
+        return [str(LAYOUT.correction_result(SELECTED_CANDIDATE)), str(LAYOUT.status)]
+    if MODE == "report":
+        return [str(LAYOUT.report)]
+    return [str(LAYOUT.decision), str(LAYOUT.report), str(LAYOUT.status)]
+
+
+rule all:
+    input:
+        _targets(),
+
+
+rule validate:
+    """Strictly validate the configuration and freeze the dataset manifest."""
+    input:
+        config=str(CONFIG_PATH),
+    output:
+        manifest=str(LAYOUT.dataset_manifest),
+        resolved=str(LAYOUT.resolved_config),
+    log:
+        str(OUTDIR / "logs" / "validate.log"),
+    threads: 1
+    resources:
+        mem_mb=4000,
+        runtime=30,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "validate.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_validate
+
+        stage_validate(CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+rule design_audit:
+    """Audit the design and emit the method and metric eligibility manifest."""
+    input:
+        manifest=str(LAYOUT.dataset_manifest),
+    output:
+        audit=str(LAYOUT.design_audit),
+    log:
+        str(OUTDIR / "logs" / "design_audit.log"),
+    threads: 1
+    resources:
+        mem_mb=4000,
+        runtime=30,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "design_audit.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_design
+
+        stage_design(CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+rule partition:
+    """Freeze evaluation labels, sampling and the common comparison set."""
+    input:
+        audit=str(LAYOUT.design_audit),
+    output:
+        sampling=str(LAYOUT.sampling_manifest),
+    log:
+        str(OUTDIR / "logs" / "partition.log"),
+    threads: 1
+    resources:
+        mem_mb=8000,
+        runtime=60,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "partition.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_partition
+
+        stage_partition(CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+rule diagnose:
+    """Run one detector.  A scientific skip is a successful rule with an explicit status."""
+    input:
+        audit=str(LAYOUT.design_audit),
+        sampling=str(LAYOUT.sampling_manifest),
+    output:
+        result=str(LAYOUT.root / "diagnostics" / "{detector}" / "detector_result.json"),
+    log:
+        str(OUTDIR / "logs" / "diagnose_{detector}.log"),
+    threads: 2
+    resources:
+        mem_mb=8000,
+        runtime=120,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "diagnose_{detector}.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_diagnose
+
+        stage_diagnose(wildcards.detector, CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+rule correct:
+    """Run one correction candidate from the immutable preprocessed baseline."""
+    input:
+        audit=str(LAYOUT.design_audit),
+        sampling=str(LAYOUT.sampling_manifest),
+    output:
+        result=str(LAYOUT.root / "candidates" / "{candidate}" / "correction_result.json"),
+    log:
+        str(OUTDIR / "logs" / "correct_{candidate}.log"),
+    threads: 4
+    resources:
+        mem_mb=16000,
+        runtime=240,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "correct_{candidate}.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_correct
+
+        stage_correct(wildcards.candidate, CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+rule metrics:
+    """Score one candidate on the frozen common partition."""
+    input:
+        correction=str(LAYOUT.root / "candidates" / "{candidate}" / "correction_result.json"),
+        sampling=str(LAYOUT.sampling_manifest),
+    output:
+        result=str(LAYOUT.root / "metrics" / "{candidate}" / "metric_result.json"),
+    log:
+        str(OUTDIR / "logs" / "metrics_{candidate}.log"),
+    threads: 2
+    resources:
+        mem_mb=12000,
+        runtime=180,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "metrics_{candidate}.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_metrics
+
+        stage_metrics(wildcards.candidate, CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+rule decide:
+    """Aggregate metrics, compute reductions, and assign a state to every candidate."""
+    input:
+        metrics=[str(LAYOUT.metric_result(c)) for c in CANDIDATES],
+        sampling=str(LAYOUT.sampling_manifest),
+    output:
+        decision=str(LAYOUT.decision),
+        reductions=str(LAYOUT.reductions),
+    log:
+        str(OUTDIR / "logs" / "decide.log"),
+    threads: 1
+    resources:
+        mem_mb=4000,
+        runtime=60,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "decide.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_decide
+
+        stage_decide(CONFIG_PATH, BASE_DIR, LAYOUT)
+
+
+def _status_inputs(wildcards):
+    inputs = [str(LAYOUT.design_audit)] + [str(LAYOUT.detector_result(d)) for d in DETECTORS]
+    if MODE in ("benchmark",):
+        inputs += [str(LAYOUT.correction_result(c)) for c in CANDIDATES]
+    if MODE == "correct":
+        inputs += [str(LAYOUT.correction_result(SELECTED_CANDIDATE))]
+    return inputs
+
+
+rule status:
+    """Machine-readable roster status, never inferred from directory existence."""
+    input:
+        _status_inputs,
+    output:
+        status=str(LAYOUT.status),
+    log:
+        str(OUTDIR / "logs" / "status.log"),
+    threads: 1
+    resources:
+        mem_mb=2000,
+        runtime=15,
+    run:
+        from batchdx.cyto.pipeline import stage_status
+
+        stage_status(CONFIG_PATH, LAYOUT)
+
+
+def _report_inputs(wildcards):
+    inputs = [str(LAYOUT.design_audit), str(LAYOUT.sampling_manifest)]
+    inputs += [str(LAYOUT.detector_result(d)) for d in DETECTORS]
+    if MODE not in ("diagnose", "report"):
+        inputs += [str(LAYOUT.decision)]
+    return inputs
+
+
+rule report:
+    """Render the offline HTML report from artifacts already on disk.
+
+    The rule depends on results, never on the correction rule itself, so regenerating
+    the report cannot trigger a correction.
+    """
+    input:
+        _report_inputs,
+    output:
+        html=str(LAYOUT.report),
+    log:
+        str(OUTDIR / "logs" / "report.log"),
+    threads: 1
+    resources:
+        mem_mb=8000,
+        runtime=120,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "report.tsv")
+    run:
+        from batchdx.cyto.pipeline import stage_report
+
+        stage_report(CONFIG_PATH, BASE_DIR, LAYOUT, diagnosis_only=(MODE == "diagnose"))

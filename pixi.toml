@@ -13,5 +13,8 @@ toml = "*"
 cookiecutter = "*"
 
 [tasks]
-test = "pytest tests/ -v"
-test-cov = "pytest tests/ --cov=. --cov-report=term-missing"
+# Scoped to the cookiecutter template's own tests. The batchdx-cyto suites live in
+# tests/{unit,integration,scientific} and need the package installed; they are run by
+# .github/workflows/batchdx-cyto-tests.yaml instead.
+test = "pytest tests/test_template_bake.py tests/test_post_gen_hook.py -v"
+test-cov = "pytest tests/test_template_bake.py tests/test_post_gen_hook.py --cov=. --cov-report=term-missing"
