@@ -175,6 +175,11 @@ pyrightconfig.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python
 # batchdx-cyto
+# The inherited Python gitignore has a bare `lib/` (for virtualenv layouts), which
+# silently swallowed the R exchange library used by every R adapter script. Negate it
+# explicitly so a fresh clone gets a workflow that actually runs.
+!workflow/scripts/lib/
+!workflow/scripts/lib/*.R
 .venv-dev/
 .upstream
 .upstream/

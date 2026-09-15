@@ -2,7 +2,7 @@
 
 **This file is generated. Do not edit it by hand.**
 
-Derived by `scripts/generate_status.py` from `report.json` on 2026-09-15 06:48 UTC.
+Derived by `scripts/generate_status.py` from `report.json` on 2026-09-15 07:13 UTC.
 Every line below corresponds to test identifiers that were executed; a claim
 without an executed test cannot appear here.
 
@@ -30,7 +30,7 @@ python scripts/generate_status.py --report build/report.json
 |---|---|---|---|---|
 | A | X | Cross-stage contracts (typed, versioned, round-tripped across the R boundary) | ✅ PASSED | 10/10 |
 | A | 0 | Audit upstream resources and establish contracts | ✅ PASSED | 8/8 |
-| A | 1 | Runnable package and minimal Snakemake workflow | ✅ PASSED | 6/6 |
+| A | 1 | Runnable package and minimal Snakemake workflow | ✅ PASSED | 7/7 |
 | A | 2 | Ingestion, immutable data, optional preprocessing | 🟡 PARTIAL | 16/16 |
 | A | 3 | Design audit and correction eligibility | ✅ PASSED | 12/12 |
 | A | 5 | Detection adapters and diagnosis report | ⛔ BLOCKED | 10/11 |
@@ -83,7 +83,7 @@ python scripts/generate_status.py --report build/report.json
 
 ### Stage 1 (Tier A) — Runnable package and minimal Snakemake workflow
 
-**✅ PASSED** — 6 passed, 0 failed, 0 skipped, 0 not executed.
+**✅ PASSED** — 7 passed, 0 failed, 0 skipped, 0 not executed.
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -93,6 +93,7 @@ python scripts/generate_status.py --report build/report.json
 * `tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code` — passed
 * `tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate` — passed
 * `tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout` — passed
+* `tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped` — passed
 
 </details>
 
@@ -334,8 +335,8 @@ Tests needing attention:
 
 ## Report totals
 
-* collected: 141
-* passed: 139
+* collected: 142
+* passed: 140
 * failed: 0
 * skipped: 2
 * errors: 0

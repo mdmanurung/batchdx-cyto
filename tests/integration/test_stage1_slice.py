@@ -131,3 +131,31 @@ def test_packaged_workflow_is_found_from_outside_the_source_checkout(tmp_path: P
     for path in (snakefile(), config_root(), examples_root(), templates_root()):
         assert path.exists(), path
     assert (templates_root() / "report.html.j2").exists()
+
+
+def test_every_r_script_the_adapters_run_is_actually_shipped() -> None:
+    """A missing R script is a broken adapter, and it is easy to lose one silently.
+
+    ``workflow/scripts/lib/binmat.R`` was swallowed by a bare ``lib/`` line in the
+    inherited Python gitignore: present locally, absent from every clone. This asserts
+    the whole set is resolvable through the packaged workflow root, which is what the
+    adapters use at run time.
+    """
+
+    from batchdx.cyto.paths import workflow_root
+
+    scripts = workflow_root() / "scripts"
+    required = [
+        "lib/binmat.R",
+        "cycombine_correct.R",
+        "cycombine_detect.R",
+        "cytobatchflagr_detect.R",
+    ]
+    missing = [name for name in required if not (scripts / name).exists()]
+    assert not missing, f"R script(s) absent from the packaged workflow: {missing}"
+
+    # Every script that sources the exchange library must find it where it looks.
+    for name in ("cycombine_correct.R", "cycombine_detect.R", "cytobatchflagr_detect.R"):
+        text = (scripts / name).read_text(encoding="utf-8")
+        if 'source(file.path(script_dir(), "lib", "binmat.R"))' in text:
+            assert (scripts / "lib" / "binmat.R").exists()

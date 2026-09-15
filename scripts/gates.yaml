@@ -50,6 +50,7 @@ gates:
       - "tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code"
       - "tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate"
       - "tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout"
+      - "tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped"
 
   - stage: "2"
     tier: A
