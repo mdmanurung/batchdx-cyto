@@ -1,0 +1,37 @@
+# R backends for batchdx-cyto.
+#
+# STATUS: NOT BUILT OR TESTED IN THIS BUILD. The environment this package was developed
+# in had no access to CRAN, Bioconductor or a conda mirror (see docs/blocked.md), so
+# this definition has never been built. Treat it as a starting point, not as a verified
+# artifact, and pin the digest of whatever you do build.
+#
+# Build:
+#   docker build -f containers/Dockerfile.r-backends -t batchdx-cyto-r:local .
+# Convert for Apptainer and pin the digest:
+#   apptainer build batchdx-cyto-r.sif docker-daemon://batchdx-cyto-r:local
+FROM rocker/r-ver:4.4.1
+
+ARG CYCOMBINE_COMMIT=fcd42dbbe92bfa6bffa6094bf9b4de536e71c249
+ARG CYTONORM_COMMIT=278f352d8edffd7a5d3e6b0b76c402d991a1e7a9
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        git libxml2-dev libcurl4-openssl-dev libssl-dev libhdf5-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN R -q -e "install.packages(c('remotes','jsonlite','BiocManager'), repos='https://cloud.r-project.org')"
+RUN R -q -e "BiocManager::install(c('sva','flowCore','FlowSOM'), ask=FALSE, update=FALSE)"
+RUN R -q -e "install.packages(c('kohonen','emdist','dplyr','tidyr','matrixStats','outliers','Matrix','ggplot2','cowplot','ggridges','plyr','readr','readxl','stringr','tibble','magrittr'), repos='https://cloud.r-project.org')"
+
+# GitHub-sourced packages are pinned by commit, which is the only reproducible handle
+# they have.
+RUN R -q -e "remotes::install_github('biosurf/cyCombine', ref='${CYCOMBINE_COMMIT}', upgrade='never')"
+RUN R -q -e "remotes::install_github('saeyslab/CytoNorm', ref='${CYTONORM_COMMIT}', upgrade='never')"
+
+# CytoBatchFlagR is GPL-3 and ships as scripts, so it is fetched as a checkout and
+# source()d at arm's length rather than installed. See
+# docs/decisions/0003-cytobatchflagr-integration.md.
+ARG CYTOBATCHFLAGR_COMMIT=ad21e3b104126783044351eb11fa24622a0da2f7
+RUN git clone https://github.com/AndorfLab/CytoBatchFlagR.git /opt/upstream/CytoBatchFlagR \
+    && git -C /opt/upstream/CytoBatchFlagR checkout ${CYTOBATCHFLAGR_COMMIT}
+
+ENV BATCHDX_UPSTREAM_DIR=/opt/upstream

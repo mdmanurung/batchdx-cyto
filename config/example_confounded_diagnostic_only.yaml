@@ -1,0 +1,73 @@
+# Perfectly confounded, diagnostic only: two batches, one biological group each.
+# No correction recommendation can be made for this design, by construction.
+#     batchdx-cyto init --example confounded my_project
+# two batches perfectly confounded with biological group and no reference; a diagnostic-only design that must not yield a correction recommendation
+
+schema_version: 2
+project:
+  id: confounded_example
+  seed: 473
+input:
+  format: h5ad
+  path: data/preprocessed.h5ad
+  expression_layer: preprocessed
+  samples: config/samples.tsv
+  markers: config/markers.tsv
+  processing_manifest: config/processing.json
+preprocessing:
+  enabled: false
+design:
+  correction_batch: batch
+  protect:
+  - group
+  donor: donor_id
+  reference_identity: null
+  reference_role: null
+  allow_exploratory_override: false
+  minimum_batches: 3
+  require_shared_reference: true
+  minimum_batches_origin: 'shipped example default: below three batches a batch effect
+    cannot be separated from a single outlying batch, and the IQR and cluster detectors
+    are degenerate'
+evaluation:
+  label_source: gating
+  gating_thresholds: config/thresholds.tsv
+  representation:
+    space: marker
+    marker_mask: evaluation
+    scaling: none
+    distance: euclidean
+    k: 30
+  sampling:
+    unit: sample_id
+    max_cells_per_sample: 1200
+    min_cells_per_population: 50
+  partitions: frozen_common
+  uncertainty_unit: donor_id
+  policy: conservative
+correction:
+  control_policy: measured_only
+  candidates:
+  - id: uncorrected
+    backend: none
+    parameters: {}
+  - id: cycombine_default
+    backend: cycombine
+    parameters: {}
+detectors:
+  acquisition_drift: true
+  composition: true
+  cycombine_express: false
+  cycombine_cluster: false
+  cytobatchflagr: false
+upstream:
+  lock: config/upstream_lock.yaml
+  checkout_dir: null
+  rscript: Rscript
+report:
+  offline: true
+  redact_identifiers: true
+  title: "batchdx-cyto \u2014 confounded example"
+exports:
+  h5ad: true
+  fcs: false

@@ -1,0 +1,161 @@
+{
+  "generated_by": "scripts/audit_upstream.R",
+  "r_version": "R version 4.3.3 (2024-02-29)",
+  "jsonlite_version": "1.8.8",
+  "upstream_dir": ".upstream",
+  "lock": "config/upstream_lock.yaml",
+  "resources": {
+    "cycombine": {
+      "resource": "cycombine",
+      "checkout": ".upstream/cyCombine",
+      "checkout_present": true,
+      "commit": "fcd42dbbe92bfa6bffa6094bf9b4de536e71c249",
+      "adapter_calls": ["normalize", "create_som", "correct_data", "compute_emd", "detect_batch_effect", "detect_batch_effect_express", "evaluate_emd", "evaluate_mad", "get_markers"],
+      "mode": "source",
+      "version": "0.3.0",
+      "exports": ["%>%", "batch_correct", "compile_fcs", "compute_cilisi", "compute_emd", "compute_lisi", "compute_mad", "convert_flowset", "correct_data", "create_som", "cyCombine", "detect_batch_effect", "detect_batch_effect_express", "df2SCE", "df2Seurat", "evaluate_emd", "evaluate_mad", "get_markers", "impute_across_panels", "non_markers", "normalize", "plot_density", "plot_dimred", "plot_dimred_full", "plot_save_four", "plot_save_two", "plot_umap_labels", "prepare_data", "process_fcs_files", "run_analysis", "salvage_problematic", "sce2FCS", "transform_asinh"],
+      "signatures": {
+        "normalize": {
+          "signature": "normalize(df = , markers = NULL, norm_method = c(\"scale\", \"rank\", \"CLR_seu\", \"CLR_med\", \"CLR\", \"qnorm\", \"none\"), ties.method = c(\"average\", \"first\", \"last\", \"random\", \"max\", \"min\"), mc.cores = 1, pb = TRUE, ...)",
+          "arguments": ["df", "markers", "norm_method", "ties.method", "mc.cores", "pb", "..."],
+          "file": "02_batch_correct.R"
+        },
+        "create_som": {
+          "signature": "create_som(df = , markers = NULL, seed = 473, cluster_method = c(\"kohonen\", \"flowsom\", \"fusesom\", \"leiden\", \"kmeans\"), distf = c(\"euclidean\", \"sumofsquares\", \"cosine\", \"manhattan\", \"chebyshev\"), rlen = 10, mode = c(\"online\", \"batch\", \"pbatch\"), xdim = 8, ydim = 8, nClus = NULL, return_model = FALSE, ...)",
+          "arguments": ["df", "markers", "seed", "cluster_method", "distf", "rlen", "mode", "xdim", "ydim", "nClus", "return_model", "..."],
+          "file": "02_batch_correct.R"
+        },
+        "correct_data": {
+          "signature": "correct_data(df = , label = NULL, markers = NULL, method = c(\"ComBat\", \"ComBat_seq\"), covar = NULL, anchor = NULL, ref.batch = NULL, parametric = TRUE, mc.cores = 1, pb = FALSE, ...)",
+          "arguments": ["df", "label", "markers", "method", "covar", "anchor", "ref.batch", "parametric", "mc.cores", "pb", "..."],
+          "file": "02_batch_correct.R"
+        },
+        "detect_batch_effect_express": {
+          "signature": "detect_batch_effect_express(df = , out_dir = NULL, binSize = 0.1, markers = NULL, batch_col = \"batch\", downsample = NULL, seed = 472)",
+          "arguments": ["df", "out_dir", "binSize", "markers", "batch_col", "downsample", "seed"],
+          "file": "detect_batch_effect.R"
+        },
+        "detect_batch_effect": {
+          "signature": "detect_batch_effect(df = , out_dir = , downsample = NULL, norm_method = \"scale\", xdim = 8, ydim = 8, seed = 382, markers = NULL, binSize = 0.1, batch_col = \"batch\", label_col = \"label\", name = \"raw data\")",
+          "arguments": ["df", "out_dir", "downsample", "norm_method", "xdim", "ydim", "seed", "markers", "binSize", "batch_col", "label_col", "name"],
+          "file": "detect_batch_effect.R"
+        },
+        "compute_emd": {
+          "signature": "compute_emd(df = , binSize = 0.1, cell_col = \"label\", batch_col = \"batch\", markers = NULL, mc.cores = 1)",
+          "arguments": ["df", "binSize", "cell_col", "batch_col", "markers", "mc.cores"],
+          "file": "evaluate_performance.R"
+        },
+        "evaluate_emd": {
+          "signature": "evaluate_emd(uncorrected = , corrected = , binSize = 0.1, cell_col = \"label\", batch_col = \"batch\", markers = NULL, plots = TRUE, filter_limit = 2, mc.cores = 1)",
+          "arguments": ["uncorrected", "corrected", "binSize", "cell_col", "batch_col", "markers", "plots", "filter_limit", "mc.cores"],
+          "file": "evaluate_performance.R"
+        },
+        "evaluate_mad": {
+          "signature": "evaluate_mad(uncorrected = , corrected = , cell_col = \"label\", batch_col = \"batch\", markers = NULL, filter_limit = NULL)",
+          "arguments": ["uncorrected", "corrected", "cell_col", "batch_col", "markers", "filter_limit"],
+          "file": "evaluate_performance.R"
+        },
+        "get_markers": {
+          "signature": "get_markers(x = )",
+          "arguments": "x",
+          "file": "utils_helper.R"
+        }
+      },
+      "all_top_level_functions": ["%||%", ".combat", "add_mat", "batch_correct", "batch_correct_df", "batch_correct_seurat", "check_colname", "check_confound", "check_make_dir", "check_package", "clr_norm", "clr_norm_mean", "clr_norm_med", "compile_fcs", "compute_cilisi", "compute_emd", "compute_lisi", "compute_mad", "convert_flowset", "correct_data", "correct_data_alt", "correct_data_mat", "correct_data_seurat", "correct_label_mat", "correct_label_seurat", "create_som", "create_som_sce", "create_som_seurat", "cyCombine", "detect_batch_effect", "detect_batch_effect_express", "df2SCE", "df2Seurat", "evaluate_emd", "evaluate_mad", "fcs_sample", "get_markers", "impute_across_panels", "missing_package", "normalize", "normalize_sce", "normalize_seurat", "object2mat", "plot_density", "plot_dimred", "plot_dimred_full", "plot_save_four", "plot_save_two", "plot_umap_labels", "prepare_data", "process_fcs_files", "quantile_norm", "quantile_norm_seurat", "randomize_matrix", "rank_norm_seurat", "remove_keywords", "run_analysis", "run_pca", "salvage_problematic", "sce2FCS", "set_apply", "transform_asinh"],
+      "missing": []
+    },
+    "cytonorm": {
+      "resource": "cytonorm",
+      "checkout": ".upstream/CytoNorm",
+      "checkout_present": true,
+      "commit": "278f352d8edffd7a5d3e6b0b76c402d991a1e7a9",
+      "adapter_calls": ["CytoNorm.train", "CytoNorm.normalize", "QuantileNorm.train", "QuantileNorm.normalize", "getCytoNormQuantiles", "emdEvaluation", "madEvaluation"],
+      "mode": "source",
+      "version": "2.0.12",
+      "exports": ["CytoNorm.normalize", "CytoNorm.train", "PlotOverviewCV", "QuantileNorm.normalize", "QuantileNorm.train", "cytofTransform", "cytofTransform.reverse", "emdEvaluation", "getCytoNormQuantiles", "getDensities", "getQuantiles", "identityFunction", "madEvaluation", "named.list", "plotDensities", "plotFileScatters", "plotRidgelines", "plotSplines", "prepareFlowSOM", "testCV", "textPlot"],
+      "signatures": {
+        "CytoNorm.train": {
+          "signature": "CytoNorm.train(files = , labels = , channels = , transformList = , outputDir = \"./tmp\", FlowSOM.params = list(nCells = 1e+06, xdim = 15, ydim = 15, nClus = 10, scale = FALSE), normMethod.train = QuantileNorm.train, normParams = list(nQ = 99), seed = NULL, clean = TRUE, plot = FALSE, verbose = FALSE, recompute = FALSE, ...)",
+          "arguments": ["files", "labels", "channels", "transformList", "outputDir", "FlowSOM.params", "normMethod.train", "normParams", "seed", "clean", "plot", "verbose", "recompute", "..."],
+          "file": "CytoNorm.R"
+        },
+        "CytoNorm.normalize": {
+          "signature": "CytoNorm.normalize(model = , files = , labels = , transformList = , transformList.reverse = , outputDir = \".\", prefix = \"Norm_\", clean = TRUE, verbose = FALSE, normMethod.normalize = QuantileNorm.normalize, write = TRUE, ...)",
+          "arguments": ["model", "files", "labels", "transformList", "transformList.reverse", "outputDir", "prefix", "clean", "verbose", "normMethod.normalize", "write", "..."],
+          "file": "CytoNorm.R"
+        },
+        "getCytoNormQuantiles": {
+          "signature": "getCytoNormQuantiles(model = , type = \"ref\")",
+          "arguments": ["model", "type"],
+          "file": "CytoNorm.R"
+        },
+        "QuantileNorm.train": {
+          "signature": "QuantileNorm.train(files = , labels = , channels = , transformList = , nQ = 99, limit = NULL, quantileValues = NULL, goal = \"mean\", verbose = FALSE, plot = FALSE, plotTitle = \"Quantiles\", ...)",
+          "arguments": ["files", "labels", "channels", "transformList", "nQ", "limit", "quantileValues", "goal", "verbose", "plot", "plotTitle", "..."],
+          "file": "QuantileNorm.R"
+        },
+        "QuantileNorm.normalize": {
+          "signature": "QuantileNorm.normalize(model = , files = , labels = , transformList = , transformList.reverse = , outputDir = \".\", prefix = \"Norm_\", removeOriginal = FALSE, verbose = FALSE, ...)",
+          "arguments": ["model", "files", "labels", "transformList", "transformList.reverse", "outputDir", "prefix", "removeOriginal", "verbose", "..."],
+          "file": "QuantileNorm.R"
+        },
+        "emdEvaluation": {
+          "signature": "emdEvaluation(files = , channels = , transformList = NULL, prefix = \"^Norm_\", manual = NULL, binSize = 0.1, minRange = -100, maxRange = 100, return_all = FALSE, manualThreshold = 2)",
+          "arguments": ["files", "channels", "transformList", "prefix", "manual", "binSize", "minRange", "maxRange", "return_all", "manualThreshold"],
+          "file": "evaluation.R"
+        },
+        "madEvaluation": {
+          "signature": "madEvaluation(files = , channels = , transformList = NULL, prefix = \"^Norm_\", manual = NULL, return_all = FALSE)",
+          "arguments": ["files", "channels", "transformList", "prefix", "manual", "return_all"],
+          "file": "evaluation.R"
+        }
+      },
+      "all_top_level_functions": ["CytoNorm.normalize", "CytoNorm.train", "PlotOverviewCV", "QuantileNorm.normalize", "QuantileNorm.train", "cytofTransform.reverse", "emdEvaluation", "getCytoNormQuantiles", "getDensities", "getQuantiles", "identityFunction", "madEvaluation", "named.list", "plotDensities", "plotFileScatters", "plotRidgelines", "plotSplines", "prepareFlowSOM", "testCV", "textPlot"],
+      "missing": []
+    },
+    "cytobatchflagr": {
+      "resource": "cytobatchflagr",
+      "checkout": ".upstream/CytoBatchFlagR",
+      "checkout_present": true,
+      "commit": "ad21e3b104126783044351eb11fa24622a0da2f7",
+      "adapter_calls": ["neg_mfi_df_all", "pos_mfi_df_all", "percent_pos_df_all", "iqr_dataframe", "iqr_metric_function", "detect_outlier"],
+      "mode": "source",
+      "version": null,
+      "exports": [],
+      "signatures": {
+        "neg_mfi_df_all": {
+          "signature": "neg_mfi_df_all(df = , markers = , cutf = , sample_col_name = , batch_col_name = , min_cells = TRUE)",
+          "arguments": ["df", "markers", "cutf", "sample_col_name", "batch_col_name", "min_cells"],
+          "file": "CytoBatchFlagR_functions.R"
+        },
+        "pos_mfi_df_all": {
+          "signature": "pos_mfi_df_all(df = , markers = , cutf = , sample_col_name = , batch_col_name = , min_cells = TRUE)",
+          "arguments": ["df", "markers", "cutf", "sample_col_name", "batch_col_name", "min_cells"],
+          "file": "CytoBatchFlagR_functions.R"
+        },
+        "percent_pos_df_all": {
+          "signature": "percent_pos_df_all(df = , markers = , cutf = , sample_col_name = , batch_col_name = )",
+          "arguments": ["df", "markers", "cutf", "sample_col_name", "batch_col_name"],
+          "file": "CytoBatchFlagR_functions.R"
+        },
+        "detect_outlier": {
+          "signature": "detect_outlier(x = )",
+          "arguments": "x",
+          "file": "CytoBatchFlagR_functions.R"
+        },
+        "iqr_metric_function": {
+          "signature": "iqr_metric_function(df = , markers = , sample_col_name = , batch_col_name = )",
+          "arguments": ["df", "markers", "sample_col_name", "batch_col_name"],
+          "file": "CytoBatchFlagR_functions.R"
+        },
+        "iqr_dataframe": {
+          "signature": "iqr_dataframe(neg_df = , pos_df = , percent_pos_df = , markers = , sample_col_name = , batch_col_name = , output_dir = )",
+          "arguments": ["neg_df", "pos_df", "percent_pos_df", "markers", "sample_col_name", "batch_col_name", "output_dir"],
+          "file": "CytoBatchFlagR_functions.R"
+        }
+      },
+      "all_top_level_functions": ["BioC_package_installer", "EMD_boxplot", "EMD_calc", "EMD_hmap", "EMD_list", "auto_axis_size", "auto_threshold_func", "automated_threshold_DF", "biax_grid_plot", "build_logicle_transformer", "checkBiocManager_install", "check_unimodality", "clusterSizes_plot", "clustering_heatmap", "create_arcsinh_transformed_dataframe", "create_logicle_transformed_dataframe", "create_transformed_dataframe_function", "density_plots_w_thresholds", "density_with_trim", "detect_outlier", "dist_median_emd", "draw_biaxial_dotplots", "editMarkerTable", "emd_med_vals", "generate_EMD_boxplots", "generate_EMD_heatmaps", "generate_IQR_metric_boxplots", "generate_MDS_plot", "generate_UMAP", "generate_cluster_UMAP", "generate_fixed_IQR_metric_boxplots", "generate_number_of_cells_plot", "generate_ranked_flagged_hmap", "generate_ranked_flagged_hmap_all", "getFlowSOM_clusters", "get_density", "image_height", "image_width", "iqr_boxplot", "iqr_boxplot_fixed_coords", "iqr_dataframe", "iqr_metric_function", "median_vals", "neg_mfi_df_all", "package_installer", "percent_pos_df_all", "pos_mfi_df_all", "proportion_of_batches_across_control_samples", "proportion_of_batches_across_control_samples_table", "proportion_of_batches_per_cluster", "proportion_of_batches_per_cluster_table", "ranked_flagged_hmap", "ranked_flagged_hmap_all", "referenceMarkerSelection", "reshape_df", "sample_cells", "selectMarkerList", "subsample_batch", "subsample_df", "subsample_for_biax_plot", "subsample_for_density_plots_refs", "subsetting", "unimodal_threshold", "write_density_plot_per_marker"],
+      "missing": []
+    }
+  }
+}

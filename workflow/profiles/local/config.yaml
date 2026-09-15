@@ -1,0 +1,14 @@
+# Local execution profile.
+#
+# Tested: this profile is what the integration suite runs.
+cores: 4
+keep-going: false
+rerun-incomplete: true
+printshellcmds: true
+# Numerical libraries oversubscribe by default; one rule already gets several threads,
+# so cap the per-process thread pools rather than multiplying them together.
+set-resources:
+  correct:
+    mem_mb: 16000
+  metrics:
+    mem_mb: 12000

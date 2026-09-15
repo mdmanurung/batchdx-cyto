@@ -1,0 +1,28 @@
+# SLURM execution profile.
+#
+# STATUS: UNTESTED. This profile has never been executed on a cluster in this build.
+# It is provided as a starting point and is labelled untested deliberately; do not cite
+# it as evidence of cluster support. A dry run is not execution validation.
+#
+# Requires the SLURM executor plugin:
+#     pip install snakemake-executor-plugin-slurm
+executor: slurm
+jobs: 32
+keep-going: true
+rerun-incomplete: true
+latency-wait: 60
+default-resources:
+  slurm_partition: "REPLACE_ME"
+  slurm_account: "REPLACE_ME"
+  mem_mb: 8000
+  runtime: 120
+set-resources:
+  correct:
+    mem_mb: 64000
+    runtime: 480
+    cpus_per_task: 8
+  metrics:
+    mem_mb: 32000
+    runtime: 240
+    cpus_per_task: 4
+# Do not run large analyses on a login node, and do not assume administrator rights.

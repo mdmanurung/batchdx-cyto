@@ -1,0 +1,34 @@
+== batchdx-cyto upstream audit (R) ==
+R version 4.3.3 (2024-02-29) 
+
+-- cycombine [source] version=0.3.0 commit=fcd42dbbe92b
+   exports: %>%, batch_correct, compile_fcs, compute_cilisi, compute_emd, compute_lisi, compute_mad, convert_flowset, correct_data, create_som, cyCombine, detect_batch_effect, detect_batch_effect_express, df2SCE, df2Seurat, evaluate_emd, evaluate_mad, get_markers, impute_across_panels, non_markers, normalize, plot_density, plot_dimred, plot_dimred_full, plot_save_four, plot_save_two, plot_umap_labels, prepare_data, process_fcs_files, run_analysis, salvage_problematic, sce2FCS, transform_asinh 
+   normalize(df = , markers = NULL, norm_method = c("scale", "rank", "CLR_seu", "CLR_med", "CLR", "qnorm", "none"), ties.method = c("average", "first", "last", "random", "max", "min"), mc.cores = 1, pb = TRUE, ...)
+   create_som(df = , markers = NULL, seed = 473, cluster_method = c("kohonen", "flowsom", "fusesom", "leiden", "kmeans"), distf = c("euclidean", "sumofsquares", "cosine", "manhattan", "chebyshev"), rlen = 10, mode = c("online", "batch", "pbatch"), xdim = 8, ydim = 8, nClus = NULL, return_model = FALSE, ...)
+   correct_data(df = , label = NULL, markers = NULL, method = c("ComBat", "ComBat_seq"), covar = NULL, anchor = NULL, ref.batch = NULL, parametric = TRUE, mc.cores = 1, pb = FALSE, ...)
+   detect_batch_effect_express(df = , out_dir = NULL, binSize = 0.1, markers = NULL, batch_col = "batch", downsample = NULL, seed = 472)
+   detect_batch_effect(df = , out_dir = , downsample = NULL, norm_method = "scale", xdim = 8, ydim = 8, seed = 382, markers = NULL, binSize = 0.1, batch_col = "batch", label_col = "label", name = "raw data")
+   compute_emd(df = , binSize = 0.1, cell_col = "label", batch_col = "batch", markers = NULL, mc.cores = 1)
+   evaluate_emd(uncorrected = , corrected = , binSize = 0.1, cell_col = "label", batch_col = "batch", markers = NULL, plots = TRUE, filter_limit = 2, mc.cores = 1)
+   evaluate_mad(uncorrected = , corrected = , cell_col = "label", batch_col = "batch", markers = NULL, filter_limit = NULL)
+   get_markers(x = )
+
+-- cytonorm [source] version=2.0.12 commit=278f352d8edf
+   exports: CytoNorm.normalize, CytoNorm.train, PlotOverviewCV, QuantileNorm.normalize, QuantileNorm.train, cytofTransform, cytofTransform.reverse, emdEvaluation, getCytoNormQuantiles, getDensities, getQuantiles, identityFunction, madEvaluation, named.list, plotDensities, plotFileScatters, plotRidgelines, plotSplines, prepareFlowSOM, testCV, textPlot 
+   CytoNorm.train(files = , labels = , channels = , transformList = , outputDir = "./tmp", FlowSOM.params = list(nCells = 1e+06, xdim = 15, ydim = 15, nClus = 10, scale = FALSE), normMethod.train = QuantileNorm.train, normParams = list(nQ = 99), seed = NULL, clean = TRUE, plot = FALSE, verbose = FALSE, recompute = FALSE, ...)
+   CytoNorm.normalize(model = , files = , labels = , transformList = , transformList.reverse = , outputDir = ".", prefix = "Norm_", clean = TRUE, verbose = FALSE, normMethod.normalize = QuantileNorm.normalize, write = TRUE, ...)
+   getCytoNormQuantiles(model = , type = "ref")
+   QuantileNorm.train(files = , labels = , channels = , transformList = , nQ = 99, limit = NULL, quantileValues = NULL, goal = "mean", verbose = FALSE, plot = FALSE, plotTitle = "Quantiles", ...)
+   QuantileNorm.normalize(model = , files = , labels = , transformList = , transformList.reverse = , outputDir = ".", prefix = "Norm_", removeOriginal = FALSE, verbose = FALSE, ...)
+   emdEvaluation(files = , channels = , transformList = NULL, prefix = "^Norm_", manual = NULL, binSize = 0.1, minRange = -100, maxRange = 100, return_all = FALSE, manualThreshold = 2)
+   madEvaluation(files = , channels = , transformList = NULL, prefix = "^Norm_", manual = NULL, return_all = FALSE)
+
+-- cytobatchflagr [source] version=unknown commit=ad21e3b10412
+   neg_mfi_df_all(df = , markers = , cutf = , sample_col_name = , batch_col_name = , min_cells = TRUE)
+   pos_mfi_df_all(df = , markers = , cutf = , sample_col_name = , batch_col_name = , min_cells = TRUE)
+   percent_pos_df_all(df = , markers = , cutf = , sample_col_name = , batch_col_name = )
+   detect_outlier(x = )
+   iqr_metric_function(df = , markers = , sample_col_name = , batch_col_name = )
+   iqr_dataframe(neg_df = , pos_df = , percent_pos_df = , markers = , sample_col_name = , batch_col_name = , output_dir = )
+
+audit written to docs/audit/audit_r.json 
