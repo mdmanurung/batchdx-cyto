@@ -10,7 +10,9 @@ on:
   pull_request:
 
 jobs:
-  test:
+  # Named distinctly from the cookiecutter template's job, which is also called
+  # "test"; two identically named checks on one PR are unreadable.
+  batchdx-cyto:
     runs-on: ubuntu-latest
     timeout-minutes: 45
 

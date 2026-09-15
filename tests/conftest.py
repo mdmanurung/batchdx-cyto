@@ -1,7 +1,19 @@
-"""Shared fixtures.
+"""Shared fixtures for the batchdx-cyto suites.
 
 Everything here is small, deterministic and synthetic: the unit and scientific suites
 never need a downloaded dataset.
+
+One structural wrinkle to be aware of. This repository also carries an unrelated
+cookiecutter template whose own tests live at ``tests/test_template_bake.py`` and
+``tests/test_post_gen_hook.py`` and run under pixi (``pixi run test``), in an
+environment that has neither batchdx-cyto nor its dependencies. pytest loads every
+``conftest.py`` between the rootdir and a collected file, so those two files load *this*
+module whether they want it or not. The validation-fixture backends are therefore
+registered only when the package is actually importable: when it is not, the environment
+is not one any test below can run in, and the template's two files use nothing from here.
+
+This guard cannot hide a broken install in the batchdx-cyto CI job, because every test
+below imports ``batchdx.cyto`` itself and would fail loudly on its own.
 """
 
 from __future__ import annotations
@@ -15,9 +27,16 @@ TESTS_ROOT = Path(__file__).resolve().parent
 REPO_ROOT = TESTS_ROOT.parent
 sys.path.insert(0, str(TESTS_ROOT))
 
-from fixtures.backends import register_fixture_backends  # noqa: E402
+try:
+    import batchdx.cyto  # noqa: F401
+except ImportError:  # the template's pixi environment; see the module docstring
+    BATCHDX_AVAILABLE = False
+else:
+    BATCHDX_AVAILABLE = True
 
-register_fixture_backends()
+    from fixtures.backends import register_fixture_backends
+
+    register_fixture_backends()
 
 
 @pytest.fixture(scope="session")
