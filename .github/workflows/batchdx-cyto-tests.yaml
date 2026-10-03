@@ -37,9 +37,8 @@ jobs:
         # one CI has to use too. Installing micromamba here rather than switching to
         # apt/CRAN keeps one authority for the R dependency set: the script.
         #
-        # NOT EXECUTED: this workflow has never been run. No GitHub runner was available,
-        # so "the R layer runs in CI" is a claim read from YAML until someone pushes a
-        # branch. Everything below is written to be checkable by that first run.
+        # The first draft-PR run reached R setup; its GitHub API package install
+        # failed with HTTP 401. Fetch pinned checkouts first and install locally.
         run: |
           set -euo pipefail
           curl -sSL https://micro.mamba.pm/api/micromamba/linux-64/latest \
@@ -47,6 +46,9 @@ jobs:
           "$RUNNER_TEMP/bin/micromamba" --version
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
           echo "MAMBA_BIN=$RUNNER_TEMP/bin/micromamba" >> "$GITHUB_ENV"
+
+      - name: Fetch pinned upstream checkouts
+        run: bash scripts/fetch_upstream.sh .upstream
 
       - name: Build the R environment
         # The script exits non-zero if a required R package is absent, so a broken build
@@ -77,9 +79,6 @@ jobs:
       - name: R exchange suite
         run: |
           BATCHDX_PYTHON="$(command -v python)" Rscript --vanilla tests/run_r_tests.R
-
-      - name: Fetch pinned upstream checkouts
-        run: bash scripts/fetch_upstream.sh .upstream
 
       - name: Lint
         run: ruff check src tests scripts

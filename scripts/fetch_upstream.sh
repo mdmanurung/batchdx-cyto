@@ -2,8 +2,8 @@
 # Clone every upstream resource at the commit pinned in config/upstream_lock.yaml.
 #
 # The checkouts are what the Stage 0 audit reads and what the CytoBatchFlagR adapter
-# source()s.  Nothing here installs an R package: cyCombine and CytoNorm pull
-# dependencies from CRAN and Bioconductor and need the container image in containers/.
+# source()s. This script only fetches sources; scripts/setup_r_env.sh installs
+# cyCombine and CytoNorm from these pinned checkouts into the isolated R environment.
 
 set -euo pipefail
 

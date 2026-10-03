@@ -27,15 +27,15 @@
 #   * Posit Package Manager has no prebuilt binary for centos8/R 4.4.
 #
 # A conda environment resolves the whole closure to prebuilt packages built
-# against one consistent toolchain, so none of that applies.  cyCombine itself is
-# GitHub-only and is installed from its pinned commit into that environment.
+# against one consistent toolchain, so none of that applies. cyCombine and CytoNorm
+# are installed from pinned local checkouts, without GitHub API credentials.
 #
 # Usage:
 #   scripts/setup_r_env.sh            # build ./renv (the default prefix)
 #   scripts/setup_r_env.sh <prefix>   # build elsewhere
 #
-# Re-running is safe: an existing environment at the prefix is reused and cyCombine
-# is only installed when absent.
+# Re-running is safe: an existing environment at the prefix is reused and the
+# source packages are only installed when absent.
 
 set -euo pipefail
 
@@ -167,30 +167,35 @@ if [[ -z "$CYTONORM_COMMIT" ]]; then
   exit 2
 fi
 
-echo "== installing cyCombine from GitHub at $CYCOMBINE_COMMIT"
-"$MAMBA_BIN" run -p "$PREFIX" Rscript --vanilla -e "
-  if (!requireNamespace('cyCombine', quietly = TRUE)) {
-    remotes::install_github('biosurf/cyCombine', ref = '$CYCOMBINE_COMMIT',
-                            upgrade = 'never', dependencies = FALSE)
-  } else {
-    message('cyCombine already present, skipping install')
-  }
-"
+verify_checkout() {
+  local name="$1" expected="$2" dir="$REPO_ROOT/.upstream/$1" observed
+  if [[ ! -d "$dir/.git" ]]; then
+    echo "missing pinned checkout $dir; run bash scripts/fetch_upstream.sh .upstream" >&2
+    exit 2
+  fi
+  observed="$(git -C "$dir" rev-parse HEAD)"
+  if [[ "$observed" != "$expected" ]]; then
+    echo "$name checkout is $observed; expected $expected; rerun scripts/fetch_upstream.sh" >&2
+    exit 2
+  fi
+}
 
-echo "== installing CytoNorm from GitHub at $CYTONORM_COMMIT"
+verify_checkout cyCombine "$CYCOMBINE_COMMIT"
+verify_checkout CytoNorm "$CYTONORM_COMMIT"
+
+echo "== installing cyCombine from pinned local checkout at $CYCOMBINE_COMMIT"
+if ! "$MAMBA_BIN" run -p "$PREFIX" Rscript --vanilla -e 'quit(status=if (requireNamespace("cyCombine", quietly=TRUE)) 0 else 1)'; then
+  "$MAMBA_BIN" run -p "$PREFIX" R CMD INSTALL --no-multiarch "$REPO_ROOT/.upstream/cyCombine"
+fi
+
+echo "== installing CytoNorm from pinned local checkout at $CYTONORM_COMMIT"
 # CytoNorm is GPL (>= 2).  It is installed and called, never copied into this package;
 # see THIRD_PARTY_NOTICES.md and docs/decisions/0003-cytobatchflagr-integration.md for
-# the arm's-length rule that applies to it.  It is not on CRAN and not on Bioconductor
-# (`bioconductor-cytonorm` does not exist), so a GitHub install at the pinned commit is
-# the only way to obtain it.
-"$MAMBA_BIN" run -p "$PREFIX" Rscript --vanilla -e "
-  if (!requireNamespace('CytoNorm', quietly = TRUE)) {
-    remotes::install_github('saeyslab/CytoNorm', ref = '$CYTONORM_COMMIT',
-                            upgrade = 'never', dependencies = FALSE)
-  } else {
-    message('CytoNorm already present, skipping install')
-  }
-"
+# the arm's-length rule that applies to it. It is installed from the checkout,
+# never copied into this package.
+if ! "$MAMBA_BIN" run -p "$PREFIX" Rscript --vanilla -e 'quit(status=if (requireNamespace("CytoNorm", quietly=TRUE)) 0 else 1)'; then
+  "$MAMBA_BIN" run -p "$PREFIX" R CMD INSTALL --no-multiarch "$REPO_ROOT/.upstream/CytoNorm"
+fi
 
 echo "== verification"
 # The verification below resolves the pinned CytoBatchFlagR checkout relative to the
