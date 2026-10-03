@@ -62,7 +62,7 @@
     <li><a href="#design">Design &amp; reference audit</a></li>
     <li><a href="#processing">Preprocessing &amp; QC</a></li>
     <li><a href="#explorer">Marker &amp; batch explorer</a></li>
-    <li><a href="#diagnostics">Drift &amp; composition</a></li>
+    <li><a href="#diagnostics">Diagnostics: drift, composition, native</a></li>
     <li><a href="#populations">Population diagnostics</a></li>
     <li><a href="#comparison">Method comparison</a></li>
     <li><a href="#preservation">Biological preservation</a></li>
@@ -117,6 +117,24 @@
       comparable evidence.</p>
   {% endif %}
   {% for w in decision.warnings %}<p class="sub">⚠ {{ w }}</p>{% endfor %}
+  {% if decision.overrides %}
+  <h3>Exploratory overrides</h3>
+  <div class="panel">
+    <span class="pill warn">design gate bypassed</span>
+    {{ decision.overrides|length }} candidate(s) were run on a design the eligibility
+    manifest marked ineligible, because <code>design.allow_exploratory_override</code>
+    was set. Their output is exploratory: nothing below was produced under this setting
+    supports a recommendation, and the numbers must be read as "what this method does
+    here", not as "this method is applicable here".
+  </div>
+  <table>
+    <tr><th>Candidate</th><th>Backend</th><th>Overrode</th><th>What it means</th></tr>
+    {% for o in decision.overrides %}
+    <tr><td><code>{{ o.candidate_id or '—' }}</code></td><td>{{ o.backend or '—' }}</td>
+        <td>{{ o.overrode or '—' }}</td><td>{{ o.effect or '—' }}</td></tr>
+    {% endfor %}
+  </table>
+  {% endif %}
 {% else %}
   <div class="panel">No decision layer ran for this report.
     {% if diagnosis_only %}This is a diagnosis-only report produced before any correction
@@ -189,31 +207,113 @@
 </table></div>
 
 <h2 id="explorer">Marker and batch explorer</h2>
+<div class="panel">
+  Showing {{ explorer_markers|length }} of {{ explorer_markers_total }} evaluation
+  marker(s), in sorted order rather than the row order of
+  <code>markers.tsv</code>: <code>{{ explorer_markers|join(', ') or 'none' }}</code>.
+  {% if explorer_markers_omitted %}
+  <br>Not shown here ({{ explorer_markers_omitted|length }}): every omitted marker is
+  still scored, and the full record set is in the metric table and its CSV.
+  <details><summary>List the omitted markers</summary>
+    <code>{{ explorer_markers_omitted|join(', ') }}</code>
+  </details>
+  {% else %}
+  <br>No evaluation marker is omitted.
+  {% endif %}
+</div>
 <div class="grid">
   {% for f in figures %}
   <figure>{{ f.svg|safe }}<figcaption>{{ f.title }} — uncorrected baseline</figcaption></figure>
   {% endfor %}
 </div>
 
-<h2 id="diagnostics">Drift and composition diagnostics</h2>
+<h2 id="diagnostics">Diagnostics: drift, composition and the native detectors</h2>
+<p class="sub">Every detector that produced a result file is rendered here, whatever its
+  namespace and whatever its status. {{ detectors|length }} detector result(s) were read;
+  a detector that is absent from this list produced no artifact and is reported as
+  skipped in <a href="#failures">Failures and limitations</a>.</p>
+<p class="sub">A detector's own free-form payload — the parameters, requirements, table
+  names and warnings it recorded — is printed with the same redaction as the rest of the
+  page: every run identifier in it becomes that identifier's pseudonym, a value that is
+  a path becomes a location under <code>&lt;run&gt;</code>, and a list longer than
+  {{ parameter_list_limit }} is replaced by its length and its first entries. A path
+  inside a captured log line is <em>not</em> rewritten, because rewriting a log would
+  falsify it; read such a warning as the machine's own text.</p>
 {% for d in detectors %}
-  {% if d.detector in ('acquisition_drift', 'composition') %}
-  <h3>{{ d.detector }} <span class="pill {{ 'ok' if d.status == 'ok' else 'warn' }}">{{ d.status }}</span></h3>
+  <h3 id="detector-{{ d.detector }}">{{ d.detector }}
+    <span class="pill {{ 'ok' if d.status == 'ok' else ('warn' if d.status in ('ineligible',) else 'bad') }}">{{ d.status }}</span>
+    <span class="pill">{{ d.namespace }} namespace</span>
+    {% if d.detector_version != 'not declared' %}
+    <span class="pill">version {{ d.detector_version }}</span>
+    {% endif %}
+  </h3>
   {% if d.reason %}<p class="sub">{{ d.reason }}</p>{% endif %}
   {% for w in d.warnings %}<p class="sub">⚠ {{ w }}</p>{% endfor %}
-  {% set flagged = d.assessments | selectattr('flag') | list %}
-  {% if flagged %}
+  <div class="panel">
+    <div><strong>{{ d.n_assessments }}</strong> assessment(s):
+      <strong>{{ d.n_flagged }}</strong> flagged, <strong>{{ d.n_unflagged }}</strong> not
+      flagged. An assessment with no flag is a measurement the detector reported without a
+      threshold; it is not a silent absence and it is shown in its own table below.</div>
+    {% if d.eligibility %}
+    <div>Eligibility: <span class="pill {{ 'ok' if d.eligibility.eligible else 'bad' }}">{{ 'eligible' if d.eligibility.eligible else 'not eligible' }}</span>
+      <code>{{ d.eligibility.reason_code }}</code> — {{ d.eligibility.reason }}</div>
+    {% else %}<div>Eligibility: not recorded by this detector.</div>{% endif %}
+    {% if d.requirements %}
+    <div>Requirements it checked:
+      {% for k, v in d.requirements.items() %}<code>{{ k }}={% if v is sameas true %}met{% elif v is sameas false %}not met{% else %}{{ v }}{% endif %}</code>{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% endif %}
+    {% if d.parameters %}
+    <div>Parameters as run:
+      <code>{{ d.parameters|tojson(indent=2) }}</code></div>
+    {% endif %}
+    {% if d.software %}
+    <div>Software:
+      {% for s in d.software %}<code>{{ s.name }}{% if s.version %} {{ s.version }}{% endif %} ({{ s.source }}{% if s.commit %} @{{ s.commit }}{% endif %}{% if not s.available %}, unavailable{% endif %})</code>{% if not loop.last %}, {% endif %}{% endfor %}
+    </div>
+    {% endif %}
+    {% if d.tables %}
+    <div>Tables written:
+      {% for k, v in d.tables.items() %}<code>{{ k }} → {{ v }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% endif %}
+    {% if d.plots %}
+    <div>Plots written:
+      {% for k, v in d.plots.items() %}<code>{{ k }} → {{ v }}</code>{% if not loop.last %}, {% endif %}{% endfor %}</div>
+    {% endif %}
+  </div>
+  {% if d.flagged %}
+  <h3>Flagged assessments ({{ d.n_flagged }})</h3>
+  <p class="sub">{{ d.flagged_note }}</p>
   <div class="scroll"><table>
-    <tr><th>Sample</th><th>Marker</th><th>Population</th><th>Statistic</th><th>Value</th>
-        <th>Threshold</th><th>Reason</th></tr>
-    {% for a in flagged[:250] %}
-    <tr><td>{{ a.sample_id or '' }}</td><td>{{ a.marker or '' }}</td>
-        <td>{{ a.population or '' }}</td><td>{{ a.statistic }}</td>
-        <td>{{ '%.4g'|format(a.value) if a.value is not none else '—' }}</td>
-        <td>{{ a.threshold if a.threshold is not none else '—' }}</td><td>{{ a.reason }}</td></tr>
+    <tr><th>Sample</th><th>Batch</th><th>Marker</th><th>Population</th><th>Statistic</th>
+        <th>Value</th><th>Threshold</th><th>Status</th><th>Evidence class</th><th>Reason</th></tr>
+    {% for a in d.flagged %}
+    <tr><td>{{ a.sample_id or '—' }}</td><td>{{ a.batch or '—' }}</td>
+        <td>{{ a.marker or '—' }}</td>
+        <td>{{ a.population or '—' }}</td><td>{{ a.statistic }}</td>
+        <td>{{ a.value if a.value != '' else '—' }}</td>
+        <td>{{ a.threshold if a.threshold != '' else '—' }}</td>
+        <td>{{ a.status }}</td><td>{{ a.evidence_class }}</td><td>{{ a.reason }}</td></tr>
     {% endfor %}
   </table></div>
-  {% else %}<p class="sub">No assessment crossed its reported threshold.</p>{% endif %}
+  {% else %}
+  <h3>Flagged assessments (0)</h3>
+  <p class="sub">No assessment crossed its reported threshold.</p>
+  {% endif %}
+  {% if d.unflagged %}
+  <h3>Assessments reported without a flag ({{ d.n_unflagged }})</h3>
+  <p class="sub">{{ d.unflagged_note }} These carry no threshold, so "not flagged" says
+    only that no threshold was crossed, not that nothing was found.</p>
+  <div class="scroll"><table>
+    <tr><th>Sample</th><th>Batch</th><th>Marker</th><th>Population</th><th>Statistic</th>
+        <th>Value</th><th>Status</th><th>Evidence class</th><th>Reason</th></tr>
+    {% for a in d.unflagged %}
+    <tr><td>{{ a.sample_id or '—' }}</td><td>{{ a.batch or '—' }}</td>
+        <td>{{ a.marker or '—' }}</td>
+        <td>{{ a.population or '—' }}</td><td>{{ a.statistic }}</td>
+        <td>{{ a.value if a.value != '' else '—' }}</td>
+        <td>{{ a.status }}</td><td>{{ a.evidence_class }}</td><td>{{ a.reason }}</td></tr>
+    {% endfor %}
+  </table></div>
   {% endif %}
 {% endfor %}
 {% if composition_figure %}
@@ -251,19 +351,29 @@
 {% else %}<p class="sub">No frozen partition is available.</p>{% endif %}
 
 <h2 id="comparison">Method comparison</h2>
-{% if corrections %}
+{% if correction_rows %}
 <table>
   <tr><th>Candidate</th><th>Backend</th><th>Status</th><th>Markers changed</th>
       <th>Samples changed</th><th>Output scale</th><th>Reason</th></tr>
-  {% for cid, c in corrections.items() %}
-  <tr><td><code>{{ cid }}</code></td><td>{{ c.candidate.backend }}</td>
-      <td><span class="pill {{ 'ok' if c.status.value == 'success' else 'bad' }}">{{ c.status.value }}</span></td>
-      <td>{{ c.markers_changed|length }}</td><td>{{ c.samples_changed|length }}</td>
-      <td>{{ c.output_scale or '—' }}</td><td>{{ c.reason or '' }}</td></tr>
+  {% for c in correction_rows %}
+  <tr><td><code>{{ c.candidate_id }}</code></td><td>{{ c.backend }}</td>
+      <td><span class="pill {{ 'ok' if c.status == 'success' else 'bad' }}">{{ c.status }}</span></td>
+      <td>{{ c.n_markers_changed }}</td><td>{{ c.n_samples_changed }}</td>
+      <td>{{ c.output_scale or '—' }}</td><td>{{ c.reason }}</td></tr>
   {% endfor %}
 </table>
 {% endif %}
 {% if comparison_figures %}
+<div class="panel">
+  Showing {{ comparison_markers|length }} of {{ explorer_markers_total }} evaluation
+  marker(s) in the before/after panels, in sorted order:
+  <code>{{ comparison_markers|join(', ') or 'none' }}</code>.
+  {% if comparison_markers_omitted %}
+  <br>Not shown ({{ comparison_markers_omitted|length }}):
+  <code>{{ comparison_markers_omitted|join(', ') }}</code>. Every omitted marker is still
+  scored; the metric table and its CSV carry all of them.
+  {% endif %}
+</div>
 <div class="grid">
   {% for f in comparison_figures %}
   <figure>{{ f.svg|safe }}
@@ -275,6 +385,13 @@
 <h3>Metric records</h3>
 <p><input type="search" id="metricFilter" placeholder="filter metric records…">
    <a class="download" href="{{ metric_csv }}" download="metric_records.csv">download metric records (CSV)</a></p>
+<p class="sub">The <code>uncertainty_low</code>, <code>uncertainty_high</code> and
+  <code>uncertainty_kind</code> columns are the interval that belongs to
+  <code>value</code> and the method that produced it — a donor-block bootstrap percentile
+  interval and the central interval of a restricted-permutation null are both
+  <code>[low, high]</code> and mean different things, so the kind is reported beside them.
+  An empty interval cell means the record reported no interval: it does not mean the
+  interval had zero width, and it is not a zero score.</p>
 <div class="scroll wide"><table id="metricTable">
   <tr>{% for col in metric_columns %}<th>{{ col }}</th>{% endfor %}</tr>
   {% for row in metric_rows %}
@@ -301,15 +418,25 @@
   The joint-structure metric below is the only preservation-adjacent evidence available,
   and it tests within-population co-expression, not a biological contrast.
 </div>
-{% set joint = metric_rows | selectattr('metric', 'equalto', 'joint_structure_distance') | list %}
+{% set joint = joint_rows %}
 {% if joint %}
+<p class="sub">{{ joint_note }}</p>
 <div class="scroll"><table>
-  <tr><th>Candidate</th><th>Population</th><th>Comparison</th><th>Value</th><th>Status</th></tr>
-  {% for r in joint[:200] %}
+  <tr><th>Candidate</th><th>Population</th><th>Comparison</th><th>Value</th>
+      <th>Interval</th><th>Interval kind</th><th>Status</th></tr>
+  {% for r in joint %}
   <tr><td>{{ r.candidate_id }}</td><td>{{ r.population }}</td><td>{{ r.comparison }}</td>
-      <td>{{ r.value }}</td><td>{{ r.status }}</td></tr>
+      <td>{{ r.value }}</td>
+      <td>{{ '[' ~ r.uncertainty_low ~ ', ' ~ r.uncertainty_high ~ ']'
+            if r.uncertainty_low != '' and r.uncertainty_high != '' else '—' }}</td>
+      <td>{{ r.uncertainty_kind or '—' }}</td>
+      <td>{{ r.status }}</td></tr>
   {% endfor %}
 </table></div>
+{% else %}
+{% if not diagnosis_only %}
+<p class="sub">No joint-structure record was produced by this run.</p>
+{% endif %}
 {% endif %}
 
 <h2 id="failures">Failures and limitations</h2>

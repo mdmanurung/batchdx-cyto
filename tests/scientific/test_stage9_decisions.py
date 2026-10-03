@@ -302,3 +302,79 @@ def test_overrides_are_recorded_beside_the_original_assessment(frozen) -> None:
     decision = _decide(frozen, {}, {"uncorrected": identity_metrics}, overrides=[override])
     assert decision.overrides == [override]
     assert decision.assessments, "the original assessment is still displayed"
+
+
+def test_a_contrast_only_the_training_split_can_estimate_blocks_approval(frozen, tmp_path):
+    """The held-out rule is enforced by the decision layer, not merely available.
+
+    `split_for_comparison` was implemented and unit-tested in isolation, which left the
+    guarantee unenforced: a candidate fitted on the training split could still be
+    recommended on a contrast that only the training split can supply.  This drives
+    `assess_candidates` with a manifest whose validate split holds one batch only, and
+    asserts the calibrated policy stops at review and says why.
+    """
+
+    config, dataset, design, sampling = frozen
+    identity_metrics = compute_common_metrics(
+        dataset, dataset.expression(), sampling, design,
+        run_id="t", candidate_id="uncorrected",
+    )
+    identity_correction, _ = _score(frozen, "none", "uncorrected", tmp_path)
+    correction, metrics = _score(frozen, "fixture_offset_removal", "offset", tmp_path)
+
+    batches = sorted({rec.batch for rec in dataset.samples.values() if rec.batch})
+    assert len(batches) >= 2, "the paired-reference fixture must have two batches"
+    all_samples = sorted(dataset.samples)
+
+    # Every sample of every batch except the last goes to train, so no split but train
+    # can compare those two batches.  The last batch's samples go to validate, which
+    # leaves validate holding exactly one batch and therefore no batch contrast at all.
+    leaky = sampling.model_copy(update={"splits": {
+        "split_unit": ["sample_id"],
+        "train": [s for s in all_samples if dataset.samples[s].batch != batches[-1]],
+        "tune": [],
+        "validate": [s for s in all_samples if dataset.samples[s].batch == batches[-1]],
+    }})
+
+    POLICIES["calibrated_for_test"] = Policy(
+        name="calibrated_for_test",
+        threshold_origins={
+            k: "calibrated against the synthetic paired-reference fixture"
+            for k in Policy(name="x").threshold_origins
+        },
+    )
+    try:
+        # First: with the real (well-stratified) manifest this same policy does approve,
+        # so the refusal below is caused by the split and not by the policy.
+        approved = _decide(
+            frozen,
+            {"uncorrected": identity_correction, "offset": correction},
+            {"uncorrected": identity_metrics, "offset": metrics},
+            policy="calibrated_for_test", samples=dict(dataset.samples),
+        )
+        assert _states(approved)["offset"] is DecisionState.RECOMMENDED_UNDER_POLICY
+
+        # Then: with validate holding one batch, approval must be withheld.
+        reductions = compute_reductions(
+            {"uncorrected": identity_metrics, "offset": metrics}, leaky,
+            run_id="t", identity_candidate_id="uncorrected",
+        )
+        blocked = assess_candidates(
+            design, leaky,
+            {"uncorrected": identity_correction, "offset": correction},
+            {"uncorrected": identity_metrics, "offset": metrics}, reductions,
+            run_id="t", policy_name="calibrated_for_test",
+            identity_candidate_id="uncorrected", samples=dict(dataset.samples),
+        )
+    finally:
+        POLICIES.pop("calibrated_for_test")
+
+    assessment = next(a for a in blocked.assessments if a.candidate_id == "offset")
+    assert assessment.state is DecisionState.ELIGIBLE_FOR_REVIEW, assessment.state
+    assert assessment.state is not DecisionState.RECOMMENDED_UNDER_POLICY
+    assert blocked.recommended_candidate_id is None
+    assert "not estimable on data held out" in assessment.reason
+    assert "estimable in" in assessment.reason, (
+        "the reason must name where the contrast could be estimated, so a reader can see "
+        "it was train-only rather than unestimable anywhere"
+    )

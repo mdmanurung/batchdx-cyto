@@ -16,6 +16,8 @@ Invoke directly, without the command-line wrapper, with:
 
 from pathlib import Path
 
+from snakemake.exceptions import WorkflowError
+
 from batchdx.cyto.config import load_config
 from batchdx.cyto.pipeline import DETECTOR_FLAGS, RunLayout
 
@@ -229,6 +231,8 @@ rule status:
     resources:
         mem_mb=2000,
         runtime=15,
+    benchmark:
+        str(OUTDIR / "benchmarks" / "status.tsv")
     run:
         from batchdx.cyto.pipeline import stage_status
 
