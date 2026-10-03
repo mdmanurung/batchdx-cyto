@@ -4,6 +4,12 @@ The labels, evaluation cells, marker subset and comparison pairs are resolved on
 from the uncorrected baseline, and are then reused unchanged by every candidate.  No
 candidate may re-derive them, because a candidate that re-clusters its own output
 would be scored against a partition it created.
+
+The same freeze applies to the train/tune/validate split written to
+``SamplingManifest.splits``: it is resolved once, from the manifest seed, and no
+candidate sees a different one.  The split itself lives in
+:mod:`batchdx.cyto.sampling.splits`, because a fit-and-apply backend needs it
+independently of the evaluation draw.
 """
 
 from __future__ import annotations
@@ -16,6 +22,7 @@ import pandas as pd
 
 from batchdx.cyto.config import Config
 from batchdx.cyto.io.dataset import CELL_ID, SAMPLE_ID, Dataset
+from batchdx.cyto.sampling.splits import build_splits
 from batchdx.cyto.schemas.contracts import (
     DesignAudit,
     ProvenanceRef,
@@ -25,6 +32,15 @@ from batchdx.cyto.schemas.contracts import (
 from batchdx.cyto.schemas.enums import LABEL_TIER_CONFIDENCE, ComparisonSupport, LabelTier
 
 UNGATED = "ungated"
+
+#: The only partition scheme this build has ever had: labels, cells, markers and pairs
+#: resolved once from the uncorrected baseline and reused by every candidate.  The
+#: configuration key ``evaluation.partitions`` is pinned to this value, and the check
+#: below is what makes that pin load-bearing rather than decorative.
+FROZEN_COMMON = "frozen_common"
+
+#: The unit the evaluation draw is balanced over, for the same reason.
+SAMPLE_SAMPLING_UNIT = "sample_id"
 
 
 @dataclass(frozen=True)
@@ -174,6 +190,25 @@ def build_sampling_manifest(
 ) -> SamplingManifest:
     """Deterministic, sample-balanced evaluation cells plus the frozen comparison set."""
 
+    if config.evaluation.partitions != FROZEN_COMMON:
+        # Unreachable through parse_config, which pins the value.  Kept so that
+        # widening the schema without widening this module fails loudly here instead
+        # of quietly building the frozen partition under a name that promises another.
+        raise PartitionError(
+            f"evaluation.partitions={config.evaluation.partitions!r} is not implemented; "
+            f"this build only builds the {FROZEN_COMMON!r} partition"
+        )
+    unit = config.evaluation.sampling.unit
+    if unit != SAMPLE_SAMPLING_UNIT:
+        # Likewise pinned by the schema.  The draw below is per sample, and the frozen
+        # manifest records per-sample counts and weights, so honouring any other unit
+        # would mean emitting a manifest that misdescribes the selection.
+        raise PartitionError(
+            f"evaluation.sampling.unit={unit!r} is not implemented; the evaluation draw is "
+            f"balanced per {SAMPLE_SAMPLING_UNIT!r} and the frozen manifest records "
+            f"per-sample counts, so no other unit can be recorded truthfully"
+        )
+
     obs = dataset.obs
     obs["_label"] = labels
     rng = np.random.default_rng(config.project.seed)
@@ -232,11 +267,42 @@ def build_sampling_manifest(
                 "comparisons involving those batches are unsupported for this population"
             )
 
+    # A declared uncertainty unit is not a computed one.  Saying so here means the
+    # report cannot be read as claiming donor-level uncertainty it never produced:
+    # uncertainty_low/uncertainty_high/uncertainty_kind are null on every record.
+    if config.evaluation.uncertainty_unit is not None:
+        warnings.append(
+            f"evaluation.uncertainty_unit={config.evaluation.uncertainty_unit!r} is recorded, "
+            "but no unit-level uncertainty is computed in this build: the "
+            "uncertainty_low/uncertainty_high/uncertainty_kind fields of every metric record "
+            "are null, because donor-level uncertainty belongs to Stage 8 biological "
+            "preservation, which is not implemented"
+        )
+
     pairs = [
         (c.batch_a, c.batch_b)
         for c in design.comparisons
         if c.population is None and c.support is not ComparisonSupport.NON_IDENTIFIABLE
     ]
+
+    # Biospecimen-level train/tune/validate.  Resolved from the same manifest seed
+    # and the same frozen sample set, so a candidate cannot obtain a different
+    # partition by being run in a different order.
+    #
+    # require_all_arms=False here, deliberately.  This manifest also serves the
+    # detectors, the metrics and the report, and a design whose thinner arm holds
+    # fewer biospecimens than there are splits is a reason to warn about the split,
+    # not a reason to refuse to run: refusing would take the whole package down for a
+    # limitation of one partition.  The deficiency is not hidden -- it becomes a
+    # coverage warning rendered on the report -- and batchdx.cyto.sampling.splits
+    # exposes missing_arms() so any consumer that must not use an unbalanced split
+    # (notably the fit-and-apply CytoNorm backend) can refuse it.  A deficiency the
+    # allocator could have fixed still raises, because that one is a defect.
+    assignment = build_splits(
+        dataset.samples, donor_factor=config.design.donor, seed=config.project.seed,
+        require_all_arms=False,
+    )
+    warnings.extend(assignment.warnings)
 
     rep = config.evaluation.representation
     representation = RepresentationSettings(
@@ -251,7 +317,7 @@ def build_sampling_manifest(
     return SamplingManifest(
         dataset_id=dataset.manifest.dataset_id,
         seed=config.project.seed,
-        unit=config.evaluation.sampling.unit,
+        unit=unit,
         max_cells_per_sample=cap,
         label_source=label_tier,
         label_confidence=label_confidence,
@@ -266,6 +332,7 @@ def build_sampling_manifest(
         evaluation_markers=dataset.marker_ids(rep.marker_mask),
         representation=representation,
         aggregation_weights=weights,
+        splits=assignment.to_manifest(),
         provenance=[ProvenanceRef(kind="dataset", identifier=dataset.manifest.dataset_id,
                                   content_hash=dataset.baseline_hash())],
     )

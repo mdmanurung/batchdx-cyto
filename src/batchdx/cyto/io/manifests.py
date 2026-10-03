@@ -192,3 +192,81 @@ def read_processing_manifest(path: str | Path) -> ProcessingManifest:
             "does not guess whether values are raw, transformed or corrected"
         )
     return ProcessingManifest.model_validate(raw)
+
+
+# --------------------------------------------------------------------------------------
+# The removal log
+# --------------------------------------------------------------------------------------
+#
+# ``Dataset.removed_events`` has declared these four columns since the field was added
+# and had no writer and no reader anywhere in the repository.  The reader and the writer
+# live here, next to the other manifest readers, rather than in
+# ``batchdx.cyto.preprocess.removals`` where the model is, because a file next to the
+# processing manifest is this module's business.
+#
+# The import of the removal model is inside the functions.  ``preprocess.peacoqc`` needs
+# ``batchdx.cyto.adapters``, whose package __init__ imports ``adapters.base``, which
+# imports ``io.dataset``, which imports this module -- so a module-level import here is a
+# cycle whenever ``io`` is imported first.  Importing it lazily costs nothing at import
+# time and keeps both orders working.
+
+
+def read_removed_events(path: str | Path) -> pd.DataFrame:
+    """Read a per-event removal log written by :func:`write_removed_events`.
+
+    Raises :class:`ManifestError` when the file is absent, unreadable or does not carry
+    exactly the four declared columns.  It never returns an empty frame for a file it
+    could not read: an absent removal log and a removal log recording nothing are
+    different facts, and collapsing them is how a dropped cell becomes invisible.
+    """
+
+    from batchdx.cyto.preprocess.removals import check_removal_log
+
+    p = Path(path)
+    if not p.exists():
+        raise ManifestError(
+            f"removal log not found: {p}. A removal log is written by "
+            "batchdx.cyto.preprocess (gating and PeacoQC); if the baseline was gated and "
+            "QCed upstream, the log must come with it. No log is not a log of no removals"
+        )
+    sep = "," if p.suffix.lower() == ".csv" else "\t"
+    try:
+        df = pd.read_csv(p, sep=sep, dtype={"sample_id": str, "step": str, "reason": str})
+    except Exception as exc:  # pandas raises a family of them
+        raise ManifestError(f"removal log {p} could not be read: {exc}") from exc
+    if df.empty:
+        raise ManifestError(
+            f"removal log {p} has a header and no rows. A zero-row log is a claim that "
+            "nothing was removed; if that is what happened, say so in the processing "
+            "manifest's qc_history instead of shipping an empty file that reads as a "
+            "record"
+        )
+    try:
+        return check_removal_log(df, what=f"removal log {p}")
+    except ValueError as exc:
+        raise ManifestError(str(exc)) from exc
+
+
+def write_removed_events(frame: pd.DataFrame, path: str | Path) -> Path:
+    """Write a removal log in the form :func:`read_removed_events` accepts.
+
+    The columns, their order, the integer dtype of ``original_event_index`` and the
+    string dtype of ``sample_id`` are all checked before anything is written, so a log
+    that cannot be read back is never written in the first place.  The extension chooses
+    the separator, and a ``.csv`` suffix is required for CSV so that a reader cannot
+    guess wrongly.
+    """
+
+    from batchdx.cyto.preprocess.removals import check_removal_log
+
+    p = Path(path)
+    if p.suffix.lower() not in {".csv", ".tsv", ".txt"}:
+        raise ManifestError(
+            f"removal log {p}: suffix must be .csv, .tsv or .txt, so the separator is "
+            "declared rather than guessed from a name that could be anything"
+        )
+    checked = check_removal_log(frame, what=f"removal log for {p}")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    sep = "," if p.suffix.lower() == ".csv" else "\t"
+    checked.to_csv(p, sep=sep, index=False)
+    return p

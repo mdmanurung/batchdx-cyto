@@ -18,8 +18,10 @@ from batchdx.cyto.config import Config
 from batchdx.cyto.io.fcs import read_fcs
 from batchdx.cyto.io.hashing import file_sha256, matrix_hash
 from batchdx.cyto.io.manifests import (
+    ManifestError,
     read_marker_table,
     read_processing_manifest,
+    read_removed_events,
     read_sample_table,
 )
 from batchdx.cyto.schemas.contracts import (
@@ -188,8 +190,24 @@ def _build_cell_index(obs: pd.DataFrame, samples: dict[str, SampleRecord]) -> pd
     return obs
 
 
-def load_dataset(config: Config, base_dir: str | Path = ".") -> Dataset:
-    """Load, validate and freeze the preprocessed baseline described by ``config``."""
+def load_dataset(
+    config: Config,
+    base_dir: str | Path = ".",
+    *,
+    removed_events: str | Path | None = None,
+) -> Dataset:
+    """Load, validate and freeze the preprocessed baseline described by ``config``.
+
+    ``removed_events`` is an **explicit** path to the per-event removal log the
+    preprocessing step wrote.  It is a parameter and not a key in the processing manifest
+    because the manifest declares *what has been done to the values* and the log records
+    *which events that removed*; the two are different statements, and
+    ``read_processing_manifest`` refuses a key its model does not declare.  Making the
+    caller pass the path also keeps the distinction that matters here visible: when no
+    path is given, ``Dataset.removed_events`` is empty because **nothing was supplied**,
+    which is not the same claim as *nothing was removed*, and the caller is the only
+    party that knows which of the two happened.
+    """
 
     base = Path(base_dir)
     samples = {r.sample_id: r for r in read_sample_table(base / config.input.samples)}
@@ -206,6 +224,12 @@ def load_dataset(config: Config, base_dir: str | Path = ".") -> Dataset:
             base / config.input.path, config.input.fcs_glob, samples, markers,
             config.input.expression_layer,
         )
+
+    # After the cell index exists, because the log is checked against it.
+    removal_log = (
+        _empty_removal_log() if removed_events is None
+        else _load_removal_log(base, removed_events, adata.obs)
+    )
 
     feature_ids = [m.feature_id for m in markers]
     var_names = list(map(str, adata.var_names))
@@ -228,7 +252,8 @@ def load_dataset(config: Config, base_dir: str | Path = ".") -> Dataset:
     if layer not in adata.layers:
         raise DatasetValidationError(
             f"expression layer {layer!r} is not present; available layers: "
-            f"{sorted(adata.layers)}. The layer is declared, never guessed."
+            f"{sorted(name for name in adata.layers if name is not None)}. "
+            "The layer is declared, never guessed."
         )
     mat = np.asarray(adata.layers[layer], dtype=np.float64)
     if mat.shape != (adata.n_obs, adata.n_vars):
@@ -265,8 +290,68 @@ def load_dataset(config: Config, base_dir: str | Path = ".") -> Dataset:
         samples=samples,
         markers={m.feature_id: m for m in markers},
         processing=processing,
+        removed_events=removal_log,
         _baseline_hash=manifest.baseline_hash or "",
     )
+
+
+def _empty_removal_log() -> pd.DataFrame:
+    """The four declared columns and no rows.
+
+    The model import is local for the cycle reason given in :func:`_load_removal_log`;
+    this one is called on every load, so the statement is kept in one place.
+    """
+
+    from batchdx.cyto.preprocess.removals import empty_removal_log
+
+    return empty_removal_log()
+
+
+def _load_removal_log(base: Path, removed_events: str | Path, obs: pd.DataFrame) -> pd.DataFrame:
+    """Read the removal log and check that it describes *this* dataset's events.
+
+    A log naming an event the baseline does not contain is worse than no log: it would
+    let a reader conclude that a cell was removed when in fact the log belongs to
+    another run.  So every ``(sample_id, original_event_index)`` pair is checked against
+    the loaded cell index and a mismatch is a refusal, not a warning.
+    """
+
+    # Imported here, not at module scope: batchdx.cyto.preprocess.peacoqc needs
+    # batchdx.cyto.adapters, whose package __init__ imports adapters.base, which imports
+    # this module. A top-level import of the removal model would be a cycle whenever io is
+    # imported first. See the same note in io/manifests.py.
+    from batchdx.cyto.preprocess.removals import empty_removal_log
+
+    path = Path(removed_events)
+    if not path.is_absolute():
+        path = base / path
+    try:
+        log = read_removed_events(path)
+    except ManifestError as exc:
+        raise DatasetValidationError(str(exc)) from exc
+
+    pairs = set(
+        zip(
+            obs[SAMPLE_ID].astype(str).to_numpy(),
+            obs[EVENT_INDEX].astype(int).to_numpy(),
+            strict=True,
+        )
+    )
+    unknown = sorted(
+        {
+            (str(s), int(i))
+            for s, i in zip(log["sample_id"], log["original_event_index"], strict=True)
+        }
+        - pairs
+    )
+    if unknown:
+        raise DatasetValidationError(
+            f"removal log {path} names {len(unknown)} event(s) the loaded baseline does not "
+            f"contain, first {unknown[0]}. A log describing another run's events would let "
+            "a reader conclude that a cell was removed when it was never here. The log and "
+            "the baseline must be the same run"
+        )
+    return log if not log.empty else empty_removal_log()
 
 
 def _load_h5ad(path: Path, layer: str) -> tuple[ad.AnnData, list[ProvenanceRef]]:
@@ -274,9 +359,14 @@ def _load_h5ad(path: Path, layer: str) -> tuple[ad.AnnData, list[ProvenanceRef]]
         raise DatasetValidationError(f"input h5ad not found: {path}")
     adata = ad.read_h5ad(path)
     if layer not in adata.layers:
+        # anndata >= 0.13 exposes a ``None`` key in ``.layers`` that aliases ``.X``,
+        # so sorting the mapping directly raises TypeError on mixed None/str keys.
+        # Report the real layer names and say that ``X`` is the default.
+        available = sorted(name for name in adata.layers if name is not None)
+        shown = ", ".join(available) if available else "(none)"
         raise DatasetValidationError(
             f"{path}: expression layer {layer!r} is absent; available layers "
-            f"{sorted(adata.layers)}. Declare the layer that holds the values to analyse."
+            f"[{shown}]. Declare the layer that holds the values to analyse."
         )
     prov = [ProvenanceRef(kind="input_h5ad", identifier=path.name,
                           content_hash=file_sha256(path), path=str(path))]

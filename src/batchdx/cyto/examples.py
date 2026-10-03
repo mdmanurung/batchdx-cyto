@@ -14,6 +14,7 @@ from pathlib import Path
 import pandas as pd
 import yaml
 
+from batchdx.cyto.config import DEFAULT_SEED
 from batchdx.cyto.simulate import (
     SimulationSpec,
     confounded_spec,
@@ -88,10 +89,23 @@ CANDIDATE_SPECS: dict[str, dict] = {
 }
 
 
-def _config_dict(name: str, example: dict) -> dict:
+def _config_dict(name: str, example: dict, seed: int = DEFAULT_SEED) -> dict:
+    # ``seed`` is the seed the fixture was actually generated with, not a default.
+    # Every stage reads ``config.project.seed``; writing a literal here meant that
+    # ``materialise_example(..., seed=7)`` produced data at seed 7 and a run
+    # configuration that claimed 473, so the run resampled something other than what it
+    # was shipped with.  The seed is material to the analysis (it is in
+    # ``analytical_fingerprint``), so it cannot be a separate default.
+    #
+    # The default exists only so this private helper keeps its two-argument arity, which
+    # ``tests/unit/test_config_keys.py:517`` relies on when it checks
+    # ``schema_version``.  ``materialise_example`` — the sole production caller — passes
+    # the real seed, and ``tests/scientific/test_multiseed.py`` asserts that the emitted
+    # configuration's seed equals the seed the data was generated with, so falling back
+    # to the default cannot pass unnoticed.
     return {
         "schema_version": 2,
-        "project": {"id": f"{name}_example", "seed": 473},
+        "project": {"id": f"{name}_example", "seed": seed},
         "input": {
             "format": "h5ad",
             "path": "data/preprocessed.h5ad",
@@ -151,9 +165,13 @@ def _config_dict(name: str, example: dict) -> dict:
 
 
 def materialise_example(
-    name: str, target: str | Path, cells_per_sample: int = 1500, seed: int = 473
+    name: str, target: str | Path, cells_per_sample: int = 1500, seed: int = DEFAULT_SEED
 ) -> dict[str, Path]:
-    """Write a complete example project and return the paths created."""
+    """Write a complete example project and return the paths created.
+
+    ``seed`` governs both the generated data and the ``project.seed`` written into the
+    emitted configuration, so the two can never disagree.
+    """
 
     if name not in EXAMPLES:
         raise KeyError(f"unknown example {name!r}; available: {sorted(EXAMPLES)}")
@@ -174,7 +192,7 @@ def materialise_example(
     config_path = target / "config" / "config.yaml"
     config_path.write_text(
         "# " + example["description"] + "\n"
-        + yaml.safe_dump(_config_dict(name, example), sort_keys=False),
+        + yaml.safe_dump(_config_dict(name, example, seed), sort_keys=False),
         encoding="utf-8",
     )
     paths["config"] = config_path
