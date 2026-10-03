@@ -15,9 +15,13 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 
-def _to_svg(fig) -> str:
+def _to_svg(fig, salt: str) -> str:
     buffer = io.StringIO()
-    fig.savefig(buffer, format="svg", bbox_inches="tight")
+    # Matplotlib otherwise writes the current time and random element IDs into SVG.
+    # Use a stable, figure-specific salt so repeated reports have identical bytes and
+    # separate inline figures do not share IDs in the same HTML document.
+    with matplotlib.rc_context({"svg.hashsalt": salt}):
+        fig.savefig(buffer, format="svg", bbox_inches="tight", metadata={"Date": None})
     plt.close(fig)
     svg = buffer.getvalue()
     return svg[svg.index("<svg") :]
@@ -49,7 +53,7 @@ def density_by_batch(
     ax.set_ylabel("density", fontsize=8)
     ax.tick_params(labelsize=7)
     ax.legend(fontsize=6, frameon=False)
-    return _to_svg(fig)
+    return _to_svg(fig, f"density:{title}")
 
 
 def before_after(
@@ -76,7 +80,7 @@ def before_after(
         ax.tick_params(labelsize=7)
     axes[0].set_ylabel("density", fontsize=8)
     axes[0].legend(fontsize=6, frameon=False)
-    return _to_svg(fig)
+    return _to_svg(fig, f"before_after:{title}")
 
 
 def frequency_bars(freq: dict[str, dict[str, float]], batch_of: dict[str, str]) -> str:
@@ -95,7 +99,7 @@ def frequency_bars(freq: dict[str, dict[str, float]], batch_of: dict[str, str]) 
     ax.set_ylabel("fraction of evaluation cells", fontsize=8)
     ax.tick_params(labelsize=7)
     ax.legend(fontsize=6, frameon=False, ncol=3)
-    return _to_svg(fig)
+    return _to_svg(fig, "frequency_bars")
 
 
 def drift_lines(series: dict[str, np.ndarray], title: str) -> str:
@@ -109,4 +113,4 @@ def drift_lines(series: dict[str, np.ndarray], title: str) -> str:
     ax.set_ylabel("block median", fontsize=8)
     ax.tick_params(labelsize=7)
     ax.legend(fontsize=6, frameon=False)
-    return _to_svg(fig)
+    return _to_svg(fig, f"drift:{title}")
