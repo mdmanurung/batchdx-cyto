@@ -65,7 +65,10 @@ PY
 
 **There is no CI matrix across versions.** The workflow names Python 3.12, matching the
 workflow environment. Three of the four rows above remain claims, not measurements,
-until a matrix runs. The 3.12 CI job has not yet run on a GitHub runner.
+until a matrix runs. The Python 3.12 draft-PR job reached the complete suite on a
+GitHub runner in [run 37102250467](https://github.com/mdmanurung/batchdx-cyto/actions/runs/37102250467):
+375 passed, 2 skipped and 2 interrupted-run byte comparisons failed. This is executed
+3.12 evidence, not yet a green compatibility result.
 
 ### Core dependency versions that were resolved and run
 
@@ -322,8 +325,9 @@ omission.
   the digest of the multi-platform OCI *index*, not of any single platform image. Which
   repository each R package belongs to was checked against the live CRAN index and
   Bioconductor 3.20; whether the installs succeed was not.
-* **CI.** Every statement about `.github/workflows/**` in this file is read from YAML. No
-  CI job has been executed.
+* **CI.** Draft PR #2 has executed both Python and R suites. The first complete Python
+  report has two resilience failures; R exchange tests, Ruff, Snakemake lint and both
+  upstream audits passed. A corrected complete run is pending.
 * **Python 3.10, 3.11 and 3.13.** Declared; the source parses under their grammars and
   nothing else about them was run.
 * **Any R version other than 4.4.3.**

@@ -61,8 +61,8 @@ git status --porcelain | grep '^??' | wc -l    # must become 0
       from the completed non-slow report; Stages 1 and 11 show `NOT RUN` because their
       workflow tests were deselected. CI staleness checking remains unverified here.
 - [x] **The R exchange suite is green locally.** R 4.4.3 ran 101 assertions with
-      0 failures, 0 errors and 0 skips on 2026-10-03. CI is configured to run it,
-      but no runner job has executed yet.
+      0 failures, 0 errors and 0 skips on 2026-10-03. The same suite passed in
+      draft PR CI run 37102250467.
 
 ```bash
 Rscript --vanilla tests/run_r_tests.R
@@ -91,8 +91,10 @@ Rscript --vanilla tests/run_r_tests.R
 - [x] `docs/validation_results.md` states what the scientific suite does **not**
       establish, including that the multi-seed sweep covers the determinism and stability
       claims but **not** a per-seed re-run of the whole suite.
-- [ ] **CI behaviour is unverified.** Every statement about `.github/workflows/**` is
-      read from YAML. No CI job has been executed on any change in this cycle.
+- [ ] **Complete CI is not yet green.** Draft PR #2 CI run 37102250467 reached the
+      full suite: 375 passed, 2 skipped, 2 failed. Both failures were interrupted-run
+      byte comparisons caused by elapsed walltime embedded in result records. The
+      focused fix is under CI rerun; its status-document comparison has not passed.
 - [ ] **The container is unbuilt.** No docker, podman, apptainer or singularity on this
       node, so the image cannot be built, run or digest-pinned. `containers/` is shipped
       with a `NOT BUILT` banner and that is the honest state.

@@ -17,7 +17,14 @@ python -m venv .venv
 
 Python dependencies are declared in `pyproject.toml`. The optional metric dependencies are in its `metrics` extra. Pinned upstream repositories are recorded in `config/upstream_lock.yaml`.
 
-The R backends use the isolated environment built by `scripts/setup_r_env.sh`; that script pins R 4.4 and installs its required packages. See `docs/decisions/0004-dependency-isolation.md` before rebuilding it.
+The R backends use the isolated environment built by `scripts/setup_r_env.sh`; that script pins R 4.4 and installs its required packages from pinned local checkouts. Fetch those checkouts first:
+
+```bash
+bash scripts/fetch_upstream.sh .upstream
+bash scripts/setup_r_env.sh
+```
+
+See `docs/decisions/0004-dependency-isolation.md` before rebuilding the environment.
 
 ## System Dependencies
 

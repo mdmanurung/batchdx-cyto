@@ -31,6 +31,7 @@
 # are installed from pinned local checkouts, without GitHub API credentials.
 #
 # Usage:
+#   scripts/fetch_upstream.sh .upstream  # required pinned source checkouts
 #   scripts/setup_r_env.sh            # build ./renv (the default prefix)
 #   scripts/setup_r_env.sh <prefix>   # build elsewhere
 #
