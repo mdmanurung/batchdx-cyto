@@ -31,6 +31,7 @@ prose changes.
 
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -78,9 +79,11 @@ def _library_block_packages(upstream_dir: Path) -> list[str]:
 
 
 def _r_library_names(repo_root: Path) -> set[str]:
-    library = repo_root / "renv" / "lib" / "R" / "library"
+    # CI builds the same package set in a temporary micromamba prefix and exports
+    # its library through R_LIBS. Resolve the executing environment first.
+    library = Path(os.environ.get("R_LIBS") or repo_root / "renv" / "lib" / "R" / "library")
     if not library.is_dir():
-        pytest.skip("the isolated R library renv/lib/R/library is absent")
+        pytest.skip(f"the active isolated R library is absent: {library}")
     return {entry.name for entry in library.iterdir() if entry.is_dir()}
 
 

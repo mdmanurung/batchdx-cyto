@@ -15,6 +15,7 @@ provenance -- runs either way, so the reconciliation cannot quietly become untes
 from __future__ import annotations
 
 import importlib.util
+from dataclasses import replace
 from pathlib import Path
 from types import ModuleType
 
@@ -776,8 +777,12 @@ def test_a_design_with_no_within_donor_pair_says_so_instead_of_scoring_zero(
 
     _, dataset, design, sampling = frozen
     panel = openproblems._panel(dataset, sampling)
-    if any(len(b) > 1 for b in openproblems._donors_batches(panel).values()):
-        pytest.skip("this design does place one donor in two batches")
+    # Make the refusal case explicit even when the shared fixture acquires
+    # cross-batch donor references for other scientific tests.
+    panel = replace(panel, donor=np.array([
+        f"{donor}:{batch}" for donor, batch in zip(panel.donor, panel.batch, strict=True)
+    ], dtype=object))
+    assert all(len(b) == 1 for b in openproblems._donors_batches(panel).values())
     records = openproblems._horizontal_emd(panel, sampling, "r", "c")
     aggregate = _aggregate_record(records, "emd_mean_ct_horiz")
     assert aggregate.value is None
