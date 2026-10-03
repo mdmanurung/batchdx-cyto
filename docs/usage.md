@@ -34,8 +34,8 @@ something specific.
 |---|---|
 | `sample_id` | required |
 | `batch` | every batch contrast |
-| `donor_id` | donor-matched metrics, donor-level uncertainty |
-| `biospecimen_id`, `aliquot_id` | distinguishing identity levels that are *not* interchangeable |
+| `donor_id` | donor-matched metrics, and `n_donors` on every metric record. It does **not** buy donor-level uncertainty intervals; none are computed in this build (Stage 8 is not implemented) |
+| `biospecimen_id`, `aliquot_id` | recorded on `SampleRecord` and kept distinct in every emitted manifest, so the levels cannot be silently merged. Nothing in this build reads them |
 | `group`, `stimulation`, `timepoint` | protected factors and stratified contrasts |
 | `reference_id` + `reference_role` | reference-supported evidence, CytoNorm, CytoBatchFlagR |
 
@@ -90,6 +90,26 @@ any of them with its data. Validation is strict and unknown keys are rejected:
 batchdx-cyto validate --config config/config.yaml
 ```
 
+Validation refuses three different things, and the difference matters. An **unknown** key
+is a typo. A **removed** key is one this build used to accept and then never read, so
+setting it produced a run that looked configured and was not; `preprocessing.time_channel`
+is the only one in that category now, and `validate` names it and says what to use
+instead. A **refused value** is a key that stays but cannot take every value:
+`evaluation.sampling.unit` is `sample_id` and nothing else,
+`evaluation.representation.scaling` is `none`, and `report.offline` is `true`, because
+this build has exactly one sampler, one coordinate system and one offline renderer. A key
+is never accepted at a value the package does not honour.
+
+`preprocessing.gating` and `preprocessing.peacoqc` were in the removed category until
+2026-09-30 and are now live keys, read as **paths**: to a gate table and to a PeacoQC
+settings file, both in the shape the pinned reference implementation's own configuration
+files declare. They are read by `batchdx.cyto.preprocess`, which is **not** yet called by
+a run — preprocessing operates on raw events before a baseline exists, and wiring it into
+a pipeline stage, a rule and the report is still to be done
+([`docs/blocked.md`](blocked.md) B-009). `preprocessing.transformation` no longer offers
+`"logicle"`: this build implements no logicle, has no tested inverse for one, and the
+reference implementation contains none either.
+
 ### Reference requirements, by capability
 
 | Capability | Needs |
@@ -133,9 +153,11 @@ batchdx-cyto report    --config config/config.yaml --outdir results/run1   # re-
 `correct` requires `--candidate`. There is no default and no automatic choice.
 
 Every command delegates to Snakemake; `README.md` shows the equivalent native
-invocation. Pass `--cores` to control parallelism, and use
-`workflow/profiles/local/config.yaml` or the **untested**
-`workflow/profiles/slurm/config.yaml` for a profile.
+invocation. Pass `--cores` to control parallelism. A Snakemake profile
+(`workflow/profiles/local/config.yaml`, or the **untested**
+`workflow/profiles/slurm/config.yaml`) applies to the native invocation: the command-line
+wrapper has no `--profile` flag, because a profile rewrites scheduler and resource
+behaviour and a wrapper that hid that would be a wrapper you could not see through.
 
 ## 5. Reading the output
 
@@ -155,8 +177,8 @@ results/run1/
 ### Interpreting metric records
 
 Every record carries its namespace, direction, scale, status, coverage, aggregation
-weight, the label tier and confidence, and the four representation settings. Three
-things follow:
+weight, the label tier and confidence, and the five representation settings (space,
+marker mask, scaling, distance, k). Three things follow:
 
 * **Namespace matters.** `native` numbers come from upstream running its own
   partitioning (including cyCombine's moving uncorrected baseline). `common` numbers
@@ -214,10 +236,25 @@ is a synthetic fixture of a few tens of thousands of cells.
 
 ## 8. Privacy
 
-`report.redact_identifiers` is on by default: sample, donor and reference identifiers
-become stable pseudonyms and absolute paths are stripped. The pseudonym mapping goes to
+`report.redact_identifiers` is on by default: sample, donor and reference identifiers in
+the report become stable pseudonyms. The pseudonym mapping goes to
 `report/identifier_map.json`, deliberately a separate file, so a report can be circulated
 without it.
+
+Identifiers are redacted. **Paths are redacted too, on a stated rule.** A path inside the
+project becomes `<run>/…`; a path outside it becomes `<redacted>/<file name>`, so the
+reader learns which file was read and not where it lives. This covers the resolved
+configuration the page prints, and the free-form payload each detector records for
+itself — its parameters, requirements, table and plot names, and warnings. A detector's
+parameters can carry one entry per evaluation cell (the pinned `cycombine_express` API
+groups by a column literally named `sample`, so a per-cell sample vector crosses the
+boundary), and a list longer than eight entries is replaced by its length and its first
+entries, with the page saying so.
+
+Two limits, both stated on the page rather than here. A path *inside* a captured log line
+is not rewritten, because rewriting a log would falsify it — read such a warning as the
+machine's own text. And the dataset manifest's provenance is not rendered at all: only
+`dataset_id` reaches the page.
 
 ## 9. Extending
 
@@ -233,7 +270,10 @@ without it.
   `upstream_verified`.
 * Adding an R call means adding it to `adapter_calls` in `config/upstream_lock.yaml`,
   or the Stage 0 test will fail — by design, so no adapter can quietly grow a call the
-  audit never checks.
+  audit never checks. That gate is `test_r_audit_runs_and_finds_every_adapter_referenced_function`
+  in `tests/integration/test_stage0_audit.py`, and it **skips** when no R interpreter is
+  on `PATH`; on a machine without R, adding an adapter call is not caught. Run the R
+  environment before relying on it.
 
 ## 10. Known limits
 

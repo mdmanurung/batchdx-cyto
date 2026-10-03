@@ -3,17 +3,25 @@
 Batch-effect **diagnosis**, **correction** and **evaluation** for mass cytometry,
 conventional flow cytometry and spectral flow cytometry, orchestrated by Snakemake.
 
+**Scope: synthetic fixtures only.** This package ships no real cytometry dataset or
+real-data example. Its scientific checks use simulated data; its thresholds are not
+calibrated for a real cohort. See [validation limits](docs/validation_results.md).
+
 Built for cross-cohort immune studies, where biological differences and technical
 batches are often correlated and where the honest answer is frequently *"this contrast
 cannot be corrected"*.
 
-> **Status: alpha, partially blocked.** The Python core, the design audit, the native
-> diagnostics, the common-partition metrics, the decision layer, the report and the
-> Snakemake workflow run end to end and are tested. The **R-backed adapters (cyCombine,
-> CytoNorm, CytoBatchFlagR) cannot be executed** in the environment this was developed
-> in, because CRAN and Bioconductor were unreachable. Those gates are recorded as
-> **BLOCKED**, not passed. See [`docs/implementation_status.md`](docs/implementation_status.md)
-> (generated from an executed test report) and [`docs/blocked.md`](docs/blocked.md).
+> **Status: alpha. No gate is BLOCKED; several are PARTIAL.** The Python core, the
+> design audit, the diagnostics, the metrics (including six verified against pinned
+> upstream components), the decision layer, the report and the Snakemake workflow run end
+> to end and are tested. **cyCombine and CytoNorm execute for real**, at their pinned
+> commits, through real upstream calls. **CytoBatchFlagR's detector also executes** in
+> integration tests, but its flags have an uncalibrated false-positive rate. Every
+> scientific result rests on deterministic synthetic fixtures because no permissibly
+> licensed real dataset was available. Every partial gate states in
+> [`docs/implementation_status.md`](docs/implementation_status.md) (generated from an
+> executed test report) exactly what is not satisfied, and
+> [`docs/blocked.md`](docs/blocked.md) lists the open items with their commands.
 
 ---
 
@@ -117,7 +125,7 @@ two executable scripts, and interpreted in [`docs/upstream_audit.md`](docs/upstr
 | Tool | Commit | Licence | Integration |
 |---|---|---|---|
 | [cyCombine](https://github.com/biosurf/cyCombine) 0.3.0 | `fcd42dbb` | MIT | subprocess; ComBat route pinned, the count model refused |
-| [CytoNorm](https://github.com/saeyslab/CytoNorm) 2.0.12 | `278f352d` | GPL (≥2) | declared, **deferred** |
+| [CytoNorm](https://github.com/saeyslab/CytoNorm) 2.0.12 | `278f352d` | GPL (≥2) | fit-and-apply backend executed on a held-out split |
 | [CytoBatchFlagR](https://github.com/AndorfLab/CytoBatchFlagR) (was `cytoFlagR`) | `ad21e3b1` | **GPL-3.0** | scripts `source()`d unmodified at arm's length; nothing vendored |
 | [OpenProblems cyto batch integration](https://github.com/openproblems-bio/task_cyto_batch_integration) | `37151479` | MIT | reference only; metrics deferred |
 | [SPiSCy](https://github.com/emilier17/spiscy) | `a6e55c8f` | MIT | reference reading only |

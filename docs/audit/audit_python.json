@@ -1,14 +1,14 @@
 {
   "generated_by": "scripts/audit_upstream.py",
   "environment": {
-    "python": "3.11.15",
-    "platform": "Linux-6.18.44-fc-v33-x86_64-with-glibc2.39"
+    "python": "3.12.13",
+    "platform": "Linux-4.18.0-553.156.1.el8_10.x86_64-x86_64-with-glibc2.28"
   },
   "python_dependencies": {
-    "numpy": "2.4.6",
-    "pandas": "2.3.3",
-    "scipy": "1.17.1",
-    "anndata": "0.12.19",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6",
+    "scipy": "1.18.1",
+    "anndata": "0.13.4",
     "h5py": "3.16.0",
     "pydantic": "2.13.5",
     "typer": "0.27.2",
@@ -20,7 +20,7 @@
     "snakemake": "9.27.0"
   },
   "upstream_dir": ".upstream",
-  "lock": "/home/user/batchdx-cyto/config/upstream_lock.yaml",
+  "lock": "/exports/para-lipg-hpc/mdmanurung/batchdx-cyto/config/upstream_lock.yaml",
   "resources": {
     "cycombine": {
       "repository": "https://github.com/biosurf/cyCombine",
@@ -80,7 +80,7 @@
         "detected": "MIT",
         "first_line": "MIT License"
       },
-      "adapter_strategy": "Reference only in this build.  The metric implementations live inside Viash components with their own container and Nextflow runtime; extracting them without that runtime has not been attempted or verified here, so no metric in this package claims to be an upstream compatibility component.",
+      "adapter_strategy": "Components are extracted from their Viash `helper.py` / `helper.R` files and verified against the pinned source.  The Nextflow runtime is NOT required: each helper is an ordinary module with plain imports, and the verification tests import the pinned file directly and compare outputs.  As of 2026-09-30 SIX components are extracted and registered in the `compatibility` namespace with `upstream_verified=True`: emd_mean_ct_horiz, emd_mean_ct_vert, ratio_consistent_peaks, average_batch_r2_ct, iLisi and cLisi. average_batch_r2_ct was first written as a reimplementation in `common`, because the pinned helper needs scikit-learn; once scikit-learn and scib-metrics were declared in the `metrics` extra the comparison exposed that the single-contrast fit was a DIFFERENT model from the pinned `get_dummies(drop_first=True)`, so it was corrected to a full per-batch dummy block and promoted rather than left as a lookalike.  Three rows stay deferred with the specific obstacle named, and nothing claims to be a compatibility component without a test that runs both implementations on a shared fixture.",
       "metrics": {
         "present": true,
         "components": {
@@ -217,16 +217,28 @@
         "detected": "MIT",
         "first_line": "MIT License"
       },
-      "adapter_strategy": "Reference reading for workflow layout and PeacoQC integration patterns.  No Tier A capability depends on it and nothing is built against it as a contract."
+      "adapter_strategy": "Reference reading for workflow layout and PeacoQC integration patterns, and now also a contract: the 2-D gate table, the per-panel asinh transform and the PeacoQC QC pass are built against the shapes SPiSCy's own config files declare, and tests load `02_prelim_gating.yaml` and `06_QC.yaml` UNCHANGED from the pinned checkout and assert this build accepts them.  The transformation is the unscaled `asinh(x / cofactor)`, verified element-wise against `flowVS::transFlowVS` at the pinned Bioconductor version, because that convention is what `io/export.py` inverts exactly.  SPiSCy has no logicle at all (zero matches in the checkout), so none is implemented here either.  Nothing from SPiSCy's own R is vendored; its scripts are read, and PeacoQC itself is an independent Bioconductor package."
     }
   },
   "registered_metrics": [
+    "common.biological_contrast_admissibility",
+    "common.biological_contrast_cohens_d",
+    "common.biological_contrast_effect_size",
+    "common.biological_contrast_permutation_p",
+    "common.biological_contrast_rank_statistic",
+    "common.biological_contrast_ttest_statistic",
     "common.emd_relative_reduction",
     "common.emd_within_population",
     "common.joint_structure_distance",
     "common.mad_compression_fraction",
     "common.mad_signed_change",
     "common.population_frequency_shift",
+    "compatibility.average_batch_r2_ct",
+    "compatibility.cLisi",
+    "compatibility.emd_mean_ct_horiz",
+    "compatibility.emd_mean_ct_vert",
+    "compatibility.iLisi",
+    "compatibility.ratio_consistent_peaks",
     "native.cycombine_evaluate_emd",
     "native.cycombine_evaluate_mad"
   ],
