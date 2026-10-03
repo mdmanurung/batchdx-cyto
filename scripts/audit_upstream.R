@@ -123,9 +123,20 @@ audit_resource <- function(key, dir_name, package_name, adapter_calls) {
       if (!exists(fn, envir = asNamespace(package_name), inherits = FALSE)) next
       obj <- get(fn, envir = asNamespace(package_name))
       if (!is.function(obj)) next
+      ## Format the captured formals the same way the source branch does, as
+      ## `name(formals)`, so the two modes produce the same shape of artifact and a
+      ## consumer can rely on the signature naming its own function.  `deparse(args())`
+      ## on a loaded function yields the deparsed argument list, which starts with
+      ## "function (" rather than the name; wrapping it here keeps the artifact
+      ## readable and keeps the audit's two modes interchangeable.
+      formals_txt <- paste(
+        trimws(deparse(args(obj))[1:(length(deparse(args(obj))) - 1)]),
+        collapse = " "
+      )
+      formals_txt <- sub("^function\\s*\\(", "", formals_txt)
+      formals_txt <- sub("\\)\\s*$", "", formals_txt)
       signatures[[fn]] <- list(
-        signature = paste(trimws(deparse(args(obj))[1:(length(deparse(args(obj))) - 1)]),
-                          collapse = " "),
+        signature = sprintf("%s(%s)", fn, trimws(formals_txt)),
         arguments = names(formals(obj)),
         file = NA_character_
       )

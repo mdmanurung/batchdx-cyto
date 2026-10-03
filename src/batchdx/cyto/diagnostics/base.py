@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Protocol
 
+from batchdx.cyto.config import DEFAULT_SEED
 from batchdx.cyto.io.dataset import Dataset
 from batchdx.cyto.schemas.contracts import DesignAudit, DetectorResult, SamplingManifest
 
@@ -23,7 +24,12 @@ class DetectorContext:
     design: DesignAudit
     sampling: SamplingManifest | None
     out_dir: str
-    seed: int = 473
+    #: The run's seed, taken from ``ProjectConfig.seed`` by
+    #: ``pipeline.stage_diagnose``.  Its default is
+    #: :data:`batchdx.cyto.config.DEFAULT_SEED`, the same single source every other seed
+    #: default in the package derives from, so a context built without one still agrees
+    #: with the configuration rather than carrying an independent literal.
+    seed: int = DEFAULT_SEED
     rscript: str = "Rscript"
     upstream_dir: str | None = None
     #: Fixed positivity thresholds in the declared coordinate system (Stage 4).

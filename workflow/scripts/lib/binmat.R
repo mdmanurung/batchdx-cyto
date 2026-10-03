@@ -43,8 +43,8 @@ write_binmat <- function(path, m, row_ids, col_names) {
     layout = "row_major",
     n_rows = nrow(m),
     n_cols = ncol(m),
-    row_ids = as.character(row_ids),
-    col_names = as.character(col_names)
+    row_ids = I(as.character(row_ids)),
+    col_names = I(as.character(col_names))
   )
   writeLines(jsonlite::toJSON(meta, auto_unbox = TRUE, pretty = TRUE),
              paste0(path, ".json"))

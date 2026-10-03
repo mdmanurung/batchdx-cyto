@@ -168,13 +168,14 @@ def test_two_batch_fixture_makes_the_cluster_detector_ineligible_not_uninformati
 def test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects(
     frozen, tmp_path
 ) -> None:
-    if r_package_version("cyCombine").available:
-        pytest.skip("cyCombine is installed; this test covers the unavailable path")
-
+    # Reproduce the unavailable case rather than waiting for an environment that lacks
+    # cyCombine.  Gating on whether the package is installed meant this test was a
+    # no-op in every environment where the native detector actually runs, which is how
+    # the most important failure path ended up with no coverage at all.
     config, dataset, design, sampling = frozen
     # three batches, so the detector is eligible and the only obstacle is the package
     result = get_detector("cycombine_cluster").run(
-        dataset, _context(frozen, tmp_path, rscript="Rscript")
+        dataset, _context(frozen, tmp_path, rscript="Rscript-does-not-exist")
     )
     assert result.status == "not_available"
     assert "not installed" in result.reason

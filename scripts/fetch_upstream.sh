@@ -31,7 +31,8 @@ fetch () {
   echo "   HEAD = $(git -C "$dir" rev-parse HEAD)"
 }
 
-# Kept in sync with config/upstream_lock.yaml by tests/unit/test_stage0_lock.py.
+# Kept in sync with config/upstream_lock.yaml by
+# tests/integration/test_stage0_audit.py::test_fetch_script_pins_the_same_commits_as_the_lock.
 fetch cyCombine        https://github.com/biosurf/cyCombine.git        fcd42dbbe92bfa6bffa6094bf9b4de536e71c249
 fetch CytoNorm         https://github.com/saeyslab/CytoNorm.git        278f352d8edffd7a5d3e6b0b76c402d991a1e7a9
 fetch CytoBatchFlagR   https://github.com/AndorfLab/CytoBatchFlagR.git ad21e3b104126783044351eb11fa24622a0da2f7

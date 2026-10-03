@@ -26,6 +26,7 @@ from batchdx.cyto.adapters.base import (
     BackendCapabilities,
     BackendContext,
     BackendError,
+    BackendNotAvailable,
     make_spec,
     register_backend,
     resolve_parameters,
@@ -112,7 +113,7 @@ class CyCombineBackend:
 
         cycombine = next(s for s in software if s.name == "cyCombine")
         if not cycombine.available:
-            raise BackendError(
+            raise BackendNotAvailable(
                 "the cyCombine R package is not installed in this environment "
                 f"({cycombine.detail}). Install it from the pinned commit recorded in "
                 "config/upstream_lock.yaml; this adapter never substitutes another algorithm."
@@ -181,7 +182,8 @@ class CyCombineBackend:
                 log_path=work / "cycombine.log",
             )
         except RNotAvailable as exc:
-            raise BackendError(str(exc)) from exc
+            # No interpreter at all is an environment gap, not a method failure.
+            raise BackendNotAvailable(str(exc)) from exc
         except RScriptFailed as exc:
             raise BackendError(
                 f"cyCombine correction failed (exit {exc.returncode}). "
