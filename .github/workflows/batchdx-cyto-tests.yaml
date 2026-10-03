@@ -81,7 +81,8 @@ jobs:
           BATCHDX_PYTHON="$pythonLocation/bin/python" Rscript --vanilla tests/run_r_tests.R
 
       - name: Lint
-        run: "$pythonLocation/bin/ruff" check src tests scripts
+        run: |
+          "$pythonLocation/bin/ruff" check src tests scripts
 
       - name: Lint the workflow
         # A valid --config is required because the Snakefile reads config["config"] at
