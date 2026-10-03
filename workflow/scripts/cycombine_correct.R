@@ -20,7 +20,6 @@ source(file.path(script_dir(), "lib", "binmat.R"))
 main <- function() {
   parsed <- batchdx_args()
   p <- parsed$params
-  started <- Sys.time()
 
   if (!identical(as.character(p$method), "ComBat")) {
     stop(sprintf(
@@ -105,8 +104,7 @@ main <- function() {
     n_som_nodes = length(unique(labels)),
     confounded_nodes = as.character(confounded_nodes),
     cycombine_version = as.character(utils::packageVersion("cyCombine")),
-    warnings = warnings_out,
-    elapsed_seconds = as.numeric(difftime(Sys.time(), started, units = "secs"))
+    warnings = warnings_out
   ))
 }
 

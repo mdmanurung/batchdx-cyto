@@ -235,7 +235,6 @@ class CyCombineBackend:
             validation=checks,
             warnings=warnings,
             software=software,
-            resources={"r_elapsed_seconds": float(r_result.payload.get("elapsed_seconds", 0.0))},
             provenance=[
                 ProvenanceRef(kind="baseline", identifier=dataset.manifest.dataset_id,
                               content_hash=dataset.baseline_hash()),

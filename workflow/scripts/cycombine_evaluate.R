@@ -76,7 +76,6 @@ emd_to_rows <- function(emd) {
 main <- function() {
   parsed <- batchdx_args()
   p <- parsed$params
-  started <- Sys.time()
 
   if (!requireNamespace("cyCombine", quietly = TRUE)) {
     stop("the cyCombine R package is not installed in this environment")
@@ -120,8 +119,7 @@ main <- function() {
     software = list(
       name = "cyCombine",
       version = as.character(utils::packageVersion("cyCombine"))
-    ),
-    elapsed_s = as.numeric(difftime(Sys.time(), started, units = "secs"))
+    )
   )
   batchdx_write_result(parsed$result_path, payload)
 }
