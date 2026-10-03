@@ -243,7 +243,7 @@ BATCHDX_UPSTREAM_DIR="$REPO_ROOT/.upstream" \
     cat("to fetch the pinned commit and re-run this script.\n")
   } else {
     lines <- readLines(cbf, warn = FALSE)
-    hits <- regmatches(lines, regexec("library\\(\\s*([A-Za-z][A-Za-z0-9._]*)", lines))
+    hits <- regmatches(lines, regexec("library[(][[:space:]]*([A-Za-z][A-Za-z0-9._]*)", lines))
     pkgs <- sort(unique(unlist(lapply(hits, function(m) if (length(m) > 1L) m[[2L]] else NULL))))
     cat(sprintf("\nCytoBatchFlagR library() block: %d packages\n", length(pkgs)))
     absent <- character(0)
