@@ -27,3 +27,11 @@ Append-only log of non-obvious decisions and their rationale.
 - **Rationale:** The source metadata establishes file-to-control coverage but not donor identity, marker-channel correspondence, or endpoint validity.
 - **Consequences:** This is B1 preparation only. No real-data correction or biological-preservation claim follows from it.
 - **Tags:** data, provenance, validation
+
+### 2026-10-03 — Restrict the spectral-control validation to an exact-layout subset
+
+- **Context:** All 72 public FCS files passed source MD5 and local SHA-256 auditing, but their batches use six distinct channel layouts. Batches 13–18 alone contain all four measured controls under one exact 33-channel layout.
+- **Decision:** Freeze those 24 files as the first technical-control subset and record the remaining 48 as panel exclusions. Do not pool the full 18-batch collection until marker harmonization is specified and validated.
+- **Rationale:** Shared fluorophore names map to different markers in some panels; pooling by channel name would silently mix biological measurements.
+- **Consequences:** The subset can enter technical-control workflow review after a marker manifest and raw preprocessing exist. It cannot support donor-disjoint or biological-preservation claims.
+- **Tags:** data, panel, validation

@@ -23,3 +23,43 @@ Append-only log of gotchas, surprises, and insights.
 - **Tags:** build, release, cache
 - **mitigation_type:** convention
 - **structural_mitigation_candidate:** A release CI job can build from a fresh checkout with the declared build backend and inspect the resulting archives.
+
+### 2026-10-03 — CI PATH shadowed the tested Python after R setup
+
+- **Category:** CI environment
+- **What happened:** The first draft-PR jobs exposed a GitHub API HTTP 401 when R packages were installed remotely, an R regex escape during setup verification, and an R environment `python` without pip shadowing `actions/setup-python` after the R `bin` directory was added to `PATH`.
+- **Why it matters:** A local green suite does not establish that CI provisions the same interpreter and R packages; setup failures prevented the test step entirely.
+- **Resolution:** Fetch pinned upstream checkouts first, install cyCombine and CytoNorm with `R CMD INSTALL`, use an escape-free R regex, and invoke the setup-python interpreter by absolute path in CI. The complete CI job remains pending verification.
+- **Tags:** ci, R, python, environment
+- **mitigation_type:** structural
+- **structural_mitigation_candidate:** Validate the GitHub Actions YAML and run the complete draft-PR job before release sign-off.
+
+### 2026-10-03 — The public spectral-control record has complete file-to-control metadata
+
+- **Category:** data access
+- **What happened:** Zenodo record 15388817 exposes 72 FCS files and a 72-row sample table with four control labels in each of 18 batches. All filenames match and both metadata attachments match their published MD5 checksums. FlowRepository's HTTPS certificate failed validation from this host.
+- **Why it matters:** The Zenodo record can seed a multi-batch technical-control validation, but its `sample_id` is a batch/control label and does not establish donor identity or biological contrasts.
+- **Resolution:** Freeze the complete source manifest and the unchanged attachments; keep eligibility provisional until all FCS files and channel headers are inspected.
+- **Tags:** data, provenance, spectral-flow, validation
+- **mitigation_type:** structural
+- **structural_mitigation_candidate:** Require a design audit that maps every FCS filename and channel to the frozen source tables before this dataset supports a claim.
+
+### 2026-10-03 — Interrupted-run hashes exposed runtime fields in scientific results
+
+- **Category:** workflow reproducibility
+- **What happened:** The complete CI suite passed 375 tests but two resilience tests found different bytes after SIGTERM and SIGKILL recovery. The changed cyCombine correction and native metric payloads included elapsed walltime; the report inherited the correction payload. The local sandbox also blocked BiocParallel ports, causing one additional local-only cyCombine failure.
+- **Why it matters:** Runtime belongs in Snakemake benchmark logs; embedding it in scientific result JSON makes a correct resume look nonreproducible and changes the offline report bytes.
+- **Resolution:** Remove elapsed fields from the two cyCombine R result payloads and from the correction result resources. The targeted cyCombine integration test passed with local ports enabled. The full CI resilience rerun is pending.
+- **Tags:** workflow, ci, reproducibility
+- **mitigation_type:** structural
+- **structural_mitigation_candidate:** Keep the full interrupted-run hash checks in CI and record performance separately in `benchmarks/`.
+
+### 2026-10-03 — Public spectral controls span six assay layouts
+
+- **Category:** data contract
+- **What happened:** All 72 FCS files contained 27,022,765 events, but the headers resolved to six distinct layouts. A complete 24-file four-control grid across batches 13–18 has one exact layout.
+- **Why it matters:** The apparent 18-batch grid is not a single panel; some fluorophores label different markers, so a common-channel correction across all files would be invalid.
+- **Resolution:** Freeze the six-batch homogeneous subset and preserve a per-file SHA-256, layout map, and explicit panel exclusions. Biological donor identity remains unestablished.
+- **Tags:** data, panel, validation
+- **mitigation_type:** structural
+- **structural_mitigation_candidate:** Require an explicit assay-marker mapping before using other batches.
