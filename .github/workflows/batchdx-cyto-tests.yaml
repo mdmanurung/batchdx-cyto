@@ -73,15 +73,15 @@ jobs:
 
       - name: Install the package
         run: |
-          python -m pip install --upgrade pip
-          pip install -e '.[dev]'
+          "$pythonLocation/bin/python" -m pip install --upgrade pip
+          "$pythonLocation/bin/python" -m pip install -e '.[dev]'
 
       - name: R exchange suite
         run: |
-          BATCHDX_PYTHON="$(command -v python)" Rscript --vanilla tests/run_r_tests.R
+          BATCHDX_PYTHON="$pythonLocation/bin/python" Rscript --vanilla tests/run_r_tests.R
 
       - name: Lint
-        run: ruff check src tests scripts
+        run: "$pythonLocation/bin/ruff" check src tests scripts
 
       - name: Lint the workflow
         # A valid --config is required because the Snakefile reads config["config"] at
@@ -92,20 +92,20 @@ jobs:
         # Executed locally against snakemake 9.27.0 on 2026-09-30: passes. Not executed
         # on a runner.
         run: |
-          snakemake --snakefile workflow/Snakefile --lint \
+          "$pythonLocation/bin/snakemake" --snakefile workflow/Snakefile --lint \
             --config config=config/example_paired_reference.yaml \
             outdir="$RUNNER_TEMP/lint" base_dir=. mode=diagnose
 
       - name: Stage 0 upstream audit
         run: |
           mkdir -p docs/audit
-          python  scripts/audit_upstream.py --upstream-dir .upstream --out docs/audit/audit_python.json
+          "$pythonLocation/bin/python" scripts/audit_upstream.py --upstream-dir .upstream --out docs/audit/audit_python.json
           Rscript scripts/audit_upstream.R docs/audit/audit_r.json .upstream config/upstream_lock.yaml
 
       - name: Tests
         run: |
           mkdir -p build
-          pytest -q --json-report --json-report-file=build/report.json
+          "$pythonLocation/bin/pytest" -q --json-report --json-report-file=build/report.json
 
       - name: Fail if the committed status document is stale
         # Regenerated into a scratch file and compared, ignoring the generation
@@ -120,7 +120,7 @@ jobs:
         # remedy is to regenerate the document, never to relax what is compared here.
         shell: bash
         run: |
-          python scripts/generate_status.py --report build/report.json --out build/status.md
+          "$pythonLocation/bin/python" scripts/generate_status.py --report build/report.json --out build/status.md
           if ! diff -u <(grep -v '^Derived by' docs/implementation_status.md) \
                        <(grep -v '^Derived by' build/status.md); then
             echo
