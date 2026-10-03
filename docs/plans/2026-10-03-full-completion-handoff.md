@@ -16,9 +16,9 @@ Treat `RELEASE.md`, `scripts/gates.yaml`, generated `docs/implementation_status.
 
 ## Milestone A — release `0.1.0` Alpha
 
-1. **[ ] A1 — Make a fresh clone reproducible.** **Status:** not started. **Estimate:** 1–2 days. Review the existing changes by concern, stage explicit paths or hunks, and commit all required source, tests, workflow assets, license, and R setup files without sweeping unrelated work into a commit. **Depends on:** none. **Validation/evidence:** no untracked required source; clean fresh-clone installation and upstream fetch; reviewed staged diffs and commit IDs.
+1. **[x] A1 — Make a fresh clone reproducible.** **Status:** locally complete on 2026-10-03. **Estimate:** 1–2 days. Review the existing changes by concern, stage explicit paths or hunks, and commit all required source, tests, workflow assets, license, and R setup files without sweeping unrelated work into a commit. **Depends on:** none. **Validation/evidence:** no untracked required source; clean fresh-clone installation and upstream fetch; reviewed staged diffs and commit IDs.
 
-2. **[ ] A2 — Execute the complete gate suite in CI.** **Status:** not started. **Estimate:** 1–2 days. Investigate the slow resilience fixture that held up the previous full run, then execute full pytest with the repository’s isolated R runtime and writable caches. Add `tests/run_r_tests.R` to CI with `testthat` and a usable Python interpreter. Make Python **3.12** the primary CI version for the generated status document; regenerate it from that job’s complete JSON report. **Depends on:** A1. **Validation/evidence:** full pytest report, R suite log, upstream audits, Ruff, Snakemake lint, and a green CI status-document comparison; no `NOT RUN` gate caused by deselection.
+2. **[ ] A2 — Execute the complete gate suite in CI.** **Status:** in progress on 2026-10-03. **Estimate:** 1–2 days. Investigate the slow resilience fixture that held up the previous full run, then execute full pytest with the repository’s isolated R runtime and writable caches. Add `tests/run_r_tests.R` to CI with `testthat` and a usable Python interpreter. Make Python **3.12** the primary CI version for the generated status document; regenerate it from that job’s complete JSON report. **Depends on:** A1. **Validation/evidence:** full pytest report, R suite log, upstream audits, Ruff, Snakemake lint, and a green CI status-document comparison; no `NOT RUN` gate caused by deselection.
 
 3. **[ ] A3 — Sign off the Alpha release.** **Status:** not started. **Estimate:** 0.5–1 day. Build and inspect wheel/sdist from a fresh clone; reconcile `RELEASE.md`, CHANGELOG, README, compatibility claims, and the one explained skip. Keep real-data, container, and HPC limits explicit. Prepare the `0.1.0` tag and release text; obtain final approval before publishing or pushing a release. **Depends on:** A1–A2. **Validation/evidence:** reproducible build artifacts, complete release checklist, green CI URL, approved tag/release record.
 
@@ -52,4 +52,11 @@ Treat `RELEASE.md`, `scripts/gates.yaml`, generated `docs/implementation_status.
 - **Decision and evidence log:** 2026-10-03 — plan reviewed against the worktree, gate registry, release checklist, workflow, Mycelium record, public-data sources, and read-only SLURM metadata. Implementation of A1–C4 has not started. Record the date, artifact path, outcome, blocker, and any deviation beside each step as work proceeds.
 - **Execution note:** package backend tests require the repository’s pinned `renv/bin` and writable caches; use the user’s R4_51 environment for standalone R analysis. The next session should read `MYCELIUM.md` and `.living/INDEX.md` before implementation.
 
-**Next action:** save this handoff, then start A1.
+## Dated execution evidence
+
+| Step | Date | Artifact and outcome | Remaining blocker or deviation |
+|---|---|---|---|
+| A1 | 2026-10-03 | Commits `aa65005` through `7bff90d` group the handoff, living layer, source, tests, workflow, metadata, and gate registry. A disposable clone at `/tmp/batchdx-fresh-20261003` built wheel and sdist, installed 124 packages from `.[dev]`, imported `0.1.0`, fetched all five pinned upstream checkouts, and passed the Python upstream audit. Required source has no untracked files. | The generated gate status awaits the complete A2 test report. The disposable clone is local evidence, not a CI runner. |
+| A2 | 2026-10-03 | Local R exchange suite: 101 passed, 0 failed, 0 skipped. Ruff, Snakemake lint, and both upstream audits passed. CI now selects Python 3.12 and runs the R suite using its installed Python. | Complete pytest is running; no GitHub Actions job has run. |
+
+**Next action:** finish A2 with a complete pytest report and a CI run.

@@ -5,8 +5,8 @@ Last audit: 2026-10-03
 | File | Entries | Last updated | Key topics |
 |------|---------|--------------|------------|
 | conventions.md | 0 sections | 2026-10-03 | — |
-| decisions.md | 1 entry | 2026-10-03 | 2026-10-03 — Add Mycelium without moving application files |
-| learnings.md | 1 entry | 2026-10-03 | 2026-10-03 — Full package tests need the isolated R runtime and writable caches |
+| decisions.md | 2 entries | 2026-10-03 | 2026-10-03 — Add Mycelium without moving application files, 2026-10-03 — Use Python 3.12 as the Alpha CI status environment |
+| learnings.md | 2 entries | 2026-10-03 | 2026-10-03 — Full package tests need the isolated R runtime and writable caches, 2026-10-03 — Fresh-clone build needs a writable uv cache and fetched build backend |
 
 ## Local skills
 See `.living/skills/` for project-specific skill packs.
@@ -21,6 +21,8 @@ _No tag clusters yet (need ≥2 entries sharing a tag)._
 
 ## Most recent (10)
 
+- [2026-10-03] L-2: Fresh-clone build needs a writable uv cache and fetched build backend
+- [2026-10-03] D-2: Use Python 3.12 as the Alpha CI status environment
 - [2026-10-03] L-1: Full package tests need the isolated R runtime and writable caches
 - [2026-10-03] D-1: Add Mycelium without moving application files
 

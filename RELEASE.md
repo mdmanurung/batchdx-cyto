@@ -40,7 +40,9 @@ grep -n 'version:' CITATION.cff | head -2
 - [x] `THIRD_PARTY_NOTICES.md` present and accurate.
 - [x] `CITATION.cff` present and valid.
 - [x] Required source and the R setup script are committed in the A1 commit series.
-- [ ] A clean fresh-clone build and pinned upstream fetch have not yet been recorded.
+- [x] Disposable fresh clone at `/tmp/batchdx-fresh-20261003` built wheel and sdist,
+      installed `.[dev]` into a new Python 3.12 virtual environment, imported version
+      `0.1.0`, fetched all five pinned upstream checkouts, and passed the Python audit.
 
 ```bash
 git status --porcelain | grep '^??' | wc -l    # must become 0
@@ -152,5 +154,5 @@ Cutting this release is defensible **with** §8 items 1–5 done. Items 6–8 ar
 work that does not block a `0.1.0` marked Alpha, provided each stays on the record —
 which §6 and `docs/blocked.md` exist to guarantee.
 
-Remaining Alpha release blocks are a complete current suite, a fresh-clone build and
-fetch, and a green CI run. The tag and publication require final approval.
+Remaining Alpha release blocks are a complete current suite and a green CI run. The tag
+and publication require final approval.
