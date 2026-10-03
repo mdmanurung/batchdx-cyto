@@ -19,3 +19,11 @@ Append-only log of non-obvious decisions and their rationale.
 - **Rationale:** The status comparison needs an executed environment matching the local report, and cross-language tests must not silently skip.
 - **Consequences:** Python 3.10, 3.11 and 3.13 remain declared-only until an executed matrix establishes support; the CI job remains unverified until it runs.
 - **Tags:** ci, release, python
+
+### 2026-10-03 — Freeze Zenodo spectral-control metadata before raw-data validation
+
+- **Context:** FlowRepository access failed TLS validation, while the public Zenodo record offered a complete, checksum-bearing fallback with 72 FCS files across 18 batches.
+- **Decision:** Commit the complete 74-file source manifest and unchanged small metadata attachments, plus an all-file downloader; keep raw FCS outside Git and defer eligibility until the full data and channel headers are audited.
+- **Rationale:** The source metadata establishes file-to-control coverage but not donor identity, marker-channel correspondence, or endpoint validity.
+- **Consequences:** This is B1 preparation only. No real-data correction or biological-preservation claim follows from it.
+- **Tags:** data, provenance, validation
