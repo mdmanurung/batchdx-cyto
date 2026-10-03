@@ -1,0 +1,49 @@
+# Python-side environment for every rule in workflow/Snakefile.
+#
+# Create it with:
+#
+#     conda env create -f workflow/envs/python.yaml
+#     conda activate batchdx-cyto
+#     pip install -e '.[workflow]'
+#
+# The versions below are the ones this build was developed and tested against, taken
+# from the package environment rather than from a resolution done at read time.  The
+# floors in pyproject.toml are deliberately wider; this file is the narrow one, so that
+# "it worked on my machine" is answered by a number rather than by an opinion.
+#
+# What this file cannot pin, and why:
+#
+#   * the R backends.  cyCombine and CytoNorm are distributed through GitHub rather than
+#     CRAN or Bioconductor, and their transitive dependencies cannot be resolved from a
+#     conda environment file.  See workflow/envs/README.md and containers/.
+#   * the package itself, which is not on PyPI.  Install it from the checkout, after
+#     creating the environment, with the `pip install -e` above.
+#
+# Every rule in the Snakefile is pure Python and needs nothing beyond this file: the
+# rules that shell out to R ask for an interpreter by name (upstream.rscript,
+# upstream.checkout_dir) and record not_available rather than failing.
+name: batchdx-cyto
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy=2.5.3
+  - pandas=3.0.6
+  - scipy=1.18.1
+  - anndata=0.13.4
+  - h5py=3.16.0
+  - pydantic=2.13.5
+  - typer=0.27.2
+  - jinja2=3.1.6
+  - pyyaml=6.0.3
+  - flowio=1.4.0
+  - pyarrow=25.0.1
+  - matplotlib=3.11.2
+  - snakemake=9.27.0
+  - pytest=9.1.1
+  - ruff=0.16.9
+  - pip
+  - pip:
+      # The one dependency that is not on conda-forge for every platform.  Kept here so
+      # that a single `conda env create` produces a runnable environment.
+      - pytest-json-report>=1.5

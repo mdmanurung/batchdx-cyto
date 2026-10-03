@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -42,10 +43,17 @@ def _snakemake(project: Path, outdir: Path, mode: str = "benchmark",
         pytest.skip("snakemake is not on PATH")
     from batchdx.cyto.paths import snakefile
 
+    profile = Path(snakefile()).parent / "profiles" / "local"
+
     # Snakemake takes one --config group; a second occurrence replaces the first, so
     # every key/value pair goes into the same group.
     command = [
         "snakemake", "--snakefile", str(snakefile()), "--directory", str(project),
+        # workflow/profiles/local/config.yaml says the integration suite runs this
+        # profile. It did not until this flag was added, so the profile header was the
+        # thing that was wrong before; passing it makes the claim checkable rather than
+        # aspirational. `--cores 1` below still wins over the profile's cores: 4.
+        "--profile", str(profile),
         "--cores", "1", "--config", "config=config/config.yaml",
         f"outdir={outdir}", f"base_dir={project}", f"mode={mode}",
     ] + (config_entries or []) + (extra or [])
@@ -164,12 +172,15 @@ def test_no_rule_hides_a_failure_behind_true_or_blanket_suppression(repo_root: P
 def test_rules_declare_logs_threads_resources_and_benchmarks(repo_root: Path) -> None:
     text = (repo_root / "workflow" / "Snakefile").read_text()
     for rule in ("validate", "design_audit", "partition", "diagnose", "correct",
-                 "metrics", "decide", "report"):
+                 "metrics", "decide", "status", "report"):
         assert f"rule {rule}:" in text
-    assert text.count("log:") >= 8
-    assert text.count("threads:") >= 8
-    assert text.count("resources:") >= 8
-    assert text.count("benchmark:") >= 7
+    assert text.count("log:") >= 9
+    assert text.count("threads:") >= 9
+    assert text.count("resources:") >= 9
+    # Nine rules besides `all`, each with its own benchmark directive, so the threshold
+    # has no slack left: dropping one directive anywhere now fails this test. It was
+    # `>=7` while `rule status` had none, which is exactly enough slack to hide it.
+    assert text.count("benchmark:") >= 9
 
 
 def test_the_candidate_roster_comes_from_the_configuration_not_the_results_tree(
@@ -197,3 +208,105 @@ def test_slurm_profile_is_present_but_labelled_untested(repo_root: Path) -> None
         "the SLURM profile has not been executed on a cluster in this build and must "
         "say so rather than implying it has"
     )
+
+
+def test_the_slurm_profile_parses_and_leaves_only_site_specific_values_unset(
+    repo_root: Path,
+) -> None:
+    """The profile is never submitted here, so it is checked the only honest way.
+
+    Parsing it and asserting that the *only* unset values are the two that genuinely
+    cannot be known off-cluster is a stronger statement than "it exists". A placeholder
+    that is site-specific is defensible in a file labelled UNTESTED; a placeholder in a
+    memory limit is not, and this fails if one is introduced.
+    """
+
+    import yaml
+
+    profile = repo_root / "workflow" / "profiles" / "slurm" / "config.yaml"
+    settings = yaml.safe_load(profile.read_text())
+
+    assert settings["executor"] == "slurm"
+    # The keys are the ones snakemake maps to command line flags; an invented one would
+    # be silently ignored by a profile parser and is therefore worse than an error.
+    assert set(settings) <= {
+        "executor", "jobs", "keep-going", "rerun-incomplete", "latency-wait",
+        "default-resources", "set-resources", "cluster-prefix", "cluster-config",
+    }
+    # This is the setting the resume behaviour in
+    # tests/integration/test_workflow_resilience.py depends on, so it is asserted here
+    # rather than only in a comment in the profile.
+    assert settings["rerun-incomplete"] is True
+
+    assert settings["default-resources"]["slurm_partition"] == "REPLACE_ME"
+    assert settings["default-resources"]["slurm_account"] == "REPLACE_ME"
+    for key, value in settings["default-resources"].items():
+        if key not in ("slurm_partition", "slurm_account"):
+            assert isinstance(value, int), f"{key} is left unset; only the two cluster-"\
+                                           "specific strings may be placeholders"
+
+    # Every rule the Snakefile declares is either covered by set-resources or left to
+    # default-resources. A per-rule block naming a rule that does not exist would be a
+    # typo that a profile parser cannot see.
+    rules = set(re.findall(r"^rule (\w+):", (repo_root / "workflow" / "Snakefile").read_text(),
+                           re.M))
+    assert set(settings["set-resources"]) <= rules
+
+
+def test_the_local_profile_claim_is_true_because_the_harness_passes_it(
+    repo_root: Path,
+) -> None:
+    """`local/config.yaml` says the integration suite runs that profile.  This asserts it.
+
+    The header used to be an unchecked claim: no test passed `--profile`. Either the claim
+    or the harness was wrong, and the claim was the easier one to fix by adding the flag,
+    so the flag was added rather than the claim withdrawn.
+    """
+
+    profile = repo_root / "workflow" / "profiles" / "local" / "config.yaml"
+    assert "this profile is what the integration suite runs" in profile.read_text()
+
+    harness = Path(__file__).read_text()
+    assert '"--profile"' in harness, (
+        "local/config.yaml claims the integration suite runs it; no test passes it"
+    )
+
+
+def test_the_environment_files_are_human_recipes_and_the_claim_is_checked(
+    repo_root: Path,
+) -> None:
+    """Pin `workflow/envs/README.md`'s "nothing consumes these" claim to a test.
+
+    The README says the two environment files are consumed by a person and not by the
+    workflow. A README that says so can rot silently the moment someone adds a `conda:`
+    directive, so the statement is asserted instead of trusted.
+    """
+
+    snakefile = (repo_root / "workflow" / "Snakefile").read_text()
+    rules = re.findall(r"^rule (\w+):", snakefile, re.M)
+    assert "all" in rules
+    for rule in rules:
+        if rule == "all":
+            continue
+        body = snakefile.split(f"rule {rule}:", 1)[1]
+        body = re.split(r"^rule \w+:", body, maxsplit=1, flags=re.M)[0]
+        assert "conda:" not in body, (
+            f"rule {rule} declares a conda environment; workflow/envs/README.md says no "
+            f"rule does, and one of the two is now wrong"
+        )
+
+    assert "--use-conda" not in (repo_root / "src" / "batchdx" / "cyto" / "cli.py").read_text()
+    # This module names the flag in order to assert its absence, so it is excluded from
+    # the sweep; the claim is about the harness as a whole, which is tests/.
+    others = [
+        p.read_text()
+        for p in (repo_root / "tests").rglob("*.py")
+        if p.resolve() != Path(__file__).resolve()
+    ]
+    assert not [t for t in others if "--use-conda" in t]
+
+    workflow = (repo_root / ".github" / "workflows" / "batchdx-cyto-tests.yaml").read_text()
+    assert "envs/python.yaml" not in workflow and "envs/openproblems.yaml" not in workflow
+
+    readme = (repo_root / "workflow" / "envs" / "README.md").read_text()
+    assert "neither is consumed by the workflow" in readme
