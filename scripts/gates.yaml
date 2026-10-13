@@ -395,8 +395,10 @@ gates:
       carries uncertainty_low/uncertainty_high/uncertainty_kind. The replicate unit is
       the sample or the donor and never the cell, which is proven directly by
       test_the_replicate_unit_is_the_sample_not_the_cell. NOT satisfied: the results are
-      established on deterministic synthetic fixtures only, with no real cytometry data
-      (docs/blocked.md B-008) and a single seed, so the preservation evidence is a
+      established on deterministic synthetic fixtures only. Public spectral controls
+      have been audited but no real-data workflow has run (docs/blocked.md B-008);
+      selected checks cover five seeds but the whole scientific suite has not been
+      rerun at every seed. The preservation evidence remains a
       demonstration that the machinery is correct, not a calibration for any real
       cohort. The OpenProblems functional-marker component remains unreconciled against
       its pinned implementation.
@@ -494,7 +496,7 @@ gates:
       - "tests/scientific/test_multiseed.py::test_the_seed_has_exactly_one_default"
     partial_reason: >-
       Release metadata, compatibility documentation, synthetic scientific fixtures and
-      selected multi-seed checks execute. The separate R exchange suite passes locally
-      but is not a pytest gate or CI job. NOT satisfied: real-cohort validation,
+      selected multi-seed checks execute. The separate R exchange suite passed locally
+      and in draft-PR CI, but is not a pytest gate. NOT satisfied: real-cohort validation,
       calibrated thresholds, suite-wide multi-seed coverage, a built container, or
       cluster execution. This release remains Alpha.

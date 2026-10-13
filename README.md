@@ -17,8 +17,9 @@ cannot be corrected"*.
 > to end and are tested. **cyCombine and CytoNorm execute for real**, at their pinned
 > commits, through real upstream calls. **CytoBatchFlagR's detector also executes** in
 > integration tests, but its flags have an uncalibrated false-positive rate. Every
-> scientific result rests on deterministic synthetic fixtures because no permissibly
-> licensed real dataset was available. Every partial gate states in
+> scientific result still rests on deterministic synthetic fixtures. Public spectral
+> controls have been downloaded and audited, but no real-data workflow result exists.
+> Every partial gate states in
 > [`docs/implementation_status.md`](docs/implementation_status.md) (generated from an
 > executed test report) exactly what is not satisfied, and
 > [`docs/blocked.md`](docs/blocked.md) lists the open items with their commands.

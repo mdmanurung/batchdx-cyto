@@ -4,22 +4,30 @@ All notable changes to `batchdx-cyto` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-**How to read the `Unreleased` section.** This repository's history is short and
-unusual: the five tracked commits are all dated 2026-09-14/15, and every change made since
-— the report-correctness tranche, preprocessing, the R environment, the R test suite and
-this release-readiness tranche — is **still uncommitted**. `Unreleased` below is therefore
-written from the working tree through 2026-10-03, not from commit messages, and the
-commit that eventually carries it will be the first since `9850c33`. Where a claim here
-could be checked, it names the command that checks it; `docs/compatibility_matrix.md` is
-the authority on which claims are `verified` and which are `declared-only`.
+**How to read the `Unreleased` section.** The development work since the September
+prototype is now committed on the `alpha-ci-20261003` draft-PR branch. The section
+describes the package as built and tested through 2026-10-03; it is not a claim that a
+release tag exists. `docs/compatibility_matrix.md` distinguishes executed support from
+declared support.
 
 The project version is `0.1.0`, mirrored in `pyproject.toml:14`,
 `src/batchdx/cyto/_version.py:3` and `CITATION.cff:15`. All three move together.
 
 ## [Unreleased] — 2026-10-03
 
-The first release candidate. `Development Status :: 3 - Alpha` is accurate: several
+The first Alpha release candidate. `Development Status :: 3 - Alpha` is accurate: several
 gates are `PARTIAL`, and real-cohort calibration and deployment remain unverified.
+
+### Development fixes — 2026-10-10
+
+- R subprocesses now require valid result envelopes and string arrays, preserve
+  single-item warnings and SOM node IDs, and retain partial logs on timeout.
+  Execution defaults to four hours; version probes are bounded to 30 seconds.
+- Correction-stage failures now retain records and tracebacks for invalid output,
+  missing files, malformed JSON, timeouts and export errors. Retries invalidate
+  previous corrected outputs and metrics; backend names and candidate directory
+  IDs are validated before execution. Cancellation and shared-input failures
+  still abort the run. These fixes do not establish real-data validation.
 
 ### Added
 
@@ -105,6 +113,10 @@ gates are `PARTIAL`, and real-cohort calibration and deployment remain unverifie
   assertions on R 4.5.1.
 - **A second AnnData 0.13 `None` layer alias path raised `TypeError`.** The missing-layer
   error now filters that alias and has a regression check.
+- **Interrupted-run artifacts carried elapsed walltime.** cyCombine correction and
+  native-metric JSON included process duration, changing hashes after a valid resume.
+  Runtime remains in Snakemake benchmark TSVs; the scientific result records and report
+  now have reproducible bytes, pending the complete CI resilience rerun.
 
 ### Changed
 
@@ -128,11 +140,10 @@ gates are `PARTIAL`, and real-cohort calibration and deployment remain unverifie
 These are open on purpose. `docs/blocked.md` carries each with the exact command that
 still fails.
 
-- **No real cytometry data, and this is a scope decision.** No dataset with reference or
-  replicate structure was obtainable under the current egress policy, so this package
-  ships synthetic fixtures only. B-008 closes as a stated boundary, not a capability.
-  Every `verified` row in `docs/compatibility_matrix.md` was measured against synthetic
-  input.
+- **Real-data validation is still absent.** The public CytoBatchFlagR spectral-control
+  files are downloaded and checksum audited outside Git. A homogeneous 24-file subset
+  is eligible for technical-control workflow review, but no raw-to-report run has been
+  executed. Every scientific performance result in this Alpha is from synthetic input.
 - **CytoBatchFlagR flags remain uncalibrated.** The detector now executes, but its
   1.5-IQR fence has a high per-test false-positive rate at realistic batch counts.
 - **All sixteen dependency floors are untested**, and no dependency carries an upper
@@ -147,7 +158,7 @@ still fails.
 
 ## [0.1.0.dev0] — 2026-09-15
 
-The five commits that exist.
+Prototype history before the Alpha branch.
 
 - `fc06be5` 2026-09-14 — Initial commit (the cookiecutter template this repository also
   carries; 53 files).

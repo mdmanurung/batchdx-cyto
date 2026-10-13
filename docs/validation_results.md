@@ -21,10 +21,10 @@ measurable at all), and separately controllable perturbations:
 | per-sample `frequencies` | a composition difference |
 | `within_population_correlation` | co-expression structure to preserve or destroy |
 
-**These are fixtures, not a scientific claim.** No real cytometry dataset was available
-under this environment's egress policy (`docs/blocked.md` B-008), so nothing here
-demonstrates behaviour on real data. **This package ships no real cytometry data and no
-real-data example, as a stated scope decision** — see item 4 below and
+**These are fixtures, not a scientific claim.** Public spectral controls have been
+obtained and audited, but no real-data correction has run. Nothing here demonstrates
+behaviour on real data. **This Alpha ships no real cytometry data or real-data example**
+— see item 4 below and
 `examples/README.md`, where the same statement sits on the face of the documentation
 rather than only in a blocked-items file.
 
@@ -129,14 +129,12 @@ Stated plainly, because the absence of a test is not evidence of correctness:
    obstacle, and `openproblems.cms` is recorded as genuinely absent at the pinned
    commit. The audit script fails the build if anything claims `compatibility` without
    verification.
-4. **No real data, and this is a scope decision rather than a gap.** Behaviour on heavy
+4. **No real-data validation yet.** Behaviour on heavy
    tails, multimodality, marker dropout, instrument artefacts and genuine spillover is
-   untested, and every scientific result here rests on `batchdx.cyto.simulate`. No
-   permissibly licensed real dataset was obtainable under this environment's egress
-   policy, and none was written from memory (`docs/blocked.md` B-008). **This package
-   ships no real cytometry data and no real-data example, deliberately** — no gate depends
-   on real data, so the honest move is to state the boundary where a reader will meet it
-   rather than leave it as a not-done item that never converges. Read any number in this
+   untested, and every scientific result here rests on `batchdx.cyto.simulate`. A public
+   spectral-control dataset is downloaded outside Git, with a 24-file homogeneous subset
+   audited, but its correction endpoints have not been run (`docs/blocked.md` B-008).
+   The `0.1.0` Alpha ships no real cytometry data or real-data example. Read any number in this
    file as a property of the code on synthetic input, not as a calibration for any cohort.
    The same statement is on the face of `examples/README.md`,
    `docs/compatibility_matrix.md` and `README.md`.

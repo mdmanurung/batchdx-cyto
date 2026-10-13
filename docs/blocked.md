@@ -288,14 +288,18 @@ quietly retired.
 
 ---
 
-## B-008 — no permissibly usable real cytometry example is included
+## B-008 — public data obtained; real-data validation remains open
 
 **Stage affected:** 12.
 
-No real dataset with reference or replicate structure was obtainable under the egress
-policy above, and none was included from memory. The scientific suite runs entirely on
-deterministic synthetic fixtures from `batchdx.cyto.simulate`, which are labelled as
-fixtures and are not a scientific claim.
+All 74 files from the public CytoBatchFlagR spectral-control record were downloaded
+outside Git and checksum verified on 2026-10-03. The FCS audit found six channel layouts;
+the 24 files from batches 13–18 form one homogeneous four-control technical subset.
+See `data/metadata/cytobatchflagr_spectral/DATASET.md` and its design audit. No raw-to-report
+run or real-data correction endpoint has been executed, and no donor identity is
+established. The scientific suite still runs on deterministic synthetic fixtures from
+`batchdx.cyto.simulate`, which are not cohort evidence. The `0.1.0` Alpha keeps this
+limit explicit; the `0.2.0` candidate needs measured real-data results.
 
 ---
 

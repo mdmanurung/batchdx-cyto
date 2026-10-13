@@ -52,8 +52,10 @@ git status --porcelain | grep '^??' | wc -l    # must become 0
 
 - [ ] `pytest -q` — a complete current run is still needed. The non-slow run on
       2026-10-03 had 355 passed, 1 conditional skip, 23 slow tests deselected.
-- [x] No unexplained skips. The skips that exist are gated on an absent package, and each
-      names the package.
+- [ ] No unexplained skips in the complete CI report. The first full runner report had
+      two skips: a test looked only for `renv/lib/R/library` although CI used `R_LIBS`,
+      and a thin-design test skipped because its shared fixture had cross-batch donors.
+      Both test conditions are corrected and await the next complete CI report.
 - [x] `ruff check src tests scripts` — clean.
 - [x] Both audit scripts exit 0: `python scripts/audit_upstream.py` and
       `Rscript --vanilla scripts/audit_upstream.R`.
@@ -133,7 +135,7 @@ ship a known defect; it is not allowed to ship an unrecorded one.
 
 ## 8. Central changes required before this release is honest
 
-Items 2–5 are complete locally. Item 1 remains necessary for a fresh clone.
+Items 1–5 are committed and verified locally.
 
 1. **Done locally:** commit the required source and release files, including
    `scripts/setup_r_env.sh` and `workflow/envs/{python,openproblems}.yaml`.
@@ -142,10 +144,11 @@ Items 2–5 are complete locally. Item 1 remains necessary for a fresh clone.
 4. **Done:** register Stage 12 tests in `scripts/gates.yaml`.
 5. **Done:** state the synthetic-only scope in `README.md`.
 
-6. **Configured, awaiting CI execution:** the R suite uses the job's Python
-   interpreter and the isolated R setup installs `testthat`.
-7. **Configured, awaiting CI execution:** the primary CI job and workflow environment
-   both use Python 3.12. Python 3.10, 3.11 and 3.13 remain declared-only.
+6. **Executed in CI:** the R suite uses the job's Python interpreter and the isolated
+   R setup installs `testthat`; run 37102250467 passed the R suite.
+7. **Executed in CI:** the primary job uses Python 3.12. Its first complete run exposed
+   two resilience failures, which are under rerun. Python 3.10, 3.11 and 3.13 remain
+   declared-only.
 8. **Set upper bounds on the sixteen dependencies** per the table in
    `docs/compatibility_matrix.md`, and add a lowest-supported-dependency CI job so the
    lower bounds become measurements rather than promises.

@@ -10,6 +10,7 @@
 | [`compatibility_matrix.md`](compatibility_matrix.md) | what is actually tested, declared only, or untested, with the command that verifies each row — Python versions, dependency versions and bounds, R and the R backends, and the statement that no real cytometry data ships |
 | [`decisions/`](decisions/) | architecture and licence decision records |
 | [`plans/`](plans/) | implementation plans and progress records, tracked deliberately: the remaining work, the tranches executing it, and what each tranche verified |
+| [`releases/0.1.0-alpha.md`](releases/0.1.0-alpha.md) | draft Alpha release text, held until the checklist and final approval |
 | `audit/` | captured Stage 0 audit artifacts (produced by `batchdx-cyto audit`) |
 
 Two files at the repository root belong in this index's reading order even though they

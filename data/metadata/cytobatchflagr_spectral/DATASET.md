@@ -16,6 +16,8 @@ The source description says the FCS files contain FlowJo-gated live `CD45+CD14-`
 
 The local FCS audit read and checksum verified all 72 FCS files, totaling **27,022,765 events**. There are **six distinct channel layouts**, and each batch uses one layout. The largest exact-layout group is batches **13–18**: 24 files, one of each control per batch, all with the same 33 channels. `technical_control_subset.tsv` freezes that subset. The other **48 files are excluded from this first technical-control analysis solely because their channel layouts differ**; they remain in the full source inventory. The full 18-batch set is ineligible as-is for a common-marker pipeline. Cross-panel harmonization would need an explicit marker mapping and separate validation.
 
+The subset layout has 25 channels with FCS `$PnS` antigen labels and eight channels for scatter, autofluorescence or acquisition time. `channel_layouts.tsv` is the exact channel-to-label map, not a curated lineage/functional role assignment. Those roles and the correction/evaluation masks must be set before a workflow run.
+
 **Role decision:** the 24-file, six-batch subset is eligible for a technical-control workflow review, subject to a marker manifest and the raw-FCS preprocessing implementation. It cannot support donor-disjoint or biological-preservation claims because donor and outcome identities are not established. No marker exclusions have been made.
 
 ## Download and validation recipe
