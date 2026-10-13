@@ -162,6 +162,46 @@ def test_an_unavailable_method_produces_a_partial_report_not_a_failed_run(
         assert entry["unit"] in html
 
 
+def test_missing_backend_output_keeps_the_workflow_and_report_usable(tmp_path: Path) -> None:
+    """Exercise the real adapter/stage/DAG boundary without requiring R packages."""
+    import yaml
+
+    from batchdx.cyto.examples import materialise_example
+
+    materialise_example("paired_reference", tmp_path, cells_per_sample=100)
+    config_path = tmp_path / "config" / "config.yaml"
+    raw = yaml.safe_load(config_path.read_text())
+    # The interpreter fixture answers version probes but omits the correction matrix.
+    # It does not perform R execution or establish backend/scientific validity.
+    interpreter = tmp_path / "fake-rscript"
+    interpreter.write_text(
+        f"#!{sys.executable}\nimport pathlib, sys\n"
+        "if '-e' in sys.argv:\n    print('1.0.0')\n"
+        "else:\n    print('fixture: correction output intentionally missing')\n"
+        "    pathlib.Path(sys.argv[-1]).write_text('{\"status\":\"ok\"}')\n"
+    )
+    interpreter.chmod(0o755)
+    raw["upstream"]["rscript"] = str(interpreter)
+    raw["correction"]["candidates"] = [
+        {"id": "uncorrected", "backend": "none"},
+        {"id": "broken_output", "backend": "cycombine"},
+    ]
+    config_path.write_text(yaml.safe_dump(raw))
+    outdir = tmp_path / "results" / "missing-output"
+    proc = _snakemake(tmp_path, outdir)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    candidate_dir = outdir / "candidates" / "broken_output"
+    correction = json.loads((candidate_dir / "correction_result.json").read_text())
+    assert correction["status"] == "failed"
+    assert not (candidate_dir / "corrected.h5ad").exists()
+    metrics = json.loads((outdir / "metrics" / "broken_output" / "metric_result.json").read_text())
+    assert metrics["records"] == [] and metrics["status"] == "ineligible"
+    assert outdir.joinpath("candidates", "uncorrected", "corrected.h5ad").exists()
+    html = outdir.joinpath("report", "report.html").read_text()
+    assert "broken_output" in html and "failed" in html
+    assert "FileNotFoundError" in outdir.joinpath("logs", "correct_broken_output.log").read_text()
+
+
 def test_no_rule_hides_a_failure_behind_true_or_blanket_suppression(repo_root: Path) -> None:
     snakefile = (repo_root / "workflow" / "Snakefile").read_text()
     assert "|| true" not in snakefile

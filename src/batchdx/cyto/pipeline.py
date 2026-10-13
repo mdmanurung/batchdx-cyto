@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import platform
+import subprocess
 import sys
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -278,10 +280,27 @@ def stage_correct(
     )
     backend = get_backend(spec.backend)
 
+    # A retry invalidates its previous success before anything can fail or be cancelled.
+    for path in (layout.correction_result(candidate_id), layout.corrected_h5ad(candidate_id),
+                 layout.metric_result(candidate_id)):
+        path.unlink(missing_ok=True)
+    log_path = layout.root / "logs" / f"correct_{candidate_id}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(f"Starting candidate {candidate_id!r} ({spec.backend}).\n", encoding="utf-8")
+
     eligibility = next(
         (e for e in design.eligibility if e.name == spec.backend and e.kind == "backend"), None
     )
     override_note: str | None = None
+
+    def finish(result: CorrectionResult) -> Path:
+        if override_note is not None:
+            result.warnings = [*result.warnings, override_note]
+        path = result.write(layout.correction_result(candidate_id))
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(f"Status: {result.status.value}. {result.reason or 'completed'}\n")
+        return path
+
     if eligibility is not None and not eligibility.eligible:
         if config.design.allow_exploratory_override and eligibility.override_allowed:
             # The gate is bypassed, not satisfied, and the bypass is recorded before the
@@ -303,48 +322,46 @@ def stage_correct(
         else:
             record = make_spec(candidate_id, spec.backend, None, dict(spec.parameters),
                                config.project.seed, dataset, [])
-            failure_result(
+            return finish(failure_result(
                 record, CorrectionStatus.INELIGIBLE,
                 f"{eligibility.reason} (reason code: {eligibility.reason_code})",
-            ).write(layout.correction_result(candidate_id))
-            return layout.correction_result(candidate_id)
-
-    def finish(result: CorrectionResult) -> Path:
-        if override_note is not None:
-            result.warnings = [*result.warnings, override_note]
-        return result.write(layout.correction_result(candidate_id))
+            ))
 
     try:
         matrix, result = backend.run(dataset, candidate_id, dict(spec.parameters), context)
-    except BackendNotAvailable as exc:
-        # Ordered before the BackendError branch because it is a subclass, and it must
-        # be: the environment-gap and method-failure states are what
-        # docs/decisions/0006-candidate-results-and-failure-handling.md requires a
-        # report to keep apart, and they are told apart by type rather than by
-        # matching words in a message.
-        record = make_spec(candidate_id, spec.backend, None, dict(spec.parameters),
-                           config.project.seed, dataset, [])
-        finish(failure_result(record, CorrectionStatus.NOT_AVAILABLE, str(exc),
-                              software=backend.availability(context)))
-        return layout.correction_result(candidate_id)
-    except BackendError as exc:
+        if result.status is CorrectionStatus.SUCCESS:
+            path = write_candidate_output(
+                dataset, matrix, layout.corrected_h5ad(candidate_id),
+                candidate_id=candidate_id, output_scale=result.output_scale,
+            )
+            result.output_path = str(path)
+    except (BackendError, ValueError, OSError, subprocess.TimeoutExpired) as exc:
+        # Only expected candidate execution/output errors are reportable skips;
+        # shared input loading above and cancellation remain whole-run failures.
+        layout.corrected_h5ad(candidate_id).unlink(missing_ok=True)
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
         try:
             resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
         except BackendError:
             resolved = dict(spec.parameters)
         record = make_spec(candidate_id, spec.backend, None, resolved,
                            config.project.seed, dataset, [])
-        finish(failure_result(record, CorrectionStatus.FAILED, str(exc),
-                              software=backend.availability(context)))
-        return layout.correction_result(candidate_id)
-
-    path = write_candidate_output(
-        dataset, matrix, layout.corrected_h5ad(candidate_id),
-        candidate_id=candidate_id, output_scale=result.output_scale,
-    )
-    result.output_path = str(path)
-    finish(result)
-    return layout.correction_result(candidate_id)
+        warnings = []
+        try:
+            software = backend.availability(context)
+        except (BackendError, ValueError, OSError, subprocess.TimeoutExpired) as probe_error:
+            software = []
+            warnings.append(f"Software availability could not be recorded: {probe_error}")
+            with log_path.open("a", encoding="utf-8") as log:
+                log.write(traceback.format_exc())
+        status = (
+            CorrectionStatus.NOT_AVAILABLE if isinstance(exc, BackendNotAvailable)
+            else CorrectionStatus.FAILED
+        )
+        result = failure_result(record, status, str(exc), software=software)
+        result.warnings = warnings
+    return finish(result)
 
 
 def _read_candidate_matrix(

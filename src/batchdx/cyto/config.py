@@ -347,6 +347,25 @@ class CandidateConfig(_Strict):
     backend: str
     parameters: dict[str, Any] = Field(default_factory=dict)
 
+    @field_validator("id")
+    @classmethod
+    def _candidate_directory_name(cls, v: str) -> str:
+        if not v or v in {".", ".."} or "/" in v or "\\" in v:
+            raise ValueError("candidate id must be a non-empty directory name without path separators")
+        return v
+
+    @field_validator("backend")
+    @classmethod
+    def _known_backend(cls, v: str) -> str:
+        from batchdx.cyto.adapters import available_backends
+
+        backends = available_backends()
+        if v not in backends:
+            raise ValueError(
+                f"unknown correction backend {v!r}; available backends: {sorted(backends)}"
+            )
+        return v
+
 
 class CorrectionConfig(_Strict):
     control_policy: Literal["measured_only"] = "measured_only"
