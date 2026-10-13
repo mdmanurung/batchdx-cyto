@@ -30,3 +30,20 @@ interprets as "no problem".
 * The report has a "failures and limitations" section that is populated from records,
   and failed candidates stay visible in the comparison table.
 * A partial run is reportable as a partial run.
+* R exit zero requires a valid result envelope. Missing/malformed results and
+  timeouts raise the checked boundary's existing failure type with logs; callers
+  report the actual reason. Timeouts have no reported exit code. R execution uses
+  a four-hour default and version probes a 30-second limit. Declared string arrays
+  retain their list shape across the R/JSON/Python boundary.
+* Expected candidate execution/output errors (including invalid values, missing
+  files, malformed JSON, timeouts and export I/O failures) produce a failure record
+  and a traceback in `logs/correct_<candidate>.log`. A failed software-version
+  probe cannot replace the original error. Invalid shared inputs, cancellation,
+  unexpected programming defects and inability to persist the failure remain
+  whole-run errors.
+* Before a correction retry, its old result, corrected H5AD and metric result are
+  invalidated. Failed/partial exports are removed; only a successful correction
+  exports a matrix. The old file cannot supply scores after a new attempt fails.
+* Backend names are checked during configuration validation. Candidate IDs must
+  be non-empty directory names without path separators, so retry invalidation
+  cannot traverse into another candidate's directory.

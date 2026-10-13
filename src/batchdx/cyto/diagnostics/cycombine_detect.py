@@ -125,7 +125,7 @@ class _CyCombineDetector:
             return DetectorResult(
                 detector=self.name, namespace="native", run_id=context.run_id,
                 status="failed",
-                reason=f"the R detector exited with status {exc.returncode}",
+                reason=f"the R detector failed: {exc}",
                 eligibility=eligibility, software=software,
                 warnings=[exc.log[-2000:]],
             )

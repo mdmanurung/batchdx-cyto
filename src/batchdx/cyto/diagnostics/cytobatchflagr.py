@@ -172,7 +172,7 @@ class CytoBatchFlagRDetector:
             return DetectorResult(
                 detector=self.name, namespace="native", run_id=context.run_id,
                 status="failed",
-                reason=f"the CytoBatchFlagR wrapper exited with status {exc.returncode}",
+                reason=f"the CytoBatchFlagR wrapper failed: {exc}",
                 eligibility=eligibility, software=software, warnings=[exc.log[-2000:]],
             )
 

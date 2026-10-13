@@ -64,6 +64,12 @@ batchdx_args <- function() {
 }
 
 batchdx_write_result <- function(path, payload) {
+  ## auto_unbox must not turn one warning or node ID into a scalar string.
+  list_fields <- c("warnings", "confounded_nodes", "fitted_labels", "unfitted_labels",
+                   "missing_packages", "metaclusters", "outputs")
+  for (field in intersect(names(payload), list_fields)) {
+    payload[[field]] <- as.list(payload[[field]])
+  }
   writeLines(jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null", pretty = TRUE), path)
   invisible(path)
 }

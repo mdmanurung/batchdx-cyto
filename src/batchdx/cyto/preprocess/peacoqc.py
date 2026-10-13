@@ -503,7 +503,7 @@ def run_peacoqc(
         raise PeacoQCNotAvailable(str(exc)) from exc
     except RScriptFailed as exc:
         raise PeacoQCError(
-            f"the PeacoQC script exited {exc.returncode}. Last lines of the R log:\n"
+            f"the PeacoQC script failed: {exc}. Last lines of the R log:\n"
             f"{exc.log[-2000:]}"
         ) from exc
 

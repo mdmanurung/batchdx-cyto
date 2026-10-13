@@ -405,7 +405,7 @@ class CytoNormBackend:
             raise BackendNotAvailable(str(exc)) from exc
         except RScriptFailed as exc:
             raise BackendError(
-                f"CytoNorm correction failed (exit {exc.returncode}). "
+                f"CytoNorm correction failed: {exc}. "
                 f"Last lines of the R log:\n{exc.log[-2000:]}"
             ) from exc
 

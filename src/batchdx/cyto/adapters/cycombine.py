@@ -186,9 +186,14 @@ class CyCombineBackend:
             raise BackendNotAvailable(str(exc)) from exc
         except RScriptFailed as exc:
             raise BackendError(
-                f"cyCombine correction failed (exit {exc.returncode}). "
+                f"cyCombine correction failed: {exc}. "
                 f"Last lines of the R log:\n{exc.log[-2000:]}"
             ) from exc
+
+        if r_result.payload.get("status") != "ok":
+            raise BackendError(
+                f"the cyCombine script did not report success: {r_result.payload.get('status')!r}"
+            )
 
         corrected_block, row_ids, col_names, _ = read_matrix(params["output_matrix"])
         if row_ids != obs[CELL_ID].astype(str).tolist():

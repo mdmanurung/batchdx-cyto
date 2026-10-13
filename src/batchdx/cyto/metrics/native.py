@@ -188,7 +188,7 @@ def compute_native_metrics(
             record(NATIVE_CYCOMBINE_MAD, None, MetricStatus.NOT_IMPLEMENTED, reason),
         ]
     except RScriptFailed as exc:
-        reason = f"cyCombine metric evaluation failed (exit {exc.returncode}): {exc.log[-1500:]}"
+        reason = f"cyCombine metric evaluation failed: {exc}: {exc.log[-1500:]}"
         return [
             record(NATIVE_CYCOMBINE_EMD, None, MetricStatus.FAILED, reason),
             record(NATIVE_CYCOMBINE_MAD, None, MetricStatus.FAILED, reason),
