@@ -1,0 +1,87 @@
+{
+  "reviewed_at_utc": "2026-10-10T07:21:03.864233+00:00",
+  "branch": "alpha-ci-20261003",
+  "head": "b313006ea175c53c7ce709f7b894d1768b7db0e2",
+  "dirty_worktree": true,
+  "scope": "Prototype planning; no package source changes",
+  "focused_tests": {
+    "command": "env XDG_CACHE_HOME=/tmp/batchdx-prototype-review-cache MPLCONFIGDIR=/tmp/batchdx-prototype-review-mpl NUMBA_CACHE_DIR=/tmp/batchdx-prototype-review-numba .venv/bin/python -m pytest -q tests/unit tests/scientific -m 'not requires_r and not requires_cycombine and not requires_cytonorm and not requires_cytobatchflagr and not slow' --json-report --json-report-file=/tmp/batchdx-prototype-review-tests.json",
+    "summary": {
+      "passed": 242,
+      "total": 242,
+      "collected": 246,
+      "deselected": 4
+    },
+    "duration_seconds": 231.51953506469727,
+    "exitcode": 0,
+    "artifact": "2026-10-10-focused-tests.json"
+  },
+  "lint": {
+    "command": ".venv/bin/ruff check src tests scripts",
+    "exitcode": 0,
+    "output": "All checks passed!"
+  },
+  "probes": {
+    "artifact": "2026-10-10-probes.json",
+    "observations": {
+      "report_template_autoescape": false,
+      "future_schema_accepted": 999,
+      "missing_guardrails_state_with_test_policy": "recommended_under_policy",
+      "emd_receives_baseline_panel": true,
+      "emd_receives_candidate_panel": false
+    },
+    "limitations": [
+      "Guardrail recommendation uses a process-local test policy; shipped YAML policies are uncalibrated.",
+      "EMD public-wrapper probe mocks component execution to inspect dispatch; it does not establish upstream numerical parity.",
+      "HTML probe checks the configured template autoescape predicate; no malicious report was opened."
+    ]
+  },
+  "historical_saved_report": {
+    "path": "build/report.json",
+    "summary": {
+      "passed": 355,
+      "skipped": 1,
+      "total": 356,
+      "collected": 379,
+      "deselected": 23
+    }
+  },
+  "source_sha256": {
+    "src/batchdx/cyto/pipeline.py": "9fa1c81ba80be429c1b11db0e8ec6e87dfbb2decc8eca3a05959ab46ff0ac34c",
+    "src/batchdx/cyto/metrics/openproblems.py": "42e849172b381b86df671672e8455ba4c2d6f4e1bc223ce367a3f26ed9729083",
+    "src/batchdx/cyto/metrics/common.py": "affd4acf0d123e589a4ba9843db4c3ec525f22314bfdf0a2f405f3c6afd56cce",
+    "src/batchdx/cyto/decisions/policy.py": "3e1dd80dafb2316762016a3d674b32e2a9e975ec1889dbf5a350166a5b12c799",
+    "src/batchdx/cyto/adapters/cycombine.py": "dcdedae578a1f3e56a3179a5204808b3bf41bf50c1ff0eb584f90da4fc8b7fad",
+    "src/batchdx/cyto/adapters/cytonorm.py": "2a000d3a6a06a4401abd9764bdd59b4ca08f8319319642791973d44cb5d57372",
+    "src/batchdx/cyto/adapters/r_runner.py": "f2ff44b33ac552d5023570cc9c4b0fcdbde5b46621c8c901cee57aaf6ba73392",
+    "src/batchdx/cyto/schemas/contracts.py": "ef9557815cae77e515f2038ceab101e18699da50cc95f0afb933e4e8afa433cc",
+    "src/batchdx/cyto/reporting/html.py": "ea2c0c0bec46f8eead53a4e003463d3464f4544339b6f4f9dc89cb8589759f99",
+    "src/batchdx/cyto/reporting/redact.py": "eccf875001148a1df2bbeabb4f77594598dfc720a81ffa9ac4beb4e336fc69da",
+    "src/batchdx/cyto/config.py": "95dcf1882498c2df4ade295eee5a0288da9d79c3e67182dd736a77f5cfa81cd1",
+    "src/batchdx/cyto/examples.py": "a621d5f60f0e2bbfe7c1e85a9cbe8692a62ae4338e5aa486d92e0f82f62d350b",
+    "src/batchdx/cyto/io/dataset.py": "d35ad9ca9ee537ce4010a358cb0694145226a1aad367f73b92de688348b4894e",
+    "workflow/Snakefile": "50c1e504a98c5c499877216be9f0e41a8917da99b9cdef55ae13fdb1bbc4cb8c",
+    "pyproject.toml": "afb958544fb1bef3f617e0c67030cd724cd47580ccc46e37f354f3fe692a79ee",
+    "scripts/gates.yaml": "a402cb24943557d09b67cb9ca25b38c2a0ade73dc8de4ead98239d0bb6165976"
+  },
+  "not_executed": [
+    "complete pytest/integration/slow workflow suite",
+    "R exchange/backend suite",
+    "real-data correction",
+    "fresh wheel/sdist installation",
+    "current remote CI query",
+    "container build",
+    "scheduler submission",
+    "unfinished external review continuation"
+  ],
+  "documentation_checks": {
+    "task_ids": "20 prototype tasks and 20 extension tasks present, without gaps",
+    "linked_local_artifacts": "present",
+    "reviewed_source_hashes": "unchanged after review",
+    "mycelium_structure": {
+      "command": ".venv/bin/python <plugin-root>/skills/core/scripts/validate_structure.py --target-dir . --strict",
+      "exitcode": 0,
+      "outcome": "Validation PASSED"
+    }
+  }
+}

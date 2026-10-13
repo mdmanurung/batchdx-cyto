@@ -1,0 +1,7 @@
+{
+  "report_template_autoescape": false,
+  "future_schema_accepted": 999,
+  "missing_guardrails_state_with_test_policy": "recommended_under_policy",
+  "emd_receives_baseline_panel": true,
+  "emd_receives_candidate_panel": false
+}

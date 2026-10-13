@@ -1,0 +1,216 @@
+{
+  "date": "2026-10-10",
+  "task": "P02 checked R result boundary",
+  "branch": "alpha-ci-20261003",
+  "head": "b313006ea175c53c7ce709f7b894d1768b7db0e2",
+  "python": "3.12.13",
+  "checks": {
+    "before": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-before-tests.json",
+      "summary": {
+        "failed": 6,
+        "total": 6,
+        "collected": 28,
+        "deselected": 22
+      },
+      "duration_seconds": 0.9689843654632568,
+      "nonpassing": [
+        {
+          "nodeid": "tests/unit/test_r_runner.py::test_successful_exit_requires_a_valid_result[None]",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/unit/test_r_runner.py::test_successful_exit_requires_a_valid_result[{]",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/unit/test_r_runner.py::test_successful_exit_requires_a_valid_result[[]]",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/unit/test_r_runner.py::test_successful_exit_requires_a_valid_result[null]",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/unit/test_r_runner.py::test_successful_exit_requires_a_valid_result[{}]",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/unit/test_r_runner.py::test_successful_exit_requires_a_valid_result[{\"status\":\"failed\"}]",
+          "outcome": "failed"
+        }
+      ]
+    },
+    "runner_initial": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-runner_initial-tests.json",
+      "summary": {
+        "passed": 28,
+        "total": 28,
+        "collected": 28
+      },
+      "duration_seconds": 2.7975544929504395,
+      "nonpassing": []
+    },
+    "related": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-related-tests.json",
+      "summary": {
+        "passed": 93,
+        "failed": 3,
+        "total": 96,
+        "collected": 121,
+        "deselected": 25
+      },
+      "duration_seconds": 97.95520091056824,
+      "nonpassing": [
+        {
+          "nodeid": "tests/integration/test_cytonorm_backend.py::test_the_verified_flag_cannot_be_claimed_without_the_package",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/integration/test_cytonorm_backend.py::test_cytonorm_needs_a_split_it_can_fit_on",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/integration/test_cytonorm_backend.py::test_cytonorm_is_ineligible_when_the_training_split_holds_no_measured_reference",
+          "outcome": "failed"
+        }
+      ]
+    },
+    "boundary_before_final_guard": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-boundary_before_final_guard-tests.json",
+      "summary": {
+        "passed": 39,
+        "total": 39,
+        "collected": 39
+      },
+      "duration_seconds": 32.79724144935608,
+      "nonpassing": []
+    },
+    "boundary_final": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-boundary_final-tests.json",
+      "summary": {
+        "passed": 40,
+        "total": 40,
+        "collected": 40
+      },
+      "duration_seconds": 34.124125957489014,
+      "nonpassing": [],
+      "command": "env XDG_CACHE_HOME=/tmp/batchdx-p02-cache MPLCONFIGDIR=/tmp/batchdx-p02-mpl NUMBA_CACHE_DIR=/tmp/batchdx-p02-numba .venv/bin/python -m pytest -q tests/unit/test_r_runner.py tests/integration/test_r_result_failures.py --tb=short --json-report --json-report-file=/tmp/batchdx-p02-final.json"
+    },
+    "workflow_without_path": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-workflow_without_path-tests.json",
+      "summary": {
+        "skipped": 1,
+        "total": 1,
+        "collected": 15,
+        "deselected": 14
+      },
+      "duration_seconds": 0.29319167137145996,
+      "nonpassing": [
+        {
+          "nodeid": "tests/integration/test_stage11_workflow.py::test_missing_backend_output_keeps_the_workflow_and_report_usable",
+          "outcome": "skipped"
+        }
+      ]
+    },
+    "baseline": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-baseline-tests.json",
+      "summary": {
+        "failed": 3,
+        "total": 3,
+        "collected": 17,
+        "deselected": 14
+      },
+      "duration_seconds": 1.512298345565796,
+      "nonpassing": [
+        {
+          "nodeid": "tests/integration/test_cytonorm_backend.py::test_the_verified_flag_cannot_be_claimed_without_the_package",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/integration/test_cytonorm_backend.py::test_cytonorm_needs_a_split_it_can_fit_on",
+          "outcome": "failed"
+        },
+        {
+          "nodeid": "tests/integration/test_cytonorm_backend.py::test_cytonorm_is_ineligible_when_the_training_split_holds_no_measured_reference",
+          "outcome": "failed"
+        }
+      ]
+    },
+    "workflow_with_path": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p02-workflow-tests.json",
+      "summary": {
+        "passed": 1,
+        "total": 1,
+        "collected": 15,
+        "deselected": 14
+      },
+      "duration_seconds": 414.3223304748535,
+      "nonpassing": [],
+      "command": "env PATH=/exports/para-lipg-hpc/mdmanurung/batchdx-cyto/.venv/bin:$PATH XDG_CACHE_HOME=/tmp/batchdx-p02-workflow-cache MPLCONFIGDIR=/tmp/batchdx-p02-workflow-mpl NUMBA_CACHE_DIR=/tmp/batchdx-p02-workflow-numba .venv/bin/python -m pytest -q tests/integration/test_stage11_workflow.py -k missing_backend_output --tb=short --json-report --json-report-file=/tmp/batchdx-p02-workflow-path.json"
+    }
+  },
+  "r_exchange": {
+    "command": "env BATCHDX_PYTHON=/exports/para-lipg-hpc/mdmanurung/batchdx-cyto/.venv/bin/python /exports/archive/hg-funcgenom-research/mdmanurung/conda/envs/R4_51/bin/Rscript --vanilla tests/run_r_tests.R",
+    "r_version": "4.5.1",
+    "jsonlite_version": "2.0.0",
+    "testthat_version": "3.3.2",
+    "summary": {
+      "passed_assertions": 110,
+      "failed": 0,
+      "errored": 0,
+      "skipped": 0,
+      "warnings": 0
+    },
+    "exit_code": 0,
+    "evidence": "Observed tool output; raw R console was not saved to a separate file.",
+    "startup_warning": "testthat was built under R version 4.5.2",
+    "initial_harness_error": "Isolated result test used a test-file-local helper; corrected to the existing shared helper before the successful full R exchange suite."
+  },
+  "timeouts_seconds": {
+    "default_execution": 14400,
+    "version_probe": 30
+  },
+  "source_sha256": {
+    "src/batchdx/cyto/adapters/r_runner.py": "13e4b663d200f6639fafab5cbe5378100862e649c84ef636b7b833cb3855f6f2",
+    "workflow/scripts/lib/binmat.R": "03e346a9f9645f63d96e793466bb92e5db36e2a9dad312c27758de1a2fa2f5e9",
+    "src/batchdx/cyto/adapters/cycombine.py": "a8f64b526a34c9625a2b8cef6faa1a77a23c229762d130627a32239aceb6f3c6",
+    "src/batchdx/cyto/adapters/cytonorm.py": "8c9e061e0a0c9bb492b9115427ede6495ec8322b10335f4f858c10f8e92d88f9",
+    "src/batchdx/cyto/diagnostics/cycombine_detect.py": "ee74b90be9ea9a31baf23cb83d572732d176092f937fc875678760775679ce5e",
+    "src/batchdx/cyto/diagnostics/cytobatchflagr.py": "1130806f127883e75c4923e04564eaf6afeea399c38f55f7dbbbffcd1ca33b9e",
+    "src/batchdx/cyto/metrics/native.py": "a82bb522436778c7523d6b09647e28dbd3640bf3b83f2fb0a179558b848f846b",
+    "src/batchdx/cyto/preprocess/peacoqc.py": "51fc812954278227105817276064a8e6ee536eba56e5917c128ff0f6e2a02640",
+    "tests/unit/test_r_runner.py": "fa72e5711d617ac0a37d5323f900738bd27da3c16968f75c315cb4ffdcd19be3",
+    "tests/integration/test_r_result_failures.py": "398f179665273869dff09c8aec37f2421df49df84d7e6c63c6b9276464cd7d60",
+    "tests/testthat/test-result.R": "cc4e6aa78b28df14fa18d9a4057c5f4616eb12cf7ae45e94e2e4aa580b931928",
+    "tests/integration/test_stage11_workflow.py": "c31e229ceebde104a4cc91d5d805adfc9b6e0d93e1adde795e3fe7a52d025e11"
+  },
+  "baseline_verification": {
+    "snapshot": "git archive HEAD previously extracted under /tmp/batchdx-p01-baseline",
+    "r_runner_import": "/tmp/batchdx-p01-baseline/src/batchdx/cyto/adapters/r_runner.py",
+    "test_matches_HEAD": true,
+    "all_three_CytoNorm_failures_reproduced": true
+  },
+  "scope_notes": [
+    "Related suite preceded the final non-JSON-number and cyCombine status guards; the final boundary suite verifies those additions.",
+    "Broader validation is not green: 3 existing CytoNorm failures under the default PATH reproduce on untouched HEAD.",
+    "Initial workflow attempt skipped due to PATH; rerun with existing project Snakemake passed, using an interpreter fixture that writes valid result JSON but omits the matrix.",
+    "Interpreter fixtures execute no R correction or detection algorithms. Actual R exchange checks only serialization and binary exchange."
+  ],
+  "not_executed": [
+    "real backend algorithms",
+    "measured data",
+    "full Python package gate",
+    "build/install",
+    "remote CI",
+    "scheduler",
+    "commit/push/publication"
+  ],
+  "lint": "ruff check src tests scripts passed",
+  "diff_whitespace": "git diff --check passed",
+  "documentation_checks": {
+    "local_links": "passed",
+    "mycelium_strict_structure": "passed",
+    "source_hashes_rechecked_after_documentation": true
+  }
+}
