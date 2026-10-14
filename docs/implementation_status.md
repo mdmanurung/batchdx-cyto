@@ -2,7 +2,7 @@
 
 **This file is generated. Do not edit it by hand.**
 
-Derived by `scripts/generate_status.py` from `report.json` on 2026-10-14 21:31 UTC.
+Derived by `scripts/generate_status.py` from `report.json` on 2026-10-14 22:10 UTC.
 Every COMPLETE line below corresponds to test identifiers that were executed in
 the referenced report; a claim without an executed test cannot appear here.
 Lines marked BLOCKED or PARTIAL come from the hand-maintained gate map
@@ -36,7 +36,7 @@ python scripts/generate_status.py --report build/report.json
 | A | 2 | Ingestion, immutable data, optional preprocessing | 🟡 PARTIAL | 16/16 |
 | A | 3 | Design audit and correction eligibility | ✅ PASSED | 12/12 |
 | A | 5 | Detection adapters and diagnosis report | 🟡 PARTIAL | 10/11 |
-| A | 6 | Correction backends and output validation | 🟡 PARTIAL | 13/15 |
+| A | 6 | Correction backends and output validation | 🟡 PARTIAL | 14/15 |
 | A | 7 | Native and common comparative metrics | ✅ PASSED | 14/14 |
 | A | 10 | Reporting and safe exports | 🟡 PARTIAL | 10/10 |
 | B | 4 | Freeze evaluation populations, sampling and splits | 🟡 PARTIAL | 10/10 |
@@ -174,7 +174,7 @@ python scripts/generate_status.py --report build/report.json
 
 Tests needing attention:
 
-* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects — skipped`
+* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call — skipped`
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -183,10 +183,10 @@ Tests needing attention:
 * `tests/integration/test_stage5_detectors.py::test_composition_detector_separates_frequency_from_intensity` — passed
 * `tests/integration/test_stage5_detectors.py::test_composition_detector_reports_insufficient_data_rather_than_a_p_value` — passed
 * `tests/integration/test_stage5_detectors.py::test_two_batch_fixture_makes_the_cluster_detector_ineligible_not_uninformative` — passed
-* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects` — skipped
+* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects` — passed
 * `tests/integration/test_stage5_detectors.py::test_cytobatchflagr_without_a_checkout_is_not_available_with_a_stated_remedy` — passed
 * `tests/integration/test_stage5_detectors.py::test_cytobatchflagr_refuses_to_choose_thresholds_itself` — passed
-* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call` — passed
+* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call` — skipped
 * `tests/integration/test_stage5_detectors.py::test_detector_results_round_trip_through_json` — passed
 * `tests/integration/test_stage5_detectors.py::test_flag_counts_are_not_presented_as_probabilities` — passed
 
@@ -194,12 +194,11 @@ Tests needing attention:
 
 ### Stage 6 (Tier A) — Correction backends and output validation
 
-**🟡 PARTIAL** — 13 passed, 0 failed, 2 skipped, 0 not executed.
+**🟡 PARTIAL** — 14 passed, 0 failed, 1 skipped, 0 not executed.
 
 Tests needing attention:
 
-* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped — skipped`
-* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason — skipped`
+* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test — skipped`
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -208,8 +207,8 @@ Tests needing attention:
 * `tests/integration/test_stage6_backends.py::test_cycombine_refuses_the_count_data_route` — passed
 * `tests/integration/test_stage6_backends.py::test_the_r_script_would_refuse_a_non_combat_method` — passed
 * `tests/integration/test_stage6_backends.py::test_unsupported_arguments_are_rejected_not_ignored` — passed
-* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped` — skipped
-* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason` — skipped
+* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped` — passed
+* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason` — passed
 * `tests/integration/test_stage6_backends.py::test_cytonorm_is_declared_but_explicitly_deferred` — passed
 * `tests/integration/test_stage6_backends.py::test_cytonorm_refuses_an_artificial_aggregate_control` — passed
 * `tests/integration/test_stage6_backends.py::test_output_validation_catches_a_changed_excluded_marker` — passed
@@ -217,7 +216,7 @@ Tests needing attention:
 * `tests/integration/test_stage6_backends.py::test_a_runtime_failure_never_returns_unchanged_data_as_success` — passed
 * `tests/integration/test_stage6_backends.py::test_correction_magnitude_is_reported_by_marker_sample_and_population` — passed
 * `tests/integration/test_stage6_backends.py::test_candidate_identity_is_stable_under_parameter_reordering` — passed
-* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test` — passed
+* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test` — skipped
 
 </details>
 
@@ -333,9 +332,9 @@ Tests needing attention:
 ## Report totals
 
 * collected: 184
-* passed: 181
+* passed: 182
 * failed: 0
-* skipped: 3
+* skipped: 2
 * errors: 0
 
 Tests outside the gate lists (helpers and additional checks) are counted in the
