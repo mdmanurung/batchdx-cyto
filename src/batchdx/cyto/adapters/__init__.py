@@ -9,7 +9,6 @@ what the build actually ships rather than what a configuration file hopes for.
 from batchdx.cyto.adapters import cycombine as _cycombine  # noqa: E402,F401
 from batchdx.cyto.adapters import cytonorm as _cytonorm  # noqa: E402,F401
 from batchdx.cyto.adapters import identity as _identity  # noqa: E402,F401
-from batchdx.cyto.adapters.validate import OutputValidationError
 from batchdx.cyto.adapters.base import (
     BackendCapabilities,
     BackendContext,
@@ -24,6 +23,7 @@ from batchdx.cyto.adapters.base import (
     register_backend,
     resolve_parameters,
 )
+from batchdx.cyto.adapters.validate import OutputValidationError
 
 __all__ = [
     "BackendCapabilities",

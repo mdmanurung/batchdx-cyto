@@ -8,11 +8,9 @@ behaviour when there are too few donors to split.
 
 from __future__ import annotations
 
-import pytest
-
+from batchdx.cyto.sampling.partitions import donor_splits
 from batchdx.cyto.schemas.contracts import SampleRecord
 from batchdx.cyto.schemas.enums import ReferenceRole
-from batchdx.cyto.sampling.partitions import donor_splits
 
 
 class _FakeSamples:
@@ -45,11 +43,6 @@ def test_every_sample_of_one_donor_lands_in_the_same_split() -> None:
         _rec(f"D3_{b}", b, donor="D3") for b in ("B1", "B2", "B3")
     ]
     splits = donor_splits(_FakeDataset(records), seed=473)
-    placement = {
-        donor: split
-        for split, donors in splits.items()
-        for donor in donors
-    }
     for donor in ("D1", "D2", "D3"):
         assert sum(donor in splits[s] for s in ("train", "tune", "validation")) == 1
 

@@ -38,7 +38,7 @@ from batchdx.cyto.schemas.contracts import (
     MetricResult,
     SamplingManifest,
 )
-from batchdx.cyto.schemas.enums import MetricStatus
+from batchdx.cyto.schemas.enums import CorrectionStatus, MetricStatus
 
 MAX_EXPLORER_MARKERS = 8
 

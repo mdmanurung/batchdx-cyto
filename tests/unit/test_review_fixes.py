@@ -81,7 +81,6 @@ def test_reference_tier_still_dominates_when_a_reference_exists() -> None:
 # ------------------------------------------------------------------------------
 
 def _base_config_kwargs(**over):
-    from batchdx.cyto.config import PreprocessingConfig
     base = dict(
         enabled=True, transformation="asinh",
         cofactor_by_panel={"default_panel": 5},

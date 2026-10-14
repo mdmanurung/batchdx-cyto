@@ -156,10 +156,6 @@ def assess_candidates(
     warnings: list[str] = []
     assessments: list[CandidateAssessment] = []
 
-    reference_supported = any(
-        c.support is ComparisonSupport.REFERENCE_SUPPORTED
-        for c in design.comparisons if c.population is None
-    )
     all_non_identifiable = bool(design.comparisons) and all(
         c.support is ComparisonSupport.NON_IDENTIFIABLE
         for c in design.comparisons if c.population is None

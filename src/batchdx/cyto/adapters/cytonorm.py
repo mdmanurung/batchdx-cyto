@@ -23,7 +23,6 @@ import numpy as np
 from batchdx.cyto.adapters.base import (
     BackendCapabilities,
     BackendContext,
-    BackendError,
     BackendNotAvailable,
     register_backend,
 )

@@ -10,8 +10,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
-
 from batchdx.cyto.diagnostics import DetectorContext, get_detector
 
 
@@ -89,9 +87,9 @@ def test_cytobatchflagr_rejects_a_duplicate_reference_id_within_one_batch(
 
     from batchdx.cyto.config import load_config
     from batchdx.cyto.design import audit_design
+    from batchdx.cyto.examples import materialise_example
     from batchdx.cyto.io import load_dataset
     from batchdx.cyto.sampling import build_sampling_manifest, resolve_labels
-    from batchdx.cyto.examples import materialise_example
     from batchdx.cyto.simulate import SampleSpec, SimulationSpec, write_simulation
 
     project = tmp_path / "flagr_dup"

@@ -20,6 +20,7 @@ from batchdx.cyto.adapters import (
     BackendContext,
     BackendError,
     BackendNotAvailable,
+    CorrectionBackend,
     OutputValidationError,
     failure_result,
     get_backend,
@@ -40,6 +41,7 @@ from batchdx.cyto.metrics import (
 from batchdx.cyto.sampling import build_sampling_manifest, resolve_labels
 from batchdx.cyto.schemas import export_json_schemas
 from batchdx.cyto.schemas.contracts import (
+    CandidateSpecRecord,
     CorrectionResult,
     DatasetManifest,
     DesignAudit,
@@ -242,9 +244,9 @@ def stage_diagnose(
 
 
 def _write_failure_candidate(
-    dataset: Dataset, layout: RunLayout, candidate_id: str, record: CorrectionSpec,
-    status: CorrectionStatus, message: str, context: BackendContext,
-    backend: CorrectionBackend,
+    dataset: Dataset, layout: RunLayout, candidate_id: str,
+    record: CandidateSpecRecord, status: CorrectionStatus, message: str,
+    context: BackendContext, backend: CorrectionBackend,
 ) -> Path:
     """Record a failed/ineligible candidate and still write its declared output.
 

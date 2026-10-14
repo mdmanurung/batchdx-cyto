@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 from batchdx.cyto._version import __version__
 
