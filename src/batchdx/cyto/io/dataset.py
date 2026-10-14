@@ -7,6 +7,7 @@ into a single object, and nothing overwrites the baseline.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -35,6 +36,8 @@ SAMPLE_ID = "sample_id"
 EVENT_INDEX = "original_event_index"
 SOURCE_CHECKSUM = "source_checksum"
 ACQUISITION_ORDER = "acquisition_order"
+#: FCS Time channel, ingested when present; the clock-time acquisition axis.
+ACQUISITION_TIME = "acquisition_time"
 
 
 class DatasetValidationError(ValueError):
@@ -150,6 +153,20 @@ def _validate_processing(processing: ProcessingManifest, config: Config) -> None
             f"{processing.transformation!r} while preprocessing.transformation is "
             f"{config.preprocessing.transformation!r}; refusing to transform twice"
         )
+    scale_match = re.fullmatch(
+        r"asinh_cofactor([0-9.]+(?:[eE][+-]?[0-9]+)?)", str(processing.scale)
+    )
+    if scale_match and processing.transformation == "asinh":
+        declared = processing.transformation_parameters.get("cofactor")
+        if declared is not None and not np.isclose(
+            float(scale_match.group(1)), float(declared), rtol=0, atol=1e-9
+        ):
+            raise DatasetValidationError(
+                f"processing manifest: scale {processing.scale!r} declares cofactor "
+                f"{float(scale_match.group(1))} but transformation_parameters.cofactor "
+                f"is {float(declared)}; the declared scale and the declared parameter "
+                "must agree"
+            )
 
 
 def _build_cell_index(obs: pd.DataFrame, samples: dict[str, SampleRecord]) -> pd.DataFrame:
@@ -330,12 +347,17 @@ def _load_fcs_directory(
         blocks.append(contents.events[:, idx])
 
         n = contents.n_events
-        obs_rows.append(pd.DataFrame({
+        row = {
             SAMPLE_ID: np.repeat(sid, n),
             EVENT_INDEX: np.arange(n, dtype=int),
             SOURCE_CHECKSUM: np.repeat(checksum, n),
+            # The event index stays the acquisition-order proxy; the FCS Time channel,
+            # when present, is ingested separately as clock time.
             ACQUISITION_ORDER: np.arange(n, dtype=int),
-        }))
+        }
+        if contents.time_values is not None:
+            row[ACQUISITION_TIME] = np.asarray(contents.time_values, dtype=float)
+        obs_rows.append(pd.DataFrame(row))
 
     mat = np.vstack(blocks) if blocks else np.zeros((0, len(channel_to_feature)))
     obs = pd.concat(obs_rows, ignore_index=True)

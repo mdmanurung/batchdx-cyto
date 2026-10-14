@@ -20,6 +20,8 @@ from batchdx.cyto.metrics.registry import (
     POPULATION_FREQUENCY_SHIFT,
     MetricSpec,
 )
+from batchdx.cyto.metrics.uncertainty import attach_emd_uncertainty
+from batchdx.cyto.sampling.partitions import UNGATED
 from batchdx.cyto.schemas.contracts import (
     DesignAudit,
     MetricRecord,
@@ -30,6 +32,10 @@ from batchdx.cyto.schemas.enums import ComparisonSupport, MetricStatus
 
 #: Minimum cells in a (population, batch) group before a distance is reported.
 MIN_GROUP_CELLS = 30
+#: Minimum independent samples per (population, batch) group.  Cells are not
+#: independent replicates; a group supplied by a single sample has no replication
+#: basis, whatever its cell count.
+MIN_SAMPLES_PER_GROUP = 2
 #: A MAD change below this is treated as no change rather than as compression.
 MAD_TOLERANCE = 1e-9
 
@@ -97,7 +103,13 @@ def compute_common_metrics(
     feature_idx = dataset.feature_index(markers)
     baseline = dataset.expression()
     records: list[MetricRecord] = []
-    populations = sorted(set(sampling.labels_by_cell.values()))
+    # The residual 'ungated' pool is a heterogeneous leftover, not a biological
+    # population: it is reported descriptively (counts, composition) but is excluded
+    # from the quantitative population metrics, where it could otherwise dominate the
+    # worst-marker summaries that drive the no-effect gate.
+    populations = sorted(
+        pop for pop in set(sampling.labels_by_cell.values()) if pop != UNGATED
+    )
     pairs = _comparisons(design)
 
     donors_of = {sid: rec.donor_id for sid, rec in dataset.samples.items()}
@@ -110,6 +122,8 @@ def compute_common_metrics(
             rows_b = pop_rows.loc[pop_rows["_batch"] == batch_b]
             n_a, n_b = len(rows_a), len(rows_b)
             samples = sorted(set(rows_a[SAMPLE_ID]) | set(rows_b[SAMPLE_ID]))
+            n_samples_a = rows_a[SAMPLE_ID].nunique()
+            n_samples_b = rows_b[SAMPLE_ID].nunique()
             donors = sorted({donors_of.get(s) for s in samples if donors_of.get(s)})
             coverage = float(min(n_a, n_b)) / MIN_GROUP_CELLS if MIN_GROUP_CELLS else 1.0
 
@@ -130,6 +144,18 @@ def compute_common_metrics(
                         **common,
                     ))
                     continue
+                if n_samples_a < MIN_SAMPLES_PER_GROUP or n_samples_b < MIN_SAMPLES_PER_GROUP:
+                    records.append(_record(
+                        EMD_WITHIN_POPULATION, sampling, status=MetricStatus.INSUFFICIENT_DATA,
+                        reason=(
+                            f"population {pop!r} has {n_samples_a} and {n_samples_b} "
+                            f"independent sample(s) in {batch_a} and {batch_b}; cells are "
+                            f"not independent replicates and {MIN_SAMPLES_PER_GROUP} "
+                            "samples per batch are required"
+                        ),
+                        **common,
+                    ))
+                    continue
                 col = markers.index(marker)
                 x = candidate_matrix[rows_a["_row"].to_numpy(), feature_idx[col]]
                 y = candidate_matrix[rows_b["_row"].to_numpy(), feature_idx[col]]
@@ -138,6 +164,12 @@ def compute_common_metrics(
                         stats.wasserstein_distance(x, y)
                     ), status=MetricStatus.OK, **common,
                 ))
+
+    # -- uncertainty on the EMD records (Stage 8) -------------------------------------
+    # Donor-block bootstrap intervals, or an explicit statement of why none could
+    # be computed.  Uncertainty is never silently omitted.
+    attach_emd_uncertainty(records, dataset, sampling, candidate_matrix,
+                           seed=sampling.seed)
 
     # -- dispersion -------------------------------------------------------------------
     n_compressed = n_total = 0
@@ -156,6 +188,17 @@ def compute_common_metrics(
                     records.append(_record(
                         MAD_SIGNED_CHANGE, sampling, status=MetricStatus.INSUFFICIENT_DATA,
                         reason=f"{len(idx)} cells, {MIN_GROUP_CELLS} required", **common,
+                    ))
+                    continue
+                if rows[SAMPLE_ID].nunique() < MIN_SAMPLES_PER_GROUP:
+                    records.append(_record(
+                        MAD_SIGNED_CHANGE, sampling, status=MetricStatus.INSUFFICIENT_DATA,
+                        reason=(
+                            f"{rows[SAMPLE_ID].nunique()} independent sample(s); cells are "
+                            f"not independent replicates and {MIN_SAMPLES_PER_GROUP} are "
+                            "required"
+                        ),
+                        **common,
                     ))
                     continue
                 f = feature_idx[col]
@@ -192,6 +235,18 @@ def compute_common_metrics(
                     reason=f"no samples in one of {batch_a}, {batch_b}", **common,
                 ))
                 continue
+            if len(fa) < MIN_SAMPLES_PER_GROUP or len(fb) < MIN_SAMPLES_PER_GROUP:
+                records.append(_record(
+                    POPULATION_FREQUENCY_SHIFT, sampling,
+                    status=MetricStatus.INSUFFICIENT_DATA,
+                    reason=(
+                        f"{len(fa)} and {len(fb)} independent sample(s) in {batch_a} and "
+                        f"{batch_b}; {MIN_SAMPLES_PER_GROUP} per batch are required, "
+                        "because the sample is the independent unit"
+                    ),
+                    **common,
+                ))
+                continue
             records.append(_record(
                 POPULATION_FREQUENCY_SHIFT, sampling,
                 value=float(abs(np.mean(fa) - np.mean(fb))), status=MetricStatus.OK,
@@ -215,6 +270,17 @@ def compute_common_metrics(
                     records.append(_record(
                         JOINT_STRUCTURE, sampling, status=MetricStatus.INSUFFICIENT_DATA,
                         reason=f"{len(idx)} cells, {MIN_GROUP_CELLS} required", **common,
+                    ))
+                    continue
+                if rows[SAMPLE_ID].nunique() < MIN_SAMPLES_PER_GROUP:
+                    records.append(_record(
+                        JOINT_STRUCTURE, sampling, status=MetricStatus.INSUFFICIENT_DATA,
+                        reason=(
+                            f"{rows[SAMPLE_ID].nunique()} independent sample(s); cells are "
+                            f"not independent replicates and {MIN_SAMPLES_PER_GROUP} are "
+                            "required"
+                        ),
+                        **common,
                     ))
                     continue
                 c_base = _correlation(baseline[np.ix_(idx, feature_idx)])
@@ -242,14 +308,24 @@ def compute_common_metrics(
         ))
 
     warnings: list[str] = []
-    if n_total:
-        from batchdx.cyto.metrics.registry import MAD_COMPRESSION
+    from batchdx.cyto.metrics.registry import MAD_COMPRESSION
 
+    if n_total:
         records.append(_record(
             MAD_COMPRESSION, sampling, run_id=run_id, candidate_id=candidate_id,
             value=float(n_compressed) / n_total, status=MetricStatus.OK,
             n_cells=None, aggregation_weight=1.0,
             reason=f"{n_compressed} of {n_total} (population, batch, marker) groups lost spread",
+        ))
+    else:
+        # A missing metric is never silently absent: with no qualifying group the
+        # compression guardrail is unavailable, and that is reported as such.
+        records.append(_record(
+            MAD_COMPRESSION, sampling, run_id=run_id, candidate_id=candidate_id,
+            value=None, status=MetricStatus.INSUFFICIENT_DATA,
+            n_cells=None, aggregation_weight=1.0,
+            reason="no (population, batch, marker) group met the cell and sample minima, "
+                   "so a compression fraction cannot be computed",
         ))
 
     n_failed = sum(1 for r in records if r.status is MetricStatus.FAILED)

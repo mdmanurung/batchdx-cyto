@@ -24,6 +24,7 @@ from batchdx.cyto.adapters.base import (
     BackendCapabilities,
     BackendContext,
     BackendError,
+    BackendNotAvailable,
     register_backend,
 )
 from batchdx.cyto.adapters.r_runner import r_package_version, r_version
@@ -45,7 +46,7 @@ class CytoNormBackend:
     capabilities = BackendCapabilities(
         name="cytonorm",
         required_sample_fields=("batch", "reference_id", "reference_role"),
-        reference_layouts=("measured_reference_in_every_batch",),
+        reference_layouts=("measured_reference_in_every_batch", "control_free"),
         supports_covariates=False,
         supports_marker_mask=True,
         input_scale="transformed, with the transform declared to CytoNorm as a transformList",
@@ -63,8 +64,14 @@ class CytoNormBackend:
         },
         rejected_parameters={
             "aggregate_control": (
-                "an artificial aggregate control is outside the validated path and is "
-                "not offered as a standard option"
+                "requiring a measured control in every batch is a batchdx policy choice "
+                "that restricts the 'cytonorm' backend to its strongest evidence tier; "
+                "it is not an upstream constraint. CytoNorm 2.0 itself supports "
+                "control-free normalisation (QuantileNorm.train goal='mean', the "
+                "default, or a numeric goal distribution), which the design audit "
+                "exposes as the separate, weaker 'cytonorm_control_free' tier. An "
+                "artificial aggregate control is additionally outside the validated "
+                "path and is not offered as a standard option under either tier."
             ),
         },
         notes=DEFERRED_REASON,
@@ -85,7 +92,7 @@ class CytoNormBackend:
         parameters: dict[str, Any],
         context: BackendContext,
     ) -> tuple[np.ndarray, CorrectionResult]:
-        raise BackendError(DEFERRED_REASON)
+        raise BackendNotAvailable(DEFERRED_REASON)
 
 
 register_backend(CytoNormBackend())

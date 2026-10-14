@@ -16,14 +16,27 @@ from pathlib import Path
 import numpy as np
 
 from batchdx.cyto._version import __version__
-from batchdx.cyto.adapters import BackendContext, BackendError, get_backend
-from batchdx.cyto.config import Config, load_config
+from batchdx.cyto.adapters import (
+    BackendContext,
+    BackendError,
+    BackendNotAvailable,
+    OutputValidationError,
+    failure_result,
+    get_backend,
+    make_spec,
+    resolve_parameters,
+)
+from batchdx.cyto.config import Config, ConfigError, load_config
 from batchdx.cyto.decisions import assess_candidates
 from batchdx.cyto.design import audit_design
 from batchdx.cyto.diagnostics import DetectorContext, get_detector
 from batchdx.cyto.io import load_dataset, write_candidate_output
 from batchdx.cyto.io.dataset import Dataset
-from batchdx.cyto.metrics import compute_common_metrics, compute_reductions
+from batchdx.cyto.metrics import (
+    compute_biological_contrasts,
+    compute_common_metrics,
+    compute_reductions,
+)
 from batchdx.cyto.sampling import build_sampling_manifest, resolve_labels
 from batchdx.cyto.schemas import export_json_schemas
 from batchdx.cyto.schemas.contracts import (
@@ -129,6 +142,30 @@ def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLay
     dataset = load_dataset(config, base_dir)
     dataset.assert_baseline_unchanged()
 
+    # A declared upstream lock is a real input: if it is named, it must exist and
+    # name the pinned commits the adapters were verified against. An unread lock
+    # would let a configuration claim a pin it cannot enforce.
+    if config.upstream.lock:
+        lock_path = Path(base_dir) / config.upstream.lock
+        if not lock_path.exists():
+            raise ConfigError(
+                f"upstream.lock names {config.upstream.lock!r} but the file does not "
+                f"exist under {base_dir}; run scripts/fetch_upstream.sh or remove the key"
+            )
+        try:
+            import yaml
+
+            lock_data = yaml.safe_load(lock_path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise ConfigError(
+                f"upstream.lock {config.upstream.lock!r} is not valid YAML: {exc}"
+            ) from exc
+        if not isinstance(lock_data, dict) or not lock_data:
+            raise ConfigError(
+                f"upstream.lock {config.upstream.lock!r} must be a non-empty mapping of "
+                "tool name to pinned commit"
+            )
+
     _write_json(layout.resolved_config, {
         "config": config.resolved_dict(),
         "analytical_fingerprint": config.analytical_fingerprint(),
@@ -204,6 +241,29 @@ def stage_diagnose(
     return layout.detector_result(detector_name)
 
 
+def _write_failure_candidate(
+    dataset: Dataset, layout: RunLayout, candidate_id: str, record: CorrectionSpec,
+    status: CorrectionStatus, message: str, context: BackendContext,
+    backend: CorrectionBackend,
+) -> Path:
+    """Record a failed/ineligible candidate and still write its declared output.
+
+    The ``correct`` rule declares ``corrected.h5ad`` as an output; for a candidate
+    that never produced a correction we write the unmodified baseline so the
+    declared output always exists. The result records the failure status, so no
+    consumer mistakes this for a correction.
+    """
+
+    failure_result(record, status, message, software=backend.availability(context)).write(
+        layout.correction_result(candidate_id)
+    )
+    write_candidate_output(
+        dataset, dataset.expression(), layout.corrected_h5ad(candidate_id),
+        candidate_id=candidate_id,
+    )
+    return layout.correction_result(candidate_id)
+
+
 def stage_correct(
     candidate_id: str, config_path: str | Path, base_dir: str | Path, layout: RunLayout
 ) -> Path:
@@ -219,8 +279,6 @@ def stage_correct(
     if spec is None:
         raise KeyError(f"candidate {candidate_id!r} is not in the configuration")
 
-    from batchdx.cyto.adapters.base import failure_result, make_spec, resolve_parameters
-
     context = BackendContext(
         design=design, sampling=sampling,
         work_dir=str(layout.candidate_dir(candidate_id) / "work"),
@@ -232,43 +290,68 @@ def stage_correct(
     eligibility = next(
         (e for e in design.eligibility if e.name == spec.backend and e.kind == "backend"), None
     )
+    waived: list[dict[str, str]] = []
     if eligibility is not None and not eligibility.eligible:
         if config.design.allow_exploratory_override and eligibility.override_allowed:
-            pass
+            # The waiver is recorded on the correction result and on the decision, so
+            # an exploratory run is never indistinguishable from a fully eligible one.
+            waived = [{
+                "candidate_id": candidate_id,
+                "backend": spec.backend,
+                "reason_code": eligibility.reason_code or "unknown",
+                "reason": eligibility.reason or "",
+                "allowed_by": "design.allow_exploratory_override",
+            }]
         else:
             record = make_spec(candidate_id, spec.backend, None, dict(spec.parameters),
                                config.project.seed, dataset, [])
-            failure_result(
-                record, CorrectionStatus.INELIGIBLE,
+            return _write_failure_candidate(
+                dataset, layout, candidate_id, record, CorrectionStatus.INELIGIBLE,
                 f"{eligibility.reason} (reason code: {eligibility.reason_code})",
-            ).write(layout.correction_result(candidate_id))
-            return layout.correction_result(candidate_id)
+                context, backend,
+            )
 
     try:
         matrix, result = backend.run(dataset, candidate_id, dict(spec.parameters), context)
-    except BackendError as exc:
+    except BackendNotAvailable as exc:
+        # Availability is a property of the environment, decided by the exception
+        # type, never by sniffing the error text.
         try:
             resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
         except BackendError:
             resolved = dict(spec.parameters)
         record = make_spec(candidate_id, spec.backend, None, resolved,
                            config.project.seed, dataset, [])
-        status = (
-            CorrectionStatus.NOT_AVAILABLE
-            if "not installed" in str(exc) or "not implemented" in str(exc)
-            else CorrectionStatus.FAILED
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, record, CorrectionStatus.NOT_AVAILABLE,
+            str(exc), context, backend,
         )
-        failure_result(record, status, str(exc),
-                       software=backend.availability(context)).write(
-            layout.correction_result(candidate_id)
+    except (BackendError, OutputValidationError, FileNotFoundError) as exc:
+        # OutputValidationError: the backend produced a non-finite or reshaped
+        # matrix; FileNotFoundError: the R script never wrote its output. Both are
+        # candidate failures and must be recorded, not crash the whole workflow.
+        try:
+            resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
+        except BackendError:
+            resolved = dict(spec.parameters)
+        record = make_spec(candidate_id, spec.backend, None, resolved,
+                           config.project.seed, dataset, [])
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, record, CorrectionStatus.FAILED,
+            str(exc), context, backend,
         )
-        return layout.correction_result(candidate_id)
 
     path = write_candidate_output(
         dataset, matrix, layout.corrected_h5ad(candidate_id),
         candidate_id=candidate_id, output_scale=result.output_scale,
     )
     result.output_path = str(path)
+    result.waived_eligibility = waived
+    if waived:
+        result.warnings = list(result.warnings) + [
+            "eligibility constraint(s) waived for this candidate: "
+            + "; ".join(f"{w['reason_code']} ({w['reason']})" for w in waived)
+        ]
     result.write(layout.correction_result(candidate_id))
     return layout.correction_result(candidate_id)
 
@@ -321,6 +404,13 @@ def stage_metrics(
         dataset, matrix, sampling, design,
         run_id=config.project.id, candidate_id=candidate_id,
     )
+    if config.design.biological_contrasts:
+        result.records.extend(compute_biological_contrasts(
+            dataset, dataset.expression(), matrix, sampling, design,
+            config.design.biological_contrasts,
+            run_id=config.project.id, candidate_id=candidate_id,
+            donor_factor=config.design.donor,
+        ))
     result.write(layout.metric_result(candidate_id))
     return layout.metric_result(candidate_id)
 
@@ -357,10 +447,18 @@ def stage_decide(
     )
     _write_json(layout.reductions, {"records": [r.model_dump(mode="json") for r in reductions]})
 
+    # Surface any waived eligibility constraints on the decision record, so the
+    # override audit trail promised by the assessment layer exists in real runs.
+    overrides = [
+        {"candidate_id": w["candidate_id"], "reason_code": w["reason_code"],
+         "reason": w["reason"], "allowed_by": w["allowed_by"]}
+        for c in corrections.values() for w in (c.waived_eligibility or [])
+    ]
+
     decision = assess_candidates(
         design, sampling, corrections, metrics, reductions,
         run_id=config.project.id, policy_name=config.evaluation.policy,
-        identity_candidate_id=identity,
+        identity_candidate_id=identity, overrides=overrides,
     )
     decision.write(layout.decision)
     return layout.decision

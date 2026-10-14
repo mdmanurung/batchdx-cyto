@@ -31,6 +31,10 @@ class DetectorContext:
     #: |Spearman rho| above which a within-file trend is reported as monotonic drift.
     #: Engineering default, not a validated cutoff; reported with every assessment.
     drift_rho_threshold: float = 0.2
+    #: Relative step between consecutive block event rates (over the median block rate)
+    #: above which an event-rate discontinuity is reported.  Engineering default, not
+    #: a validated cutoff; reported with every assessment.
+    drift_rate_threshold: float = 3.0
     #: Nominal level for the composition test.  Reported, never used to declare a
     #: technical cause on its own.
     composition_alpha: float = 0.05

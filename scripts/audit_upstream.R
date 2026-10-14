@@ -123,9 +123,11 @@ audit_resource <- function(key, dir_name, package_name, adapter_calls) {
       if (!exists(fn, envir = asNamespace(package_name), inherits = FALSE)) next
       obj <- get(fn, envir = asNamespace(package_name))
       if (!is.function(obj)) next
+      formals_txt <- paste(trimws(deparse(args(obj))[1:(length(deparse(args(obj))) - 1)]),
+                           collapse = " ")
+      formals_txt <- sub("^function\\s*", "", formals_txt)
       signatures[[fn]] <- list(
-        signature = paste(trimws(deparse(args(obj))[1:(length(deparse(args(obj))) - 1)]),
-                          collapse = " "),
+        signature = sprintf("%s%s", fn, formals_txt),
         arguments = names(formals(obj)),
         file = NA_character_
       )

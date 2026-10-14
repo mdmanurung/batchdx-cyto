@@ -51,6 +51,9 @@ main <- function() {
   markers <- as.character(p$markers)
   df <- as.data.frame(input$matrix, stringsAsFactors = FALSE)
   df$batch <- as.character(p$batch)
+  ## detect_batch_effect* groups per-sample medians by a `sample` column; without it
+  ## the MDS step fails inside upstream.  The per-cell sample label is required.
+  df$sample <- as.character(p$sample)
   df$id <- seq_len(nrow(df))
   labels <- as_opt(p$label)
   if (!is.null(labels)) df$label <- as.character(labels)

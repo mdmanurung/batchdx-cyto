@@ -28,7 +28,7 @@ from batchdx.cyto.metrics.registry import (
 )
 from batchdx.cyto.paths import templates_root
 from batchdx.cyto.reporting import plots
-from batchdx.cyto.reporting.redact import Redactor
+from batchdx.cyto.reporting.redact import Redactor, run_salt
 from batchdx.cyto.schemas.contracts import (
     CorrectionResult,
     DecisionResult,
@@ -94,7 +94,8 @@ def render_report(
     """Render ``report.html``.  ``diagnosis_only`` renders before any correction exists."""
 
     config = load_config(config_path)
-    redactor = Redactor(enabled=config.report.redact_identifiers, base_dir=base_dir)
+    redactor = Redactor(enabled=config.report.redact_identifiers, base_dir=base_dir,
+                        salt=run_salt(layout.root))
     dataset = load_dataset(config, base_dir)
 
     design = DesignAudit.read(layout.design_audit)
@@ -123,6 +124,31 @@ def render_report(
         DecisionResult.read(layout.decision)
         if (not diagnosis_only and layout.decision.exists()) else None
     )
+
+    # The exports.* configuration is consumed here: when FCS export is requested,
+    # every successful candidate's corrected matrix is written as one FCS per
+    # sample under the run's exports directory. Nothing is exported by default.
+    if config.exports.fcs and not diagnosis_only:
+        from batchdx.cyto.io.dataset import write_candidate_output  # noqa: F401
+        from batchdx.cyto.io.export import export_fcs_per_sample
+
+        for candidate in config.correction.candidates:
+            result_path = layout.correction_result(candidate.id)
+            corrected = layout.corrected_h5ad(candidate.id)
+            if not (result_path.exists() and corrected.exists()):
+                continue
+            result = CorrectionResult.read(result_path)
+            if result.status is not CorrectionStatus.SUCCESS:
+                continue
+            import anndata as ad
+
+            adata = ad.read_h5ad(corrected)
+            layer_name = str(adata.uns.get("expression_layer", "corrected"))
+            matrix = np.asarray(adata.layers[layer_name], dtype=np.float64)
+            out_dir = layout.root / "exports" / candidate.id / "fcs"
+            export_fcs_per_sample(
+                dataset, matrix, out_dir, candidate_id=candidate.id, invert=True,
+            )
 
     all_records: list[MetricRecord] = []
     for result in metrics.values():
@@ -216,7 +242,7 @@ def render_report(
         "title": config.report.title,
         "version": __version__,
         "diagnosis_only": diagnosis_only,
-        "config": config.resolved_dict(),
+        "config": redactor.strip_paths(config.resolved_dict()),
         "fingerprint": config.analytical_fingerprint(),
         "dataset": dataset.manifest,
         "processing": dataset.processing,

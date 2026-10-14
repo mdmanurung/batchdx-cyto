@@ -63,7 +63,13 @@ def compute_reductions(
             and identity[k].value is not None
             and candidate[k].value is not None
         ]
-        n_eligible = len(identity)
+        # Coverage is the candidate's own success rate on the comparisons the identity
+        # candidate made eligible.  The identity's own failures are reported separately
+        # so a deflated coverage cannot be misread as this candidate's failure.
+        n_eligible = sum(
+            1 for k in identity if identity[k].status is MetricStatus.OK
+        )
+        identity_ok = n_eligible
         coverage = (len(usable) / n_eligible) if n_eligible else 0.0
         base = dict(
             run_id=run_id, candidate_id=candidate_id, metric_namespace="common",
@@ -95,8 +101,9 @@ def compute_reductions(
         out.append(MetricRecord(
             **base, value=float(numerator / denominator), status=MetricStatus.OK,
             reason=(
-                f"over {len(usable)} of {n_eligible} comparisons that succeeded for both "
-                "candidates"
+                f"over {len(usable)} of {n_eligible} comparisons eligible for the identity "
+                f"candidate (identity itself succeeded on {identity_ok}); coverage is this "
+                "candidate's success rate on the shared set"
             ),
         ))
     return out

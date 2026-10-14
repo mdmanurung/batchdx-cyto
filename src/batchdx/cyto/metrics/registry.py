@@ -176,6 +176,36 @@ EMD_REDUCTION = register_metric(MetricSpec(
     ),
 ))
 
+BIOLOGICAL_CONTRAST = register_metric(MetricSpec(
+    name="biological_contrast_change",
+    namespace="common",
+    version="1.0.0",
+    stage="biological_preservation",
+    grouping="(prespecified contrast, population) on the frozen common partition",
+    formula=(
+        "effect_after - effect_before, where the effect is the group-to-group difference "
+        "of donor-level (or sample-level) marker means; the contrast is preserved when "
+        "|change| is within the predeclared preservation tolerance"
+    ),
+    implementation=(
+        "donor-paired difference or donor-level pooled difference (numpy), as the design "
+        "declares; the model used is stated in the record reason"
+    ),
+    direction=MetricDirection.NEUTRAL,
+    scale="units of the declared expression scale",
+    eligible_population="populations with enough cells and enough independent units in "
+                        "both groups",
+    aggregation="one record per prespecified contrast and population; never aggregated "
+                "across contrasts",
+    requirements=("declared biological contrasts in the configuration", "frozen "
+                  "evaluation labels"),
+    notes=(
+        "a contrast confounded with the correction factor is reported unassessable, "
+        "never preserved. The verdict (preserved / not preserved / unassessable) lives "
+        "in the record reason together with the tolerance and its declared origin."
+    ),
+))
+
 NATIVE_CYCOMBINE_EMD = register_metric(MetricSpec(
     name="cycombine_evaluate_emd",
     namespace="native",

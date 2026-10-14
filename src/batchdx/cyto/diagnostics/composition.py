@@ -20,6 +20,23 @@ from batchdx.cyto.schemas.enums import MarkerRole, MetricStatus
 MIN_SAMPLES_PER_BATCH = 2
 
 
+def _bh_adjust(pvalues: list[float]) -> list[float]:
+    """Benjamini-Hochberg adjusted p-values, order-preserving and monotone."""
+
+    n = len(pvalues)
+    if n <= 1:
+        return list(pvalues)
+    order = np.argsort(pvalues)
+    ranked = np.asarray(pvalues, dtype=float)[order]
+    adjusted = np.minimum.accumulate(
+        (ranked * n / np.arange(1, n + 1))[::-1]
+    )[::-1]
+    adjusted = np.clip(adjusted, 0.0, 1.0)
+    out = np.empty(n, dtype=float)
+    out[order] = adjusted
+    return [float(v) for v in out]
+
+
 class CompositionDetector:
     """Population frequencies by sample and batch, with a sample-level test."""
 
@@ -52,9 +69,14 @@ class CompositionDetector:
         samples = sorted(obs[SAMPLE_ID].unique())
 
         freq: dict[str, dict[str, float]] = {}
+        empty_samples = []
         for sid in samples:
             block = obs.loc[obs[SAMPLE_ID] == sid]
             total = len(block)
+            if total == 0:
+                empty_samples.append(str(sid))
+                freq[str(sid)] = {pop: float("nan") for pop in populations}
+                continue
             counts = block["_label"].value_counts().to_dict()
             freq[str(sid)] = {
                 pop: (counts.get(pop, 0) / total if total else float("nan"))
@@ -64,14 +86,26 @@ class CompositionDetector:
         assessments: list[DetectorAssessment] = []
         for sid in samples:
             for pop in populations:
-                assessments.append(DetectorAssessment(
-                    assessment_id=f"freq:{sid}:{pop}", detector=self.name, namespace="common",
-                    scope="sample_population", sample_id=str(sid), population=pop,
-                    batch=batch_of.get(str(sid)), statistic="population_frequency",
-                    value=float(freq[str(sid)][pop]), status=MetricStatus.OK,
-                    evidence_class="descriptive",
-                    reason="fraction of the sample's evaluation cells in this population",
-                ))
+                value = freq[str(sid)][pop]
+                if np.isfinite(value):
+                    assessments.append(DetectorAssessment(
+                        assessment_id=f"freq:{sid}:{pop}", detector=self.name,
+                        namespace="common", scope="sample_population", sample_id=str(sid),
+                        population=pop, batch=batch_of.get(str(sid)),
+                        statistic="population_frequency", value=float(value),
+                        status=MetricStatus.OK, evidence_class="descriptive",
+                        reason="fraction of the sample's evaluation cells in this population",
+                    ))
+                else:
+                    assessments.append(DetectorAssessment(
+                        assessment_id=f"freq:{sid}:{pop}", detector=self.name,
+                        namespace="common", scope="sample_population", sample_id=str(sid),
+                        population=pop, batch=batch_of.get(str(sid)),
+                        statistic="population_frequency", value=None,
+                        status=MetricStatus.INSUFFICIENT_DATA,
+                        reason="the sample has no evaluation cells, so a frequency is "
+                               "undefined and is not reported as a number",
+                    ))
 
         by_batch: dict[str, list[str]] = {}
         for sid in samples:
@@ -81,6 +115,7 @@ class CompositionDetector:
 
         warnings: list[str] = []
         small = [b for b, sids in by_batch.items() if len(sids) < MIN_SAMPLES_PER_BATCH]
+        tested: list[tuple[str, float, float]] = []  # (population, stat, pvalue)
         for pop in populations:
             groups = [
                 [freq[sid][pop] for sid in sids]
@@ -109,16 +144,24 @@ class CompositionDetector:
                     status=MetricStatus.UNDEFINED, reason=str(exc),
                 ))
                 continue
+            tested.append((pop, float(stat), float(pvalue)))
+
+        # Benjamini-Hochberg across the populations tested by this detector: each
+        # population is one test, and per-population flags at raw alpha would emit
+        # alpha*P false flags per run.
+        adjusted = _bh_adjust([p for _, _, p in tested])
+        for (pop, stat, pvalue), padj in zip(tested, adjusted, strict=True):
             assessments.append(DetectorAssessment(
                 assessment_id=f"freqtest:{pop}", detector=self.name, namespace="common",
                 scope="population", population=pop,
                 statistic="kruskal_batch_frequency_pvalue", value=float(pvalue),
-                flag=bool(pvalue < context.composition_alpha),
+                flag=bool(padj < context.composition_alpha),
                 threshold=context.composition_alpha, status=MetricStatus.OK,
                 evidence_class="descriptive",
                 reason=(
-                    f"Kruskal-Wallis H={float(stat):.3g} on sample-level frequencies across "
-                    "batches; a frequency difference is not evidence that marker "
+                    f"Kruskal-Wallis H={stat:.3g} on sample-level frequencies across "
+                    f"batches; BH-adjusted p={padj:.3g} over {len(tested)} population(s) "
+                    "tested. A frequency difference is not evidence that marker "
                     "intensities require correction"
                 ),
             ))

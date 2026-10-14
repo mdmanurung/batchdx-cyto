@@ -179,6 +179,14 @@ def materialise_example(
     )
     paths["config"] = config_path
 
+    # The config names an upstream lock; a declared lock is a validated input, so the
+    # example ships the repository's own pinned lock rather than a dangling reference.
+    repo_lock = Path(__file__).resolve().parents[3] / "config" / "upstream_lock.yaml"
+    if repo_lock.exists():
+        project_lock = target / "config" / "upstream_lock.yaml"
+        project_lock.write_text(repo_lock.read_text(encoding="utf-8"), encoding="utf-8")
+        paths["upstream_lock"] = project_lock
+
     readme = target / "README.md"
     readme.write_text(
         f"# batchdx-cyto example: {name}\n\n{example['description']}\n\n"

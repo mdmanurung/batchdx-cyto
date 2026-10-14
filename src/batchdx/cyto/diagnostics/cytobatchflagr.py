@@ -14,6 +14,10 @@ positive) are computed per control sample per marker across batches, and a batch
 flagged when a value falls beyond 1.5 IQR of the quartiles.  That makes a control
 sample in every batch a hard requirement, and it makes the rule degenerate below four
 batches; both constraints are encoded in the Stage 3 eligibility manifest.
+
+Only the IQR assessment is wrapped in this build.  Upstream also derives EMD-based and
+cluster-based batch assessments; those are **explicitly deferred**, not wrapped, and no
+result from this adapter may be read as covering them.
 """
 
 from __future__ import annotations
@@ -39,7 +43,10 @@ REQUIRED_UPSTREAM_FILE = "R/CytoBatchFlagR_functions.R"
 
 
 class CytoBatchFlagRDetector:
-    """Non-interactive wrapper around the upstream IQR and EMD assessments."""
+    """Non-interactive wrapper around the upstream IQR assessment.
+
+    The EMD and cluster assessments are explicitly deferred, not wrapped.
+    """
 
     name = "cytobatchflagr"
     namespace = "native"
@@ -88,6 +95,33 @@ class CytoBatchFlagRDetector:
                 eligibility=eligibility, software=software,
             )
 
+        # A reference id repeated within one batch makes the per-control across-batch
+        # comparison ambiguous.  This is an input-integrity error, so it is reported
+        # before the eligibility verdict rather than folded into it.
+        batch_of = dataset.sample_batches()
+        seen: dict[tuple[str, str], str] = {}
+        duplicates: list[str] = []
+        for sid, rec in sorted(controls.items()):
+            key = (str(batch_of.get(sid)), rec.reference_id or sid)
+            if key in seen:
+                duplicates.append(
+                    f"reference {key[1]!r} appears twice in batch {key[0]!r} "
+                    f"(samples {seen[key]} and {sid})"
+                )
+            else:
+                seen[key] = sid
+        if duplicates:
+            return DetectorResult(
+                detector=self.name, namespace="native", run_id=context.run_id,
+                status="ineligible",
+                reason=(
+                    "each reference_id may appear at most once per batch: the IQR "
+                    "assessment compares per-control values across batches, so a repeated "
+                    "reference id within one batch is ambiguous. " + "; ".join(duplicates)
+                ),
+                eligibility=eligibility, software=software,
+            )
+
         out_dir = Path(context.out_dir) / self.name
         out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -97,9 +131,11 @@ class CytoBatchFlagRDetector:
                 detector=self.name, namespace="native", run_id=context.run_id,
                 status="ineligible",
                 reason=(
-                    "no fixed positivity thresholds are available. The published evaluation "
-                    "reports five experienced analysts choosing five different thresholds for "
-                    "the same markers, so this adapter refuses to pick them itself: supply "
+                    "no fixed positivity thresholds are available. Upstream can derive "
+                    "thresholds itself (automated_threshold_DF with a dip test in "
+                    "R/auto_threshold_func.R), but this adapter requires analyst-supplied "
+                    "values: the published evaluation reports five experienced analysts "
+                    "choosing five different thresholds for the same markers. Supply "
                     "evaluation.gating_thresholds in the declared coordinate system."
                 ),
                 eligibility=eligibility, software=software,

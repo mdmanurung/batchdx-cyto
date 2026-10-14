@@ -213,6 +213,10 @@
         <td>{{ a.threshold if a.threshold is not none else '—' }}</td><td>{{ a.reason }}</td></tr>
     {% endfor %}
   </table></div>
+  {% if flagged | length > 250 %}
+  <p class="sub">Showing the first 250 of {{ flagged | length }} flagged assessments;
+  the full list is in the detector result files.</p>
+  {% endif %}
   {% else %}<p class="sub">No assessment crossed its reported threshold.</p>{% endif %}
   {% endif %}
 {% endfor %}

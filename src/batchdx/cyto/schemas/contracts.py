@@ -349,6 +349,10 @@ class CorrectionResult(_Contract):
     software: list[SoftwareVersion] = Field(default_factory=list)
     resources: dict[str, float] = Field(default_factory=dict)
     provenance: list[ProvenanceRef] = Field(default_factory=list)
+    #: Eligibility constraint(s) waived by an exploratory override, with the reason
+    #: code and the configuration flag that allowed the waiver.  Empty unless the run
+    #: overrode an ineligibility; a waived constraint is always visible here.
+    waived_eligibility: list[dict[str, str]] = Field(default_factory=list)
 
 
 # --------------------------------------------------------------------------------------
@@ -413,7 +417,7 @@ class CandidateAssessment(_Contract):
     reason: str
     guardrails_failed: list[str] = Field(default_factory=list)
     evidence: dict[str, float | None] = Field(default_factory=dict)
-    coverage: dict[str, float] = Field(default_factory=dict)
+    coverage: dict[str, float | None] = Field(default_factory=dict)
     comparable_evidence_key: str | None = None
 
 
