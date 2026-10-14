@@ -173,11 +173,14 @@ def render(gates: list[dict], outcomes: dict[str, str], report_path: Path,
     lines += [
         "## Report totals",
         "",
-        f"* collected: {summary.get('total', 'unknown')}",
-        f"* passed: {summary.get('passed', 0)}",
-        f"* failed: {summary.get('failed', 0)}",
-        f"* skipped: {summary.get('skipped', 0)}",
-        f"* errors: {summary.get('error', 0)}",
+        # Raw counts are environment-dependent (a test that skips in one environment
+        # runs in another), so they are reported as a range-free statement of what
+        # the referenced report saw, not as a number the committed document must
+        # reproduce exactly. The staleness check compares the gate table, not these
+        # counts.
+        "The referenced report's raw counts are environment-dependent (a test that "
+        "skips in one environment runs in another), so they are not reproduced here; "
+        "the gate table above is the environment-independent statement.",
         "",
         "Tests outside the gate lists (helpers and additional checks) are counted in the",
         "totals but do not decide a gate.",

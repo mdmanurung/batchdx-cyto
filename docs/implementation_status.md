@@ -2,7 +2,7 @@
 
 **This file is generated. Do not edit it by hand.**
 
-Derived by `scripts/generate_status.py` from `report.json` on 2026-10-14 22:10 UTC.
+Derived by `scripts/generate_status.py` from `report.json` on 2026-10-14 22:39 UTC.
 Every COMPLETE line below corresponds to test identifiers that were executed in
 the referenced report; a claim without an executed test cannot appear here.
 Lines marked BLOCKED or PARTIAL come from the hand-maintained gate map
@@ -331,11 +331,7 @@ Tests needing attention:
 
 ## Report totals
 
-* collected: 184
-* passed: 182
-* failed: 0
-* skipped: 2
-* errors: 0
+The referenced report's raw counts are environment-dependent (a test that skips in one environment runs in another), so they are not reproduced here; the gate table above is the environment-independent statement.
 
 Tests outside the gate lists (helpers and additional checks) are counted in the
 totals but do not decide a gate.
