@@ -1,20 +1,27 @@
 [project]
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "linux-64"]
-description = "Cookiecutter template for Python data science projects"
+platforms = ["linux-64", "osx-arm64"]
+description = "Batch-effect diagnostics and correction for cytometry, with an honest decision policy"
+name = "batchdx-cyto"
 version = "0.1.0"
 
 [dependencies]
-python = ">=3.10"
+python = ">=3.11"
+numpy = "*"
+pandas = "*"
+anndata = "*"
+pydantic = ">=2"
+pyyaml = "*"
+jinja2 = "*"
+pulp = "*"
+typer = "*"
+scipy = "*"
 pytest = "*"
 pytest-cov = "*"
-pyyaml = "*"
-toml = "*"
-cookiecutter = "*"
+pytest-xdist = "*"
+snakemake = "*"
+r-base = ">=4.2"
 
 [tasks]
-# Scoped to the cookiecutter template's own tests. The batchdx-cyto suites live in
-# tests/{unit,integration,scientific} and need the package installed; they are run by
-# .github/workflows/batchdx-cyto-tests.yaml instead.
-test = "pytest tests/test_template_bake.py tests/test_post_gen_hook.py -v"
-test-cov = "pytest tests/test_template_bake.py tests/test_post_gen_hook.py --cov=. --cov-report=term-missing"
+test = "python -m pytest tests/unit tests/integration tests/scientific -q"
+test-unit = "python -m pytest tests/unit -q"

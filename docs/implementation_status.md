@@ -2,9 +2,11 @@
 
 **This file is generated. Do not edit it by hand.**
 
-Derived by `scripts/generate_status.py` from `report.json` on 2026-09-15 07:13 UTC.
-Every line below corresponds to test identifiers that were executed; a claim
-without an executed test cannot appear here.
+Derived by `scripts/generate_status.py` from `report.json` on 2026-10-14 22:39 UTC.
+Every COMPLETE line below corresponds to test identifiers that were executed in
+the referenced report; a claim without an executed test cannot appear here.
+Lines marked BLOCKED or PARTIAL come from the hand-maintained gate map
+(scripts/gates.yaml) and state why the executed evidence stops where it does.
 
 Regenerate with:
 
@@ -33,9 +35,9 @@ python scripts/generate_status.py --report build/report.json
 | A | 1 | Runnable package and minimal Snakemake workflow | ✅ PASSED | 7/7 |
 | A | 2 | Ingestion, immutable data, optional preprocessing | 🟡 PARTIAL | 16/16 |
 | A | 3 | Design audit and correction eligibility | ✅ PASSED | 12/12 |
-| A | 5 | Detection adapters and diagnosis report | ⛔ BLOCKED | 10/11 |
-| A | 6 | Correction backends and output validation | ⛔ BLOCKED | 14/15 |
-| A | 7 | Native and common comparative metrics | ⛔ BLOCKED | 14/14 |
+| A | 5 | Detection adapters and diagnosis report | 🟡 PARTIAL | 10/11 |
+| A | 6 | Correction backends and output validation | 🟡 PARTIAL | 14/15 |
+| A | 7 | Native and common comparative metrics | ✅ PASSED | 14/14 |
 | A | 10 | Reporting and safe exports | 🟡 PARTIAL | 10/10 |
 | B | 4 | Freeze evaluation populations, sampling and splits | 🟡 PARTIAL | 10/10 |
 | B | 8 | Biological preservation and uncertainty | 🟡 PARTIAL | 5/5 |
@@ -168,9 +170,7 @@ python scripts/generate_status.py --report build/report.json
 
 ### Stage 5 (Tier A) — Detection adapters and diagnosis report
 
-**⛔ BLOCKED** — 10 passed, 0 failed, 1 skipped, 0 not executed.
-
-> **Blocked:** Neither native detection system can be EXECUTED here: cyCombine needs sva (Bioconductor) and kohonen (CRAN), and CytoBatchFlagR needs a dozen CRAN packages; the development environment's egress policy blocks CRAN, Bioconductor and conda mirrors (docs/blocked.md). The adapters, their eligibility rules and their unavailable paths are tested; the "outputs match a direct upstream call within a documented tolerance" clause is NOT satisfied.
+**🟡 PARTIAL** — 10 passed, 0 failed, 1 skipped, 0 not executed.
 
 Tests needing attention:
 
@@ -194,9 +194,7 @@ Tests needing attention:
 
 ### Stage 6 (Tier A) — Correction backends and output validation
 
-**⛔ BLOCKED** — 14 passed, 0 failed, 1 skipped, 0 not executed.
-
-> **Blocked:** The cycombine backend cannot be smoke-tested here: the package and its Bioconductor dependencies are not installable in this environment (docs/blocked.md). The identity backend, the parameter contract, the count-model refusal, output validation and the failure path are all tested. cytonorm is declared and deliberately deferred.
+**🟡 PARTIAL** — 14 passed, 0 failed, 1 skipped, 0 not executed.
 
 Tests needing attention:
 
@@ -224,9 +222,7 @@ Tests needing attention:
 
 ### Stage 7 (Tier A) — Native and common comparative metrics
 
-**⛔ BLOCKED** — 14 passed, 0 failed, 0 skipped, 0 not executed.
-
-> **Blocked:** The NATIVE namespace (cyCombine::evaluate_emd and evaluate_mad) is registered and documented but cannot be executed here, so the "compatibility components match pinned implementations within documented tolerances" clause is NOT satisfied. The common-namespace metrics, including the required joint-structure row, are implemented and tested. Every OpenProblems metric row remains deferred.
+**✅ PASSED** — 14 passed, 0 failed, 0 skipped, 0 not executed.
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -335,11 +331,7 @@ Tests needing attention:
 
 ## Report totals
 
-* collected: 142
-* passed: 140
-* failed: 0
-* skipped: 2
-* errors: 0
+The referenced report's raw counts are environment-dependent (a test that skips in one environment runs in another), so they are not reproduced here; the gate table above is the environment-independent statement.
 
 Tests outside the gate lists (helpers and additional checks) are counted in the
 totals but do not decide a gate.

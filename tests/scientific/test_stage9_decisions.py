@@ -95,6 +95,10 @@ def test_a_calibrated_policy_can_recommend(frozen, tmp_path) -> None:
             k: "calibrated against the synthetic paired-reference fixture"
             for k in Policy(name="x").threshold_origins
         },
+        calibration_artifacts={
+            k: "tests/scientific/test_stage9_decisions.py::test_a_calibrated_policy_can_recommend"
+            for k in Policy(name="x").threshold_origins
+        },
     )
     try:
         decision = _decide(
@@ -302,3 +306,135 @@ def test_overrides_are_recorded_beside_the_original_assessment(frozen) -> None:
     decision = _decide(frozen, {}, {"uncorrected": identity_metrics}, overrides=[override])
     assert decision.overrides == [override]
     assert decision.assessments, "the original assessment is still displayed"
+
+
+def test_confounded_design_blocks_recommendation_even_when_reference_supported(
+    frozen, tmp_path
+) -> None:
+    """Regression for the policy-layer confounding gate.
+
+    A design whose batch factor is perfectly confounded with a protected biological
+    factor must never reach ``recommended_under_policy`` — not via per-backend
+    eligibility alone.  Before this gate existed, a shared measured reference made
+    every comparison ``reference_supported`` and a calibrated policy could recommend a
+    correction on a batch-by-group design.
+    """
+    _, dataset, design, sampling = frozen
+    design.confounded_factors = ["group"]
+
+    identity_metrics = compute_common_metrics(
+        dataset, dataset.expression(), sampling, design,
+        run_id="t", candidate_id="uncorrected",
+    )
+    identity_correction, _ = _score(frozen, "none", "uncorrected", tmp_path)
+    correction, metrics = _score(frozen, "fixture_offset_removal", "offset", tmp_path)
+
+    POLICIES["calibrated_for_test"] = Policy(
+        name="calibrated_for_test",
+        threshold_origins={
+            k: "calibrated against the synthetic paired-reference fixture"
+            for k in Policy(name="x").threshold_origins
+        },
+        calibration_artifacts={
+            k: "tests/scientific/test_stage9_decisions.py::test_a_calibrated_policy_can_recommend"
+            for k in Policy(name="x").threshold_origins
+        },
+    )
+    try:
+        decision = _decide(
+            frozen,
+            {"uncorrected": identity_correction, "offset": correction},
+            {"uncorrected": identity_metrics, "offset": metrics},
+            policy="calibrated_for_test",
+        )
+        states = _states(decision)
+        assert states["offset"] is DecisionState.NON_IDENTIFIABLE
+        assert "confounded" in next(
+            a.reason for a in decision.assessments if a.candidate_id == "offset"
+        )
+        assert decision.recommended_candidate_id is None
+    finally:
+        POLICIES.pop("calibrated_for_test")
+
+
+def test_permissive_policy_cannot_recommend_on_clustering_labels(frozen, tmp_path) -> None:
+    """The clustering-label gate is an invariant, not a policy option: no shipped or
+    user policy may reach recommended_under_policy on clustering-derived labels."""
+    _, dataset, design, sampling = frozen
+    object.__setattr__(sampling, "label_source", LabelTier.CLUSTERING)
+
+    identity_metrics = compute_common_metrics(
+        dataset, dataset.expression(), sampling, design,
+        run_id="t", candidate_id="uncorrected",
+    )
+    identity_correction, _ = _score(frozen, "none", "uncorrected", tmp_path)
+    correction, metrics = _score(frozen, "fixture_offset_removal", "offset", tmp_path)
+
+    POLICIES["calibrated_for_test"] = Policy(
+        name="calibrated_for_test",
+        threshold_origins={
+            k: "calibrated against the synthetic paired-reference fixture"
+            for k in Policy(name="x").threshold_origins
+        },
+        calibration_artifacts={
+            k: "tests/scientific/test_stage9_decisions.py::test_a_calibrated_policy_can_recommend"
+            for k in Policy(name="x").threshold_origins
+        },
+    )
+    try:
+        decision = _decide(
+            frozen,
+            {"uncorrected": identity_correction, "offset": correction},
+            {"uncorrected": identity_metrics, "offset": metrics},
+            policy="permissive",
+        )
+        assert _states(decision)["offset"] is not DecisionState.RECOMMENDED_UNDER_POLICY
+        assert decision.recommended_candidate_id is None
+    finally:
+        POLICIES.pop("calibrated_for_test")
+
+
+def test_reference_gate_is_evaluated_on_the_evidence_actually_used(
+    frozen, tmp_path
+) -> None:
+    """A candidate whose EMD evidence comes from conditional contrasts must not ride on
+    an unrelated reference-supported pair.  The gate is scoped to the comparisons that
+    produced the candidate's evidence."""
+    _, dataset, design, sampling = frozen
+    # Downgrade every comparison except one pair to conditional; the candidate's
+    # evidence spans all pairs, so the gate must now fail.
+    from batchdx.cyto.schemas.enums import ComparisonSupport
+
+    for c in design.comparisons:
+        if c.population is None and c.support is ComparisonSupport.REFERENCE_SUPPORTED:
+            c.support = ComparisonSupport.BIOLOGICALLY_STRATIFIED_CONDITIONAL
+    design.comparisons[0].support = ComparisonSupport.REFERENCE_SUPPORTED
+
+    identity_metrics = compute_common_metrics(
+        dataset, dataset.expression(), sampling, design,
+        run_id="t", candidate_id="uncorrected",
+    )
+    identity_correction, _ = _score(frozen, "none", "uncorrected", tmp_path)
+    correction, metrics = _score(frozen, "fixture_offset_removal", "offset", tmp_path)
+
+    POLICIES["calibrated_for_test"] = Policy(
+        name="calibrated_for_test",
+        threshold_origins={
+            k: "calibrated against the synthetic paired-reference fixture"
+            for k in Policy(name="x").threshold_origins
+        },
+        calibration_artifacts={
+            k: "tests/scientific/test_stage9_decisions.py::test_a_calibrated_policy_can_recommend"
+            for k in Policy(name="x").threshold_origins
+        },
+    )
+    try:
+        decision = _decide(
+            frozen,
+            {"uncorrected": identity_correction, "offset": correction},
+            {"uncorrected": identity_metrics, "offset": metrics},
+            policy="calibrated_for_test",
+        )
+        assert _states(decision)["offset"] is not DecisionState.RECOMMENDED_UNDER_POLICY
+    finally:
+        POLICIES.pop("calibrated_for_test")

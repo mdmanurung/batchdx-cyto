@@ -250,9 +250,14 @@ def audit(
 ) -> None:
     """Run the Stage 0 upstream audit scripts and store their captured output."""
 
-    repo_scripts = Path(__file__).resolve().parents[3] / "scripts"
-    py_script = repo_scripts / "audit_upstream.py"
-    r_script = repo_scripts / "audit_upstream.R"
+    # Resolve the audit scripts from the installed package first (the wheel ships
+    # them under workflow_assets via hatch force-include), then from the repo
+    # layout so an editable checkout keeps working.
+    packaged = Path(__file__).resolve().parent / "workflow_assets" / "scripts"
+    repo = Path(__file__).resolve().parents[3] / "scripts"
+    scripts_dir = packaged if (packaged / "audit_upstream.py").exists() else repo
+    py_script = scripts_dir / "audit_upstream.py"
+    r_script = scripts_dir / "audit_upstream.R"
     out_dir.mkdir(parents=True, exist_ok=True)
 
     failures = []

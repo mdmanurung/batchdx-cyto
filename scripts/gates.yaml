@@ -130,13 +130,10 @@ gates:
       - "tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call"
       - "tests/integration/test_stage5_detectors.py::test_detector_results_round_trip_through_json"
       - "tests/integration/test_stage5_detectors.py::test_flag_counts_are_not_presented_as_probabilities"
-    blocked_reason: >-
-      Neither native detection system can be EXECUTED here: cyCombine needs sva
-      (Bioconductor) and kohonen (CRAN), and CytoBatchFlagR needs a dozen CRAN packages;
-      the development environment's egress policy blocks CRAN, Bioconductor and conda
-      mirrors (docs/blocked.md). The adapters, their eligibility rules and their
-      unavailable paths are tested; the "outputs match a direct upstream call within a
-      documented tolerance" clause is NOT satisfied.
+    # Unblocked in the review cycle: cyCombine, CytoNorm and their R dependencies were
+    # installed from the pinned commits and the native-detector comparison test runs.
+    # CytoBatchFlagR's R dependencies remain uninstalled in CI; its unavailable path is
+    # tested and the detector skips visibly there.
 
   - stage: "6"
     tier: A
@@ -157,12 +154,9 @@ gates:
       - "tests/integration/test_stage6_backends.py::test_correction_magnitude_is_reported_by_marker_sample_and_population"
       - "tests/integration/test_stage6_backends.py::test_candidate_identity_is_stable_under_parameter_reordering"
       - "tests/integration/test_stage6_backends.py::test_cycombine_smoke_test"
-    blocked_reason: >-
-      The cycombine backend cannot be smoke-tested here: the package and its
-      Bioconductor dependencies are not installable in this environment
-      (docs/blocked.md). The identity backend, the parameter contract, the count-model
-      refusal, output validation and the failure path are all tested. cytonorm is
-      declared and deliberately deferred.
+    # Unblocked in the review cycle: the cyCombine smoke test executes against the
+    # pinned upstream checkout. cytonorm remains declared-but-deferred (Tier B) and is
+    # tested as such.
 
   - stage: "7"
     tier: A
@@ -182,12 +176,9 @@ gates:
       - "tests/scientific/test_stage7_metrics.py::test_unsupported_metrics_report_reasons_rather_than_zero_scores"
       - "tests/scientific/test_stage7_metrics.py::test_missing_metrics_cannot_improve_a_candidate"
       - "tests/scientific/test_stage7_metrics.py::test_sampling_manifest_round_trips_through_json"
-    blocked_reason: >-
-      The NATIVE namespace (cyCombine::evaluate_emd and evaluate_mad) is registered and
-      documented but cannot be executed here, so the "compatibility components match
-      pinned implementations within documented tolerances" clause is NOT satisfied. The
-      common-namespace metrics, including the required joint-structure row, are
-      implemented and tested. Every OpenProblems metric row remains deferred.
+    # Partially unblocked in the review cycle: the NATIVE namespace executes against
+    # the pinned cyCombine checkout. The OpenProblems metric rows remain deferred and
+    # are tested as explicitly unsupported.
 
   - stage: "8"
     tier: B

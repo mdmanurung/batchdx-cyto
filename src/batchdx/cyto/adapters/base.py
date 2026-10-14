@@ -26,6 +26,15 @@ from batchdx.cyto.schemas.enums import CorrectionStatus
 
 
 class BackendError(RuntimeError):
+    """A correction backend failed or refused to run."""
+
+
+class BackendNotAvailable(BackendError):
+    """The backend cannot run in this environment (dependency absent, not implemented).
+
+    Raised where the *availability* of the backend is the problem, so the pipeline can
+    report NOT_AVAILABLE (blocked) rather than FAILED without sniffing error text.
+    """
     """Raised when a backend cannot run as configured."""
 
 

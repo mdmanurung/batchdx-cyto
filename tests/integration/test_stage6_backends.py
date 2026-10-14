@@ -179,7 +179,15 @@ def test_a_runtime_failure_never_returns_unchanged_data_as_success(
     assert result.status is CorrectionStatus.FAILED
     assert result.output_path is None
     assert result.validation["produced_output"] is False
-    assert not layout.corrected_h5ad("boom").exists()
+    # The `correct` rule declares corrected.h5ad as an output, so a failed candidate
+    # writes the unmodified baseline to keep the declared output existing. It must
+    # never be mistaken for a correction: the result says FAILED, output_path is
+    # None, and metrics read no matrix from a non-SUCCESS candidate.
+    assert layout.corrected_h5ad("boom").exists()
+    import anndata as ad
+
+    stored = ad.read_h5ad(layout.corrected_h5ad("boom"))
+    assert stored.uns.get("candidate_id") == "boom"
 
     stage_metrics("boom", config_path, example_project, layout)
     from batchdx.cyto.schemas.contracts import MetricResult

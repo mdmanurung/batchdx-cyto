@@ -1,6 +1,6 @@
 """Single source of the package version, mirrored from ``pyproject.toml``."""
 
-__version__ = "0.1.0.dev0"
+__version__ = "0.1.0"
 
 #: Version of the on-disk contract used by every emitted record.  Bump this when a
 #: record gains or loses a field so that old result directories are rejected loudly

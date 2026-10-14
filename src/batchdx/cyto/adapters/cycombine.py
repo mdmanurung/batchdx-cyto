@@ -26,6 +26,7 @@ from batchdx.cyto.adapters.base import (
     BackendCapabilities,
     BackendContext,
     BackendError,
+    BackendNotAvailable,
     make_spec,
     register_backend,
     resolve_parameters,
@@ -42,7 +43,7 @@ from batchdx.cyto.io.binary import read_matrix, write_matrix
 from batchdx.cyto.io.dataset import CELL_ID, SAMPLE_ID, Dataset
 from batchdx.cyto.io.hashing import matrix_hash
 from batchdx.cyto.schemas.contracts import CorrectionResult, ProvenanceRef, SoftwareVersion
-from batchdx.cyto.schemas.enums import CorrectionStatus
+from batchdx.cyto.schemas.enums import CorrectionStatus, ReferenceRole
 
 R_SCRIPT = "cycombine_correct.R"
 
@@ -88,7 +89,10 @@ class CyCombineBackend:
         notes=(
             "fit and apply are not separable in the audited API: correct_data returns a "
             "corrected table, not a reusable model, so frozen application to unseen "
-            "batches is not advertised."
+            "batches is not advertised. The anchor parameter is explicitly experimental "
+            "upstream (correct_data docstring: 'Experimental ... may be confounded with "
+            "the condition'); this adapter builds it from reference identity and never "
+            "presents an anchor-corrected run as ordinary ComBat output."
         ),
     )
 
@@ -112,7 +116,7 @@ class CyCombineBackend:
 
         cycombine = next(s for s in software if s.name == "cyCombine")
         if not cycombine.available:
-            raise BackendError(
+            raise BackendNotAvailable(
                 "the cyCombine R package is not installed in this environment "
                 f"({cycombine.detail}). Install it from the pinned commit recorded in "
                 "config/upstream_lock.yaml; this adapter never substitutes another algorithm."
@@ -153,11 +157,24 @@ class CyCombineBackend:
             col_names=correction_markers,
         )
 
+        # The anchor covariate is built on the R side from reference identity, so the
+        # per-cell sample ids and the per-cell reference identity cross the boundary
+        # here.  Only measured reference roles may anchor the correction; a biological
+        # pseudo-control is never technical evidence.
+        measured_roles = (ReferenceRole.TECHNICAL_REPLICATE, ReferenceRole.ANCHOR)
+        reference_of = {
+            sid: (rec.reference_id or "") if rec.reference_role in measured_roles else ""
+            for sid, rec in dataset.samples.items()
+        }
+        reference_per_cell = obs[SAMPLE_ID].map(reference_of).fillna("").astype(str).tolist()
+
         params = {
             "input_matrix": str(matrix_path),
             "output_matrix": str(work / "corrected.f64"),
             "markers": correction_markers,
             "batch": batches,
+            "sample": obs[SAMPLE_ID].astype(str).tolist(),
+            "reference": reference_per_cell,
             "covar": covar_values,
             "covar_name": covar,
             "anchor": resolved.get("anchor"),
@@ -211,6 +228,16 @@ class CyCombineBackend:
         spec = make_spec(candidate_id, "cycombine", cycombine.version, resolved,
                          context.seed, dataset, correction_markers)
         warnings = list(r_result.payload.get("warnings", []))
+        if resolved.get("anchor") is not None:
+            warnings.append(
+                "the anchor route is explicitly experimental upstream: the "
+                "correct_data documentation marks anchor 'Experimental' and warns it "
+                "may be confounded with the condition. The anchor covariate was built "
+                "from reference identity (cells of measured reference samples carry "
+                "their reference id; every other cell carries its own sample id), and "
+                "upstream silently ignores the anchor inside a label group that is "
+                "confounded with batch or dominated by a single anchor."
+            )
         for node in r_result.payload.get("confounded_nodes", []):
             warnings.append(
                 f"SOM node {node} contains a single batch or a covariate level perfectly "

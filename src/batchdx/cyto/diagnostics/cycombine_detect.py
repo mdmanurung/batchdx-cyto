@@ -102,6 +102,7 @@ class _CyCombineDetector:
             "out_dir": str(out_dir),
             "markers": markers,
             "batch": batches,
+            "sample": [sample_of[c] for c in cells],
             "label": labels,
             "seed": context.seed,
             "bin_size": 0.1,

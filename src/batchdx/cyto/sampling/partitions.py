@@ -164,6 +164,62 @@ def resolve_labels(
     return labels, source, LABEL_TIER_CONFIDENCE[source]
 
 
+SPLIT_FRACTIONS = {"train": 0.6, "tune": 0.2, "validation": 0.2}
+SPLIT_ORDER = ("train", "tune", "validation")
+
+
+def donor_splits(dataset: Dataset, seed: int) -> dict[str, list[str]]:
+    """Deterministic donor-level train/tune/validation split of the biospecimens.
+
+    Every sample of one donor lands in the same split: a donor split across splits
+    would leak biological signal between tuning and validation. Donors are stratified
+    by group so each split can contain both groups when the design allows it.
+    Reference aliquots are technical replicates, not biospecimens, and are excluded.
+    With fewer than three eligible donors no split is meaningful, so the single
+    stratum is returned unsplit under the key "unsplit" and the empty keys are
+    still present so consumers never key-error.
+    """
+
+    donors: dict[str, set[str]] = {}
+    for sid, rec in sorted(dataset.samples.items()):
+        if rec.reference_id:
+            continue
+        donor = rec.donor_id or sid  # without a donor factor, the sample is the unit
+        donors.setdefault(donor, set()).add(rec.group or "unknown")
+
+    splits: dict[str, list[str]] = {name: [] for name in SPLIT_ORDER}
+    splits["unsplit"] = []
+    if not donors:
+        return splits
+
+    rng = np.random.default_rng(seed)
+    strata: dict[str, list[str]] = {}
+    for donor, groups in donors.items():
+        # a donor spanning groups (a data error) is stratified by its declared groups
+        strata.setdefault("+".join(sorted(groups)), []).append(donor)
+
+    total = sum(len(v) for v in strata.values())
+    if total < 3:
+        splits["unsplit"] = sorted(donors)
+        return splits
+
+    for _, members in sorted(strata.items()):
+        ordered = sorted(members)
+        rng.shuffle(ordered)
+        n = len(ordered)
+        boundary_train = int(round(SPLIT_FRACTIONS["train"] * n))
+        boundary_tune = int(round((SPLIT_FRACTIONS["train"] + SPLIT_FRACTIONS["tune"]) * n))
+        # with >= 3 donors every split gets at least one member
+        boundary_train = min(max(boundary_train, 1), n - 2)
+        boundary_tune = min(max(boundary_tune, boundary_train + 1), n - 1)
+        splits["train"].extend(ordered[:boundary_train])
+        splits["tune"].extend(ordered[boundary_train:boundary_tune])
+        splits["validation"].extend(ordered[boundary_tune:])
+    for name in SPLIT_ORDER:
+        splits[name] = sorted(splits[name])
+    return splits
+
+
 def build_sampling_manifest(
     dataset: Dataset,
     config: Config,
@@ -266,6 +322,7 @@ def build_sampling_manifest(
         evaluation_markers=dataset.marker_ids(rep.marker_mask),
         representation=representation,
         aggregation_weights=weights,
+        splits=donor_splits(dataset, config.project.seed),
         provenance=[ProvenanceRef(kind="dataset", identifier=dataset.manifest.dataset_id,
                                   content_hash=dataset.baseline_hash())],
     )
