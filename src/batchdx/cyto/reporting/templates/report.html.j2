@@ -343,6 +343,12 @@
   the fingerprint, so changing the report title does not invalidate a correction.
 </div>
 <h3>Resolved configuration</h3>
+{% if redacted %}
+<p class="sub">⚠ Identifiers in this report are pseudonymized with a per-run salt stored
+in this run directory (<code>identifier_salt.json</code>). Anyone holding the run
+directory can reverse the pseudonyms; share the report without the salt file if the
+mapping must stay private.</p>
+{% endif %}
 <pre><code>{{ config | tojson(indent=2) }}</code></pre>
 <h3>Citation</h3>
 <p class="sub">Cite the components actually enabled in this run. See

@@ -7,13 +7,25 @@ Built for cross-cohort immune studies, where biological differences and technica
 batches are often correlated and where the honest answer is frequently *"this contrast
 cannot be corrected"*.
 
-> **Status: alpha, partially blocked.** The Python core, the design audit, the native
+> **Status: 0.1.0 — research preview.** The Python core, the design audit, the native
 > diagnostics, the common-partition metrics, the decision layer, the report and the
-> Snakemake workflow run end to end and are tested. The **R-backed adapters (cyCombine,
-> CytoNorm, CytoBatchFlagR) cannot be executed** in the environment this was developed
-> in, because CRAN and Bioconductor were unreachable. Those gates are recorded as
-> **BLOCKED**, not passed. See [`docs/implementation_status.md`](docs/implementation_status.md)
-> (generated from an executed test report) and [`docs/blocked.md`](docs/blocked.md).
+> Snakemake workflow run end to end and are tested (181 tests, including real
+> Snakemake executions and the R-backed cyCombine path against the pinned upstream
+> checkout). Three things you must know before using it:
+>
+> 1. **Every decision threshold is an uncalibrated engineering default.** The report
+>    says so next to every recommendation. Do not cite the thresholds as validated
+>    cutoffs; see the calibration program in issue #5.
+> 2. **No real-data validation yet.** All evidence comes from synthetic fixtures of
+>    250–2,000 cells per sample. Production CyTOF acquisitions are orders of magnitude
+>    larger; expect the memory and runtime profile to be untested.
+> 3. **The CytoNorm backend is declared but deferred** (it returns `NOT_AVAILABLE`);
+>    its two eligibility tiers describe the intended contract, not a working backend.
+>    CytoBatchFlagR requires R packages that CI does not install, so its tests skip
+>    there.
+>
+> Stage-by-stage status, generated from an executed test report:
+> [`docs/implementation_status.md`](docs/implementation_status.md).
 
 ---
 

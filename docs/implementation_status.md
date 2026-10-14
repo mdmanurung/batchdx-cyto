@@ -2,9 +2,11 @@
 
 **This file is generated. Do not edit it by hand.**
 
-Derived by `scripts/generate_status.py` from `report.json` on 2026-09-15 07:13 UTC.
-Every line below corresponds to test identifiers that were executed; a claim
-without an executed test cannot appear here.
+Derived by `scripts/generate_status.py` from `report.json` on 2026-10-14 21:31 UTC.
+Every COMPLETE line below corresponds to test identifiers that were executed in
+the referenced report; a claim without an executed test cannot appear here.
+Lines marked BLOCKED or PARTIAL come from the hand-maintained gate map
+(scripts/gates.yaml) and state why the executed evidence stops where it does.
 
 Regenerate with:
 
@@ -33,9 +35,9 @@ python scripts/generate_status.py --report build/report.json
 | A | 1 | Runnable package and minimal Snakemake workflow | ✅ PASSED | 7/7 |
 | A | 2 | Ingestion, immutable data, optional preprocessing | 🟡 PARTIAL | 16/16 |
 | A | 3 | Design audit and correction eligibility | ✅ PASSED | 12/12 |
-| A | 5 | Detection adapters and diagnosis report | ⛔ BLOCKED | 10/11 |
-| A | 6 | Correction backends and output validation | ⛔ BLOCKED | 14/15 |
-| A | 7 | Native and common comparative metrics | ⛔ BLOCKED | 14/14 |
+| A | 5 | Detection adapters and diagnosis report | 🟡 PARTIAL | 10/11 |
+| A | 6 | Correction backends and output validation | 🟡 PARTIAL | 13/15 |
+| A | 7 | Native and common comparative metrics | ✅ PASSED | 14/14 |
 | A | 10 | Reporting and safe exports | 🟡 PARTIAL | 10/10 |
 | B | 4 | Freeze evaluation populations, sampling and splits | 🟡 PARTIAL | 10/10 |
 | B | 8 | Biological preservation and uncertainty | 🟡 PARTIAL | 5/5 |
@@ -168,13 +170,11 @@ python scripts/generate_status.py --report build/report.json
 
 ### Stage 5 (Tier A) — Detection adapters and diagnosis report
 
-**⛔ BLOCKED** — 10 passed, 0 failed, 1 skipped, 0 not executed.
-
-> **Blocked:** Neither native detection system can be EXECUTED here: cyCombine needs sva (Bioconductor) and kohonen (CRAN), and CytoBatchFlagR needs a dozen CRAN packages; the development environment's egress policy blocks CRAN, Bioconductor and conda mirrors (docs/blocked.md). The adapters, their eligibility rules and their unavailable paths are tested; the "outputs match a direct upstream call within a documented tolerance" clause is NOT satisfied.
+**🟡 PARTIAL** — 10 passed, 0 failed, 1 skipped, 0 not executed.
 
 Tests needing attention:
 
-* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call — skipped`
+* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects — skipped`
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -183,10 +183,10 @@ Tests needing attention:
 * `tests/integration/test_stage5_detectors.py::test_composition_detector_separates_frequency_from_intensity` — passed
 * `tests/integration/test_stage5_detectors.py::test_composition_detector_reports_insufficient_data_rather_than_a_p_value` — passed
 * `tests/integration/test_stage5_detectors.py::test_two_batch_fixture_makes_the_cluster_detector_ineligible_not_uninformative` — passed
-* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects` — passed
+* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects` — skipped
 * `tests/integration/test_stage5_detectors.py::test_cytobatchflagr_without_a_checkout_is_not_available_with_a_stated_remedy` — passed
 * `tests/integration/test_stage5_detectors.py::test_cytobatchflagr_refuses_to_choose_thresholds_itself` — passed
-* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call` — skipped
+* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call` — passed
 * `tests/integration/test_stage5_detectors.py::test_detector_results_round_trip_through_json` — passed
 * `tests/integration/test_stage5_detectors.py::test_flag_counts_are_not_presented_as_probabilities` — passed
 
@@ -194,13 +194,12 @@ Tests needing attention:
 
 ### Stage 6 (Tier A) — Correction backends and output validation
 
-**⛔ BLOCKED** — 14 passed, 0 failed, 1 skipped, 0 not executed.
-
-> **Blocked:** The cycombine backend cannot be smoke-tested here: the package and its Bioconductor dependencies are not installable in this environment (docs/blocked.md). The identity backend, the parameter contract, the count-model refusal, output validation and the failure path are all tested. cytonorm is declared and deliberately deferred.
+**🟡 PARTIAL** — 13 passed, 0 failed, 2 skipped, 0 not executed.
 
 Tests needing attention:
 
-* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test — skipped`
+* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped — skipped`
+* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason — skipped`
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -209,8 +208,8 @@ Tests needing attention:
 * `tests/integration/test_stage6_backends.py::test_cycombine_refuses_the_count_data_route` — passed
 * `tests/integration/test_stage6_backends.py::test_the_r_script_would_refuse_a_non_combat_method` — passed
 * `tests/integration/test_stage6_backends.py::test_unsupported_arguments_are_rejected_not_ignored` — passed
-* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped` — passed
-* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason` — passed
+* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped` — skipped
+* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason` — skipped
 * `tests/integration/test_stage6_backends.py::test_cytonorm_is_declared_but_explicitly_deferred` — passed
 * `tests/integration/test_stage6_backends.py::test_cytonorm_refuses_an_artificial_aggregate_control` — passed
 * `tests/integration/test_stage6_backends.py::test_output_validation_catches_a_changed_excluded_marker` — passed
@@ -218,15 +217,13 @@ Tests needing attention:
 * `tests/integration/test_stage6_backends.py::test_a_runtime_failure_never_returns_unchanged_data_as_success` — passed
 * `tests/integration/test_stage6_backends.py::test_correction_magnitude_is_reported_by_marker_sample_and_population` — passed
 * `tests/integration/test_stage6_backends.py::test_candidate_identity_is_stable_under_parameter_reordering` — passed
-* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test` — skipped
+* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test` — passed
 
 </details>
 
 ### Stage 7 (Tier A) — Native and common comparative metrics
 
-**⛔ BLOCKED** — 14 passed, 0 failed, 0 skipped, 0 not executed.
-
-> **Blocked:** The NATIVE namespace (cyCombine::evaluate_emd and evaluate_mad) is registered and documented but cannot be executed here, so the "compatibility components match pinned implementations within documented tolerances" clause is NOT satisfied. The common-namespace metrics, including the required joint-structure row, are implemented and tested. Every OpenProblems metric row remains deferred.
+**✅ PASSED** — 14 passed, 0 failed, 0 skipped, 0 not executed.
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -335,10 +332,10 @@ Tests needing attention:
 
 ## Report totals
 
-* collected: 142
-* passed: 140
+* collected: 184
+* passed: 181
 * failed: 0
-* skipped: 2
+* skipped: 3
 * errors: 0
 
 Tests outside the gate lists (helpers and additional checks) are counted in the
