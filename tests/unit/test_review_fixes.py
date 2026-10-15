@@ -89,18 +89,18 @@ def _base_config_kwargs(**over):
     return base
 
 
-def test_config_refuses_peacoqc_which_is_not_implemented() -> None:
+def test_config_accepts_declared_qc_paths_which_are_now_implemented() -> None:
+    """PeaCoQC and the gate table are implemented (preprocess.peacoqc / preprocess.gating),
+    so the configuration accepts a path to each step's own declaration instead of
+    refusing the key. A boolean is still refused: the key names a file, not a switch."""
+
     from batchdx.cyto.config import PreprocessingConfig
 
-    with pytest.raises(ValueError, match="not implemented"):
+    cfg = PreprocessingConfig(**_base_config_kwargs(peacoqc="qc.yaml", gating="gates.yaml"))
+    assert cfg.peacoqc == "qc.yaml"
+    assert cfg.gating == "gates.yaml"
+    with pytest.raises(ValueError):
         PreprocessingConfig(**_base_config_kwargs(peacoqc=True))
-
-
-def test_config_refuses_a_gating_setting_which_is_not_implemented() -> None:
-    from batchdx.cyto.config import PreprocessingConfig
-
-    with pytest.raises(ValueError, match="not implemented"):
-        PreprocessingConfig(**_base_config_kwargs(gating="spiscy"))
 
 
 def test_config_accepts_unset_qc_flags() -> None:

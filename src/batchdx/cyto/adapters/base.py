@@ -30,12 +30,22 @@ class BackendError(RuntimeError):
 
 
 class BackendNotAvailable(BackendError):
-    """The backend cannot run in this environment (dependency absent, not implemented).
+    """The backend is absent or unusable in this environment, rather than broken.
 
-    Raised where the *availability* of the backend is the problem, so the pipeline can
-    report NOT_AVAILABLE (blocked) rather than FAILED without sniffing error text.
+    This is a distinct type, not a message convention, because
+    ``docs/decisions/0006-candidate-results-and-failure-handling.md`` requires
+    ``not_available`` and ``failed`` to stay distinguishable.  The two mean
+    different things to a reader of a report: "this method was not installed here"
+    is an environment fact that resolves by installing it, while "this method ran
+    and broke" is a statement about the method.  A backend that raises
+    ``BackendError`` is recorded as ``failed``; only this subclass is recorded as
+    ``not_available``.
+
+    Substring matching on the message cannot make that distinction: any real
+    failure whose text happens to mention a missing package would be reported as
+    a missing package, which is how a genuine defect gets recorded as an
+    environment gap.
     """
-    """Raised when a backend cannot run as configured."""
 
 
 @dataclass(frozen=True)

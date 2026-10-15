@@ -11,6 +11,16 @@ jobs: 32
 keep-going: true
 rerun-incomplete: true
 latency-wait: 60
+# The two values below are site-specific and are left as REPLACE_ME on purpose. There is
+# no correct value to hard-code: a partition name and an account string are properties of
+# one cluster, and a default that is wrong for every reader is worse than a placeholder
+# that cannot be mistaken for one. Every other resource here is a stated number.
+#
+# Snakemake maps each top-level key of this file onto the matching command line flag
+# (`executor: slurm` becomes `--executor slurm`, `default-resources:` becomes
+# `--default-resources ...`; see `snakemake --help`), so this profile cannot do anything
+# useful until both are replaced. Replace them in your own copy, and keep this one
+# UNTESTED.
 default-resources:
   slurm_partition: "REPLACE_ME"
   slurm_account: "REPLACE_ME"
@@ -25,4 +35,16 @@ set-resources:
     mem_mb: 32000
     runtime: 240
     cpus_per_task: 4
-# Do not run large analyses on a login node, and do not assume administrator rights.
+
+# Two operational notes, deliberately kept as notes rather than turned into directives,
+# because neither has a directive in this file to turn into. An earlier revision ended
+# with a trailing comment and nothing after it, which read as though a directive had been
+# dropped; that ambiguity is what is being removed here.
+#
+#   * There is no login-node guard in this profile, and this build cannot add one. What
+#     constrains a job to non-login nodes is the partition named in default-resources
+#     above, so choose a partition that excludes them. A job submitted to a partition
+#     that includes login nodes will run there.
+#   * A job body is a one-line call into batchdx.cyto.pipeline that writes nothing outside
+#     `outdir`, so the profile assumes no shared filesystem beyond the working directory
+#     and no privileges the submitter does not already have.

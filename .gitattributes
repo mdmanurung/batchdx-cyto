@@ -1,0 +1,2 @@
+# Preserve the exact CRLF bytes of the checksum-frozen Zenodo source table.
+data/metadata/cytobatchflagr_spectral/source_Table_2.csv -text -diff

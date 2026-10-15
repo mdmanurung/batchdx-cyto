@@ -136,6 +136,23 @@ def test_missing_expression_layer_names_what_is_available(example_project: Path)
         load_dataset(load_config(config_path), example_project)
 
 
+def test_missing_expression_layer_with_none_alias_names_layers(
+    example_project: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import anndata as ad
+
+    from batchdx.cyto.io import dataset as dataset_module
+
+    config_path = example_project / "config" / "config.yaml"
+    config_path.write_text(
+        config_path.read_text().replace("expression_layer: preprocessed", "expression_layer: absent")
+    )
+    adata = ad.read_h5ad(example_project / "data" / "preprocessed.h5ad")
+    monkeypatch.setattr(dataset_module, "_load_h5ad", lambda *_: (adata, []))
+    with pytest.raises(DatasetValidationError, match="available layers: \\['preprocessed'\\]"):
+        load_dataset(load_config(config_path), example_project)
+
+
 def test_multiple_panels_must_be_run_separately(example_project: Path) -> None:
     path = example_project / "config" / "markers.tsv"
     lines = path.read_text().splitlines()

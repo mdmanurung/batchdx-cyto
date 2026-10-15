@@ -1,15 +1,38 @@
 # R backends for batchdx-cyto.
 #
-# STATUS: NOT BUILT OR TESTED IN THIS BUILD. The environment this package was developed
-# in had no access to CRAN, Bioconductor or a conda mirror (see docs/blocked.md), so
-# this definition has never been built. Treat it as a starting point, not as a verified
-# artifact, and pin the digest of whatever you do build.
+# STATUS: NEVER BUILT. Nothing in this repository has ever built, run or pulled this
+# image. There is no docker, podman, apptainer, singularity, skopeo or crane on the node
+# this file was written on, so every RUN below is unexecuted and no claim is made that
+# any of them succeed. What follows is what could be established *without* a container
+# runtime, and how each fact was obtained.
+#
+#   * The base image digest was resolved over plain HTTP from the Docker Hub registry
+#     API (auth.docker.io for a token, then
+#     HEAD registry-1.docker.io/v2/rocker/r-ver/manifests/4.4.1), on 2026-09-30, twice
+#     with the same answer. It is the digest of the multi-platform OCI image *index*,
+#     not of the linux/amd64 image; the platform manifests it points at are
+#     f3ef082e63ca36547fcf0c05a0d74255ddda6ca7bd88f1dae5a44ce117fc3804 (amd64) and
+#     6127a544f2b9bf65d11ee4c07eb7aba6f1670cb9f18c93c5ce8f873649a77882 (arm64). No
+#     layer was pulled, unpacked or executed.
+#   * Which repository each R package belongs to was checked against the live CRAN
+#     index (cloud.r-project.org/src/contrib/PACKAGES.gz) and against Bioconductor 3.20,
+#     the release that serves R 4.4 -- not assumed from memory.
+#   * The package set CytoBatchFlagR needs was read out of the pinned checkout at
+#     .upstream/CytoBatchFlagR/R/CytoBatchFlagR_functions.R:6-34, which is 29
+#     unconditional library() calls, rather than out of its README.
+#
+# The earlier version of this banner said the development environment "had no access to
+# CRAN, Bioconductor or a conda mirror (see docs/blocked.md)". That premise is stale:
+# both CRAN and Bioconductor are reachable from this node today, which is how the digest
+# and the two package indices above were read. "Never been built" is still true, and is
+# the reason the install list below carries no receipt.
 #
 # Build:
 #   docker build -f containers/Dockerfile.r-backends -t batchdx-cyto-r:local .
-# Convert for Apptainer and pin the digest:
+# Convert for Apptainer, and pin the digest of what *you* actually built rather than of
+# the base image above:
 #   apptainer build batchdx-cyto-r.sif docker-daemon://batchdx-cyto-r:local
-FROM rocker/r-ver:4.4.1
+FROM rocker/r-ver:4.4.1@sha256:78cb94ce2db23aaaf7b546450fcf70b5a3f2ace5a9b5fa1f87217da329211312
 
 ARG CYCOMBINE_COMMIT=fcd42dbbe92bfa6bffa6094bf9b4de536e71c249
 ARG CYTONORM_COMMIT=278f352d8edffd7a5d3e6b0b76c402d991a1e7a9
@@ -19,8 +42,34 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 RUN R -q -e "install.packages(c('remotes','jsonlite','BiocManager'), repos='https://cloud.r-project.org')"
-RUN R -q -e "BiocManager::install(c('sva','flowCore','FlowSOM'), ask=FALSE, update=FALSE)"
-RUN R -q -e "install.packages(c('kohonen','emdist','dplyr','tidyr','matrixStats','outliers','Matrix','ggplot2','cowplot','ggridges','plyr','readr','readxl','stringr','tibble','magrittr'), repos='https://cloud.r-project.org')"
+
+# Every R package the pinned CytoBatchFlagR checkout requires, plus the two GitHub-only
+# backends' own CRAN dependencies.  MASS and stats are deliberately absent from the CRAN
+# list: they ship with R itself.  The three Bioconductor packages are placed by checking
+# the live CRAN index (which has no row for them) against Bioconductor 3.20's software
+# list (which has all three).
+RUN R -q -e "BiocManager::install(c('sva','flowCore','FlowSOM','limma','ComplexHeatmap','ConsensusClusterPlus'), ask=FALSE, update=FALSE)"
+RUN R -q -e "install.packages(c('kohonen','emdist','dplyr','tidyr','matrixStats','outliers','Matrix','ggplot2','cowplot','ggridges','plyr','readr','readxl','stringr','tibble','magrittr','scales','reshape2','ggpubr','RColorBrewer','ggrepel','circlize','LaplacesDemon','tidyverse','pheatmap','Rtsne','umap','progress','crayon','patchwork'), repos='https://cloud.r-project.org')"
+
+# The 29 names at CytoBatchFlagR_functions.R:6-34, and where each one is installed above:
+#
+#   BiocManager : flowCore, FlowSOM, limma, ComplexHeatmap, ConsensusClusterPlus
+#   CRAN        : dplyr, scales, tidyr, reshape2, readxl, readr, matrixStats, ggplot2,
+#                 ggpubr, ggridges, RColorBrewer, cowplot, ggrepel, circlize,
+#                 LaplacesDemon, tidyverse, pheatmap, Rtsne, umap, progress, crayon,
+#                 patchwork
+#   with R      : MASS, stats
+#
+# The CRAN line above installs all 22 of the CRAN names from the enforced set (8 of which
+# were already there, 14 newly added) plus 8 more for cyCombine and CytoNorm, 30 in all.
+# That is what it takes for the unconditional source() of the upstream file to complete
+# rather than aborting on the first missing library().
+#
+# Upstream's README also names DT, randomcoloR, shinyjs, shinycssloaders and shinyWidgets
+# in its package_installer() list. Those are reached only through
+# CytoBatchFlagR_workflow.R and the Shiny helpers, which this package deliberately never
+# sources (docs/decisions/0003-cytobatchflagr-integration.md), so they are not installed
+# here and are not enforced either.
 
 # GitHub-sourced packages are pinned by commit, which is the only reproducible handle
 # they have.
@@ -34,4 +83,18 @@ ARG CYTOBATCHFLAGR_COMMIT=ad21e3b104126783044351eb11fa24622a0da2f7
 RUN git clone https://github.com/AndorfLab/CytoBatchFlagR.git /opt/upstream/CytoBatchFlagR \
     && git -C /opt/upstream/CytoBatchFlagR checkout ${CYTOBATCHFLAGR_COMMIT}
 
-ENV BATCHDX_UPSTREAM_DIR=/opt/upstream
+# This file used to end in `ENV BATCHDX_UPSTREAM_DIR=/opt/upstream`, which nothing in the
+# repository read -- there were zero references to it outside this line. It is gone
+# rather than kept as a decoy. The wiring is a configuration key, not an environment
+# variable: the adapter resolves the checkout as
+# `<upstream.checkout_dir>/CytoBatchFlagR` (src/batchdx/cyto/diagnostics/
+# cytobatchflagr.py:60), and upstream.checkout_dir is passed straight through to it
+# (src/batchdx/cyto/pipeline.py:245, :277, :416). To use this image, point the key at
+# the directory that holds the clone:
+#
+#     upstream:
+#       checkout_dir: /opt/upstream
+#
+# or, for a one-off run, `--config upstream.checkout_dir=/opt/upstream`. Leaving it unset
+# is a supported state, not a silent one: the detector then records not_available with
+# the remedy in its reason (src/batchdx/cyto/diagnostics/cytobatchflagr.py:66-72).

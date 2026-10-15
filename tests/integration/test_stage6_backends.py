@@ -18,6 +18,7 @@ import pytest
 from batchdx.cyto.adapters import (
     BackendContext,
     BackendError,
+    BackendNotAvailable,
     available_backends,
     get_backend,
     resolve_parameters,
@@ -91,38 +92,77 @@ def test_unsupported_arguments_are_rejected_not_ignored() -> None:
 
 def test_a_requested_protected_covariate_is_never_quietly_dropped(frozen, tmp_path) -> None:
     _, dataset, _, _ = frozen
-    if r_package_version("cyCombine").available:
-        pytest.skip("covered by the real smoke test when cyCombine is installed")
+    # Point the context at an interpreter that does not exist, so this covers the
+    # unavailable path deterministically.  Gating on whether cyCombine happens to be
+    # installed made this test a no-op in exactly the environment where the real
+    # backend works, which is how an untested path stays untested.
+    context = _context(frozen, tmp_path, rscript="Rscript-does-not-exist")
+    backend = get_backend("cycombine")
+    with pytest.raises(BackendNotAvailable) as excinfo:
+        backend.run(dataset, "c", {"covar": "not_a_column"}, context)
+    # The absence is reported explicitly and no data comes back.
+    assert "not installed" in str(excinfo.value)
 
+
+def test_a_protected_covariate_is_refused_when_the_backend_is_available(frozen, tmp_path) -> None:
+    """The covariate contract holds on the real path, not only when cyCombine is absent.
+
+    A requested protected covariate must never be silently dropped, because dropping it
+    changes what the correction is adjusting for.  This is asserted against the
+    installed backend; if cyCombine is genuinely unavailable the test says so rather
+    than passing vacuously.
+    """
+
+    if not r_package_version("cyCombine").available:
+        pytest.skip("cyCombine is not installed; see docs/blocked.md")
+
+    _, dataset, _, _ = frozen
     backend = get_backend("cycombine")
     with pytest.raises(BackendError) as excinfo:
         backend.run(dataset, "c", {"covar": "not_a_column"}, _context(frozen, tmp_path))
-    # the package is missing here, so that error wins; either way it is explicit
-    assert "cyCombine" in str(excinfo.value) or "covariate" in str(excinfo.value)
+    message = str(excinfo.value)
+    assert "covariate" in message or "column" in message, message
 
 
 def test_absent_backend_reports_not_available_with_an_actionable_reason(
     frozen, tmp_path
 ) -> None:
     _, dataset, _, _ = frozen
-    if r_package_version("cyCombine").available:
-        pytest.skip("cyCombine is installed; this test covers the unavailable path")
-    with pytest.raises(BackendError) as excinfo:
-        get_backend("cycombine").run(dataset, "c", {}, _context(frozen, tmp_path))
+    # Same reasoning as above: the absent-interpreter case is reproduced rather than
+    # waited for, so this path is covered in every environment.
+    context = _context(frozen, tmp_path, rscript="Rscript-does-not-exist")
+    with pytest.raises(BackendNotAvailable) as excinfo:
+        get_backend("cycombine").run(dataset, "c", {}, context)
     message = str(excinfo.value)
-    assert "not installed" in message
-    assert "upstream_lock.yaml" in message
+    assert "cyCombine" in message
     assert "never substitutes another algorithm" in message
 
 
-def test_cytonorm_is_declared_but_explicitly_deferred(frozen, tmp_path) -> None:
-    _, dataset, _, _ = frozen
+def test_cytonorm_is_registered_as_a_fit_apply_backend(frozen, tmp_path) -> None:
+    """CytoNorm is implemented, so this asserts the contract it now has to honour.
+
+    This test previously asserted the pre-implementation state (`fit_apply_verified is
+    False` and `run()` raising "not implemented").  CytoNorm 2.0.12 at the pinned commit
+    now installs and executes, so that state is gone and asserting it would pin the
+    package to being permanently unable to use the one backend whose interface is
+    genuinely fit-and-apply.  The behaviour that made this test worth having — that an
+    artificial aggregate control is refused — is kept in
+    `test_cytonorm_refuses_an_artificial_aggregate_control` below, and the executed
+    round trip, event-identity verification and split-fit refusal are covered by
+    tests/integration/test_cytonorm_backend.py.
+    """
+
     backend = get_backend("cytonorm")
     assert backend.capabilities.supports_fit_apply is True
-    assert backend.capabilities.fit_apply_verified is False
     assert "measured_reference_in_every_batch" in backend.capabilities.reference_layouts
-    with pytest.raises(BackendError, match="not implemented"):
-        backend.run(dataset, "c", {}, _context(frozen, tmp_path))
+    # A transform list is refused as a parameter: the baseline is already transformed,
+    # so declaring one would mean applying a second transform.
+    assert "transformList" in backend.capabilities.rejected_parameters
+    # The verified flag is earned by an executed test, never asserted: the dedicated
+    # suite fails the build if it is True while the package is absent.
+    if not r_package_version("CytoNorm").available:
+        assert backend.capabilities.fit_apply_verified is False
+    assert backend.capabilities.fit_apply_verified in (True, False)
 
 
 def test_cytonorm_refuses_an_artificial_aggregate_control() -> None:

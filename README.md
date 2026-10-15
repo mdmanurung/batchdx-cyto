@@ -3,15 +3,21 @@
 Batch-effect **diagnosis**, **correction** and **evaluation** for mass cytometry,
 conventional flow cytometry and spectral flow cytometry, orchestrated by Snakemake.
 
+**Scope: synthetic fixtures only.** This package ships no real cytometry dataset or
+real-data example. Its scientific checks use simulated data; its thresholds are not
+calibrated for a real cohort. See [validation limits](docs/validation_results.md).
+
 Built for cross-cohort immune studies, where biological differences and technical
 batches are often correlated and where the honest answer is frequently *"this contrast
 cannot be corrected"*.
 
-> **Status: 0.1.0 — research preview.** The Python core, the design audit, the native
-> diagnostics, the common-partition metrics, the decision layer, the report and the
-> Snakemake workflow run end to end and are tested (181 tests, including real
-> Snakemake executions and the R-backed cyCombine path against the pinned upstream
-> checkout). Three things you must know before using it:
+> **Status: 0.1.0 — research preview.** The Python core, the design audit, the
+> diagnostics, the metrics (including six verified against pinned upstream components),
+> the decision layer, the report and the Snakemake workflow run end to end and are
+> tested, including real Snakemake executions and the R-backed cyCombine and CytoNorm
+> paths against their pinned upstream checkouts. CytoBatchFlagR's detector also executes
+> in integration tests, but its flags have an uncalibrated false-positive rate. Three
+> things you must know before using it:
 >
 > 1. **Every decision threshold is an uncalibrated engineering default.** The report
 >    says so next to every recommendation. Do not cite the thresholds as validated
@@ -19,13 +25,15 @@ cannot be corrected"*.
 > 2. **No real-data validation yet.** All evidence comes from synthetic fixtures of
 >    250–2,000 cells per sample. Production CyTOF acquisitions are orders of magnitude
 >    larger; expect the memory and runtime profile to be untested.
-> 3. **The CytoNorm backend is declared but deferred** (it returns `NOT_AVAILABLE`);
->    its two eligibility tiers describe the intended contract, not a working backend.
->    CytoBatchFlagR requires R packages that CI does not install, so its tests skip
->    there.
+> 3. **CytoNorm and PeacoQC execute for real** at their pinned versions, and CI builds
+>    the full R environment (cyCombine, CytoNorm, PeacoQC, flowVS) from the pinned
+>    local checkouts, so the R-backed tests run there too. They remain the least
+>    exercised backends, and their GPL licences mean they are called, never vendored.
 >
-> Stage-by-stage status, generated from an executed test report:
-> [`docs/implementation_status.md`](docs/implementation_status.md).
+> Every partial gate states in
+> [`docs/implementation_status.md`](docs/implementation_status.md) (generated from an
+> executed test report) exactly what is not satisfied, and
+> [`docs/blocked.md`](docs/blocked.md) lists the open items with their commands.
 
 ---
 
@@ -129,7 +137,7 @@ two executable scripts, and interpreted in [`docs/upstream_audit.md`](docs/upstr
 | Tool | Commit | Licence | Integration |
 |---|---|---|---|
 | [cyCombine](https://github.com/biosurf/cyCombine) 0.3.0 | `fcd42dbb` | MIT | subprocess; ComBat route pinned, the count model refused |
-| [CytoNorm](https://github.com/saeyslab/CytoNorm) 2.0.12 | `278f352d` | GPL (≥2) | declared, **deferred** |
+| [CytoNorm](https://github.com/saeyslab/CytoNorm) 2.0.12 | `278f352d` | GPL (≥2) | fit-and-apply backend executed on a held-out split |
 | [CytoBatchFlagR](https://github.com/AndorfLab/CytoBatchFlagR) (was `cytoFlagR`) | `ad21e3b1` | **GPL-3.0** | scripts `source()`d unmodified at arm's length; nothing vendored |
 | [OpenProblems cyto batch integration](https://github.com/openproblems-bio/task_cyto_batch_integration) | `37151479` | MIT | reference only; metrics deferred |
 | [SPiSCy](https://github.com/emilier17/spiscy) | `a6e55c8f` | MIT | reference reading only |

@@ -43,8 +43,8 @@ write_binmat <- function(path, m, row_ids, col_names) {
     layout = "row_major",
     n_rows = nrow(m),
     n_cols = ncol(m),
-    row_ids = as.character(row_ids),
-    col_names = as.character(col_names)
+    row_ids = I(as.character(row_ids)),
+    col_names = I(as.character(col_names))
   )
   writeLines(jsonlite::toJSON(meta, auto_unbox = TRUE, pretty = TRUE),
              paste0(path, ".json"))
@@ -64,6 +64,17 @@ batchdx_args <- function() {
 }
 
 batchdx_write_result <- function(path, payload) {
+  ## auto_unbox must not turn one warning or node ID into a scalar string, and a
+  ## NAME must not turn the array into a JSON object: c() and unlist(lapply(...))
+  ## propagate the names of the lists they combine (a sample_id, a node id), and
+  ## jsonlite serialises a named list as an object, which no reader of these fields
+  ## accepts. The validator in r_runner.py requires an array of strings, so the
+  ## names are stripped here, once, for every script that writes a result.
+  list_fields <- c("warnings", "confounded_nodes", "fitted_labels", "unfitted_labels",
+                   "missing_packages", "metaclusters", "outputs")
+  for (field in intersect(names(payload), list_fields)) {
+    payload[[field]] <- unname(as.list(payload[[field]]))
+  }
   writeLines(jsonlite::toJSON(payload, auto_unbox = TRUE, null = "null", pretty = TRUE), path)
   invisible(path)
 }

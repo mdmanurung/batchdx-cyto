@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Any
 
 import numpy as np
 
@@ -145,8 +146,16 @@ def assess_candidates(
     policy_name: str = "conservative",
     identity_candidate_id: str = "uncorrected",
     overrides: list[dict[str, str]] | None = None,
+    samples: dict[str, Any] | None = None,
 ) -> DecisionResult:
-    """Assign one state per candidate and, only if every gate clears, a recommendation."""
+    """Assign one state per candidate and, only if every gate clears, a recommendation.
+
+    ``samples`` is the sample-level record table, needed only when the frozen manifest
+    carries a train/tune/validate split: the held-out check asks which batch contrasts
+    the validation split can supply, and that is a question about the samples.  It is
+    optional so that a caller with no split, and every unit test written before splits
+    existed, keeps its previous behaviour exactly.
+    """
 
     policy = POLICIES.get(policy_name)
     if policy is None:
@@ -172,6 +181,36 @@ def assess_candidates(
         if identity_metrics else None
     )
     no_effect = baseline_emd is not None and baseline_emd < policy.no_effect_emd
+
+    # Which of the design's batch contrasts are estimable only on data that a
+    # fit-and-apply candidate would have been fitted on.  Computed once, from the
+    # frozen manifest, because it is a property of the design and the split rather
+    # than of any one candidate.
+    #
+    # This is deliberately a *blanket* check over the design's comparisons rather than a
+    # check on whichever comparison a given candidate happened to be scored on.  A
+    # candidate that was fitted on the training split cannot be judged by a contrast
+    # that only the training split can supply, no matter which row the number came
+    # from, so the whole comparison set has to clear before any of it counts as
+    # held-out evidence.  With no splits in the manifest (the pre-split case) there is
+    # nothing to be held out from, so the check does not fire and the older behaviour
+    # is unchanged.
+    non_held_out = ""
+    if sampling.splits and samples:
+        from batchdx.cyto.sampling.splits import split_for_comparison
+
+        blocked = []
+        for comparison in design.comparisons:
+            if comparison.population is not None:
+                continue
+            placement = split_for_comparison(comparison, sampling.splits, samples)
+            if not placement.can_support_recommendation:
+                blocked.append(
+                    f"{placement.batch_a} vs {placement.batch_b} "
+                    f"(estimable in {placement.evaluable_in or 'no split'})"
+                )
+        if blocked:
+            non_held_out = "; ".join(blocked)
 
     for candidate_id in sorted(set(corrections) | set(metrics)):
         correction = corrections.get(candidate_id)
@@ -317,6 +356,17 @@ def assess_candidates(
                 state, reason = DecisionState.ELIGIBLE_FOR_REVIEW, (
                     "evaluation labels come from clustering of the uncorrected baseline and "
                     "may themselves be batch-driven; they cannot alone support a recommendation"
+                )
+            elif non_held_out:
+                # A contrast estimated only on data the candidate was fitted on is not
+                # held-out evidence, however good the number looks.  With a
+                # fit-and-apply backend in play this is the difference between
+                # measuring generalisation and measuring its own training set, so the
+                # outcome is review rather than approval, and the reason names the
+                # contrast so a reader can see which comparison is not held out.
+                state, reason = DecisionState.ELIGIBLE_FOR_REVIEW, (
+                    "the supporting batch contrast is not estimable on data held out from "
+                    f"the fit: {non_held_out}"
                 )
             elif policy.any_threshold_uncalibrated:
                 state, reason = DecisionState.ELIGIBLE_FOR_REVIEW, (

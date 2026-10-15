@@ -185,3 +185,14 @@ pyrightconfig.json
 .upstream/
 build/
 results/
+
+# The isolated R environment for the batchdx-cyto R backends, built by
+# scripts/setup_r_env.sh (see docs/decisions/0004-dependency-isolation.md).  It
+# holds cyCombine and its pinned dependency closure and is deliberately separate
+# from any personal R library, so a run's R environment is attributable to this
+# package.  Never commit it; rebuild it from the script.
+renv/
+.micromamba/
+libR/
+.Rhistory
+.RData

@@ -13,12 +13,12 @@ from scipy import stats
 
 from batchdx.cyto.diagnostics.composition import frequency_table
 from batchdx.cyto.io.dataset import CELL_ID, SAMPLE_ID, Dataset
+from batchdx.cyto.metrics.records import metric_record as _record
 from batchdx.cyto.metrics.registry import (
     EMD_WITHIN_POPULATION,
     JOINT_STRUCTURE,
     MAD_SIGNED_CHANGE,
     POPULATION_FREQUENCY_SHIFT,
-    MetricSpec,
 )
 from batchdx.cyto.metrics.uncertainty import attach_emd_uncertainty
 from batchdx.cyto.sampling.partitions import UNGATED
@@ -38,21 +38,6 @@ MIN_GROUP_CELLS = 30
 MIN_SAMPLES_PER_GROUP = 2
 #: A MAD change below this is treated as no change rather than as compression.
 MAD_TOLERANCE = 1e-9
-
-
-def _record(spec: MetricSpec, sampling: SamplingManifest, **kwargs) -> MetricRecord:
-    return MetricRecord(
-        metric_namespace=spec.namespace,
-        metric_name=spec.name,
-        metric_version=spec.version,
-        stage=spec.stage,
-        direction=spec.direction,
-        scale=spec.scale,
-        label_tier=sampling.label_source,
-        label_confidence=sampling.label_confidence,
-        representation=sampling.representation,
-        **kwargs,
-    )
 
 
 def _grouping(dataset: Dataset, sampling: SamplingManifest):
@@ -78,6 +63,21 @@ def _comparisons(design: DesignAudit) -> dict[tuple[str, str], str]:
             continue
         out[(c.batch_a, c.batch_b)] = c.comparison_id
     return out
+
+
+def _donors(sample_ids, donors_of: dict[str, str | None]) -> int | None:
+    """Distinct donors behind ``sample_ids``, or ``None`` when there are none.
+
+    Every family in this module reports it, so the report's ``n_donors`` column means
+    the same thing on a dispersion row as on a distance row.  A run in which no sample
+    declares a donor reports ``None`` and the page shows an empty cell; it never
+    reports zero, because "no donor was declared" and "zero donors were available" are
+    different facts and only the first is true.
+    """
+
+    found = {donors_of.get(str(s)) for s in sample_ids}
+    found.discard(None)
+    return len(found) or None
 
 
 def compute_common_metrics(
@@ -179,10 +179,13 @@ def compute_common_metrics(
             rows = pop_rows.loc[pop_rows["_batch"] == batch]
             idx = rows["_row"].to_numpy()
             for col, marker in enumerate(markers):
+                group_samples = sorted(set(rows[SAMPLE_ID]))
                 common = dict(
                     run_id=run_id, candidate_id=candidate_id, marker=marker, population=pop,
                     comparison_id=f"batch:{batch}", n_cells=len(idx),
-                    n_samples=len(set(rows[SAMPLE_ID])), aggregation_weight=1.0,
+                    n_samples=len(group_samples),
+                    n_donors=_donors(group_samples, donors_of),
+                    aggregation_weight=1.0,
                 )
                 if len(idx) < MIN_GROUP_CELLS:
                     records.append(_record(
@@ -221,11 +224,14 @@ def compute_common_metrics(
     batch_of = dataset.sample_batches()
     for pop in populations:
         for (batch_a, batch_b), comparison_id in sorted(pairs.items()):
-            fa = [freq[s][pop] for s in freq if batch_of.get(s) == batch_a]
-            fb = [freq[s][pop] for s in freq if batch_of.get(s) == batch_b]
+            samples_a = sorted(s for s in freq if batch_of.get(s) == batch_a)
+            samples_b = sorted(s for s in freq if batch_of.get(s) == batch_b)
+            fa = [freq[s][pop] for s in samples_a]
+            fb = [freq[s][pop] for s in samples_b]
             common = dict(
                 run_id=run_id, candidate_id=candidate_id, population=pop,
                 comparison_id=comparison_id, n_samples=len(fa) + len(fb),
+                n_donors=_donors(samples_a + samples_b, donors_of),
                 aggregation_weight=1.0,
             )
             if not fa or not fb:
@@ -261,10 +267,13 @@ def compute_common_metrics(
             for batch in sorted(set(obs["_batch"])):
                 rows = pop_rows.loc[pop_rows["_batch"] == batch]
                 idx = rows["_row"].to_numpy()
+                group_samples = sorted(set(rows[SAMPLE_ID]))
                 common = dict(
                     run_id=run_id, candidate_id=candidate_id, population=pop,
                     comparison_id=f"batch:{batch}", n_cells=len(idx),
-                    n_samples=len(set(rows[SAMPLE_ID])), aggregation_weight=1.0,
+                    n_samples=len(group_samples),
+                    n_donors=_donors(group_samples, donors_of),
+                    aggregation_weight=1.0,
                 )
                 if len(idx) < MIN_GROUP_CELLS:
                     records.append(_record(

@@ -1,20 +1,42 @@
 [build-system]
-requires = ["hatchling"]
+# The floor is load-bearing, not decoration.  PEP 639 (`license` as an SPDX expression
+# plus `license-files`) needs hatchling >= 1.27: built with 1.26.3 the wheel still
+# succeeds but silently degrades to the deprecated `License: MIT` field and drops
+# `License-File`, so an unpinned `hatchling` would make the published metadata depend
+# on whatever the resolver happened to pick.  Verified by building both ways against
+# hatchling 1.26.3 and 1.27.0; see docs/compatibility_matrix.md.
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
 name = "batchdx-cyto"
+# Mirrored in src/batchdx/cyto/_version.py:3 and CITATION.cff:15; all three move together.
 version = "0.1.0"
 description = "Batch-effect diagnosis, correction and evaluation for mass, conventional and spectral flow cytometry, orchestrated by Snakemake."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "batchdx-cyto contributors" }]
 keywords = ["cytometry", "batch effect", "CyTOF", "spectral flow", "snakemake"]
 classifiers = [
+  # Alpha, not beta: the Stage gates are a mix of PASSED and PARTIAL and several
+  # backends record not_available rather than a result.  See docs/implementation_status.md
+  # for the per-gate state and docs/blocked.md for what is still open.
   "Development Status :: 3 - Alpha",
   "Intended Audience :: Science/Research",
   "Programming Language :: Python :: 3",
+  # Declared, not tested.  These restate requires-python = ">=3.10" as the classifiers
+  # PyPI renders; only 3.12 has actually been executed, and CI declares 3.11.  The
+  # per-version status, and the command that checks it, are in
+  # docs/compatibility_matrix.md.
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  # R is a declared runtime language: five tracked R scripts under workflow/scripts/ do
+  # the correction and detection work that batchdx.cyto.pipeline drives.
+  "Programming Language :: R",
   "Topic :: Scientific/Engineering :: Bio-Informatics",
 ]
 dependencies = [
@@ -35,7 +57,16 @@ dependencies = [
 [project.optional-dependencies]
 workflow = ["snakemake>=8.0"]
 tests = ["pytest>=7.4", "pytest-json-report>=1.5"]
-dev = ["snakemake>=8.0", "pytest>=7.4", "pytest-json-report>=1.5", "ruff>=0.5"]
+# The metrics that reconcile against an upstream benchmark need more than the core.
+# These are optional because exactly three OpenProblems components are extracted without
+# them; adding scikit-learn lets average_batch_r2_ct become a verified `compatibility`
+# row instead of a reimplementation, and scib-metrics carries the LISI neighbourhood
+# machinery that iLisi/cLisi need.  With neither installed, the affected rows stay
+# deferred with the obstacle named and nothing claims a compatibility component it has
+# not verified.
+metrics = ["scikit-learn>=1.3", "scib-metrics>=0.5"]
+dev = ["snakemake>=8.0", "pytest>=7.4", "pytest-json-report>=1.5", "ruff>=0.5",
+       "scikit-learn>=1.3", "scib-metrics>=0.5"]
 
 [project.scripts]
 batchdx-cyto = "batchdx.cyto.cli:main"
@@ -53,7 +84,10 @@ packages = ["src/batchdx"]
 "scripts" = "batchdx/cyto/workflow_assets/scripts"
 
 [tool.hatch.build.targets.sdist]
-include = ["src", "workflow", "config", "examples", "tests", "scripts", "docs", "README.md", "pyproject.toml"]
+# LICENSE is always included by hatchling; CITATION.cff and THIRD_PARTY_NOTICES.md are
+# not, and a distribution that shipped neither would omit the notices that make the
+# licence position of the GPL upstream components checkable.
+include = ["src", "workflow", "config", "examples", "tests", "scripts", "docs", "README.md", "pyproject.toml", "CITATION.cff", "THIRD_PARTY_NOTICES.md"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/unit", "tests/integration", "tests/scientific"]

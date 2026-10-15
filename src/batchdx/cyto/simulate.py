@@ -4,6 +4,10 @@ The generator is a *fixture*, not a scientific claim.  It produces a mixture of
 lineage populations with declared marker means, then applies separately controllable
 technical and biological perturbations so that a test can state exactly which effect
 it expects a method or metric to see.
+
+The seed defaults here are :data:`batchdx.cyto.config.DEFAULT_SEED`, the same value
+:attr:`batchdx.cyto.config.ProjectConfig.seed` carries.  A run's seed therefore has one
+source, and a fixture built with an explicit seed is the same seed the run records.
 """
 
 from __future__ import annotations
@@ -15,6 +19,8 @@ from pathlib import Path
 import anndata as ad
 import numpy as np
 import pandas as pd
+
+from batchdx.cyto.config import DEFAULT_SEED
 
 DEFAULT_POPULATIONS: dict[str, dict[str, float]] = {
     # population -> marker -> mean on the declared (asinh-like) scale
@@ -57,7 +63,7 @@ class SimulationSpec:
     """Full description of a synthetic dataset."""
 
     samples: list[SampleSpec]
-    seed: int = 473
+    seed: int = DEFAULT_SEED
     sd: float = 0.35
     #: Strength of a shared per-cell latent factor within each population.  Real
     #: cytometry markers co-vary within a cell type (cell size, staining index,
@@ -218,7 +224,7 @@ def write_simulation(spec: SimulationSpec, out_dir: str | Path) -> dict[str, Pat
 # --------------------------------------------------------------------------------------
 
 
-def paired_reference_spec(seed: int = 473, n_cells: int = 1500) -> SimulationSpec:
+def paired_reference_spec(seed: int = DEFAULT_SEED, n_cells: int = 1500) -> SimulationSpec:
     """Three batches, a measured reference aliquot in each, balanced biology.
 
     Batch B and C carry a technical offset on CD4 and HLADR; the biological
@@ -332,7 +338,7 @@ def confounded_spec(seed: int = 473, n_cells: int = 1500) -> SimulationSpec:
     )
 
 
-def overlapping_no_reference_spec(seed: int = 473, n_cells: int = 1500) -> SimulationSpec:
+def overlapping_no_reference_spec(seed: int = DEFAULT_SEED, n_cells: int = 1500) -> SimulationSpec:
     """Three batches, biologically overlapping, but no measured technical replicate."""
 
     samples = []

@@ -4,6 +4,12 @@ Source FCS files are opened read-only and never written back to.  Export writes 
 files, records the channel order and the scale of the exported values, and stamps a
 keyword policy block so that a downstream tool cannot silently compensate or
 transform the same values twice.
+
+One property of the format is load-bearing and is stated rather than assumed: an FCS
+event block is IEEE-754 *single* precision, so a write/read round trip is lossy at
+the fourth significant decimal.  :func:`assert_fcs_round_trip` measures that loss
+against the bound the format actually guarantees, so a caller that needs bit-exact
+values is told rather than discovering it later.
 """
 
 from __future__ import annotations
@@ -25,6 +31,11 @@ PROCESSING_KEYWORD = "BATCHDX_PROCESSING"
 SCALE_KEYWORD = "BATCHDX_SCALE"
 SOURCE_KEYWORD = "BATCHDX_SOURCE_SAMPLE"
 CANDIDATE_KEYWORD = "BATCHDX_CANDIDATE"
+
+#: FCS event values are single precision.  A round trip is therefore exact only to
+#: about seven significant decimal digits, and comparing float64 against a file
+#: expecting bit equality fails on values that were never wrong.
+FCS_STORAGE_DTYPE = np.float32
 
 #: How the FCS Time channel is recognised.  The FCS standard does not fix the name;
 #: instruments in practice use $PnN/$PnS values beginning with "Time".
@@ -174,3 +185,60 @@ def write_fcs(
             metadata_dict=metadata,
         )
     return p
+
+
+def round_trip_tolerance(events: np.ndarray) -> float:
+    """The largest absolute error an FCS round trip can introduce for ``events``.
+
+    Single precision carries about seven significant decimal digits, so the
+    representable spacing at a value ``v`` is ``2**-23 * 2**floor(log2|v|)``.  The
+    bound is one spacing, plus the smallest subnormal spacing so that an all-zero
+    matrix has a finite, non-zero bound rather than a division by zero.
+    """
+
+    arr = np.asarray(events, dtype=np.float64)
+    if arr.size == 0:
+        return 0.0
+    magnitude = np.max(np.abs(arr))
+    if magnitude == 0.0:
+        return float(np.finfo(FCS_STORAGE_DTYPE).smallest_subnormal)
+    return float(np.spacing(np.float32(magnitude)))
+
+
+def assert_fcs_round_trip(
+    events: np.ndarray,
+    contents: FCSContents,
+    channel_names: list[str] | None = None,
+    *,
+    context: str = "",
+) -> float:
+    """Check that ``contents`` is the file ``events`` was written to, and by how much.
+
+    Channel order and event count must match exactly.  Values are compared against
+    the bound the format itself guarantees, so a genuine ordering mix-up fails while
+    the unavoidable single-precision loss does not.  Returns the observed maximum
+    absolute error, so a caller can record the real number rather than asserting
+    equality it did not achieve.
+    """
+
+    expected = list(channel_names) if channel_names is not None else list(contents.channel_names)
+    if list(contents.channel_names) != expected:
+        raise FCSError(
+            f"{contents.path}: channel order is {contents.channel_names}, expected {expected}"
+        )
+    original = np.asarray(events, dtype=np.float64)
+    if contents.events.shape != original.shape:
+        raise FCSError(
+            f"{contents.path}: round trip produced {contents.events.shape}, "
+            f"expected {original.shape}"
+        )
+    error = float(np.max(np.abs(contents.events - original))) if original.size else 0.0
+    tolerance = round_trip_tolerance(original)
+    if not np.isfinite(error) or error > tolerance:
+        where = f" in {contents.path}" if contents.path else ""
+        raise FCSError(
+            f"FCS round trip{where}{(' for ' + context) if context else ''} changed values by "
+            f"{error:.6g}, beyond the {tolerance:.6g} that single-precision FCS storage "
+            f"allows; the events were not preserved"
+        )
+    return error

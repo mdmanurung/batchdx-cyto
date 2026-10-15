@@ -1,0 +1,50 @@
+# Optional environment for the metrics that reconcile against an upstream benchmark.
+#
+# `python.yaml` remains the one environment every rule needs, and a run does not require
+# this file.  It exists because six of the nine OpenProblems metric components are
+# verified by executing their pinned Viash helper, and three of those six need
+# dependencies the core package does not have:
+#
+#   average_batch_r2_ct  scikit-learn, because the pinned
+#                        src/metrics/average_batch_r2/helper.py:fit_r2 imports
+#                        sklearn.linear_model.LinearRegression and reads model.score
+#   iLisi, cLisi         scib-metrics, for nearest_neighbors.pynndescent and lisi_knn,
+#                        which the pinned src/metrics/lisi/helper.py calls; pynndescent
+#                        and python-igraph come with it
+#
+# The other three -- emd_mean_ct_horiz, emd_mean_ct_vert and ratio_consistent_peaks --
+# are pure numpy/scipy/pandas and need nothing beyond python.yaml.
+#
+# These are the packages `pyproject.toml` declares in the `metrics` extra, pinned here to
+# the versions the `compatibility` rows were verified against, so that a later run
+# reproduces the recorded tolerances rather than merely re-running the tests.
+#
+#     conda env create -f workflow/envs/openproblems.yaml
+#     conda activate batchdx-cyto
+#     pip install -e '.[metrics,dev]'
+#
+# A missing scib-metrics or scikit-learn is not a crash: the affected rows report
+# insufficient_data or undefined with the reason on the record.  It is, however, a reason
+# not to believe a `compatibility` claim, because a row that cannot run its comparison
+# has not verified anything.  `scripts/audit_upstream.py` checks the flag, not the
+# environment, so the environment check lives in the tests that run both implementations.
+name: batchdx-cyto-metrics
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - numpy=2.5.3
+  - pandas=3.0.6
+  - scipy=1.18.1
+  - anndata=0.13.4
+  - h5py=3.16.0
+  - pydantic=2.13.5
+  - pyyaml=6.0.3
+  - scikit-learn=1.9.1
+  - scib-metrics=0.6.1
+  - umap-learn=0.5.12
+  - pytest=9.1.1
+  - ruff=0.16.9
+  - pip
+  - pip:
+      - pytest-json-report>=1.5

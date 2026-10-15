@@ -91,6 +91,7 @@ class _CyCombineDetector:
         batch_of = dataset.sample_batches()
         sample_of = dict(zip(obs[CELL_ID].astype(str), obs[SAMPLE_ID].astype(str), strict=True))
         batches = [str(batch_of.get(sample_of[c])) for c in cells]
+        samples = [sample_of[c] for c in cells]
         labels = (
             [context.sampling.labels_by_cell[c] for c in cells]
             if context.sampling is not None else None
@@ -102,7 +103,11 @@ class _CyCombineDetector:
             "out_dir": str(out_dir),
             "markers": markers,
             "batch": batches,
-            "sample": [sample_of[c] for c in cells],
+            # cyCombine's detector groups by a column literally named "sample"
+            # (detect_batch_effect.R:200, hard-coded with no rename parameter), so
+            # the per-cell sample identity has to cross the boundary alongside the
+            # per-cell batch labels.  Passing it is a requirement of the pinned API.
+            "sample": samples,
             "label": labels,
             "seed": context.seed,
             "bin_size": 0.1,
@@ -120,7 +125,7 @@ class _CyCombineDetector:
             return DetectorResult(
                 detector=self.name, namespace="native", run_id=context.run_id,
                 status="failed",
-                reason=f"the R detector exited with status {exc.returncode}",
+                reason=f"the R detector failed: {exc}",
                 eligibility=eligibility, software=software,
                 warnings=[exc.log[-2000:]],
             )

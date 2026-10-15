@@ -1,0 +1,113 @@
+{
+  "date": "2026-10-10",
+  "user_instruction": "Use the full OpenProblems cytometry batch-integration metric set for prototype measurement",
+  "repository": "https://github.com/openproblems-bio/task_cyto_batch_integration",
+  "commit": "37151479aaa89edf37ae23068de8fbb41a1b7bb4",
+  "checkout_clean": true,
+  "component_count": 6,
+  "score_count": 9,
+  "components": [
+    {
+      "component": "average_batch_r2",
+      "source": ".upstream/task_cyto_batch_integration/src/metrics/average_batch_r2/config.vsh.yaml",
+      "source_sha256": "f42c2f0f70fce7b9f524adda12a83aa7144ac1de4050ef6308271cefbcf62d40",
+      "metrics": [
+        {
+          "name": "average_batch_r2_ct",
+          "maximize": false
+        }
+      ]
+    },
+    {
+      "component": "emd",
+      "source": ".upstream/task_cyto_batch_integration/src/metrics/emd/config.vsh.yaml",
+      "source_sha256": "83973f30f56e97bbb5825025e29bce8070f2a944f11fa79f6b770b7eccae2a80",
+      "metrics": [
+        {
+          "name": "emd_mean_ct_horiz",
+          "maximize": false
+        },
+        {
+          "name": "emd_mean_ct_vert",
+          "maximize": false
+        }
+      ]
+    },
+    {
+      "component": "flowsom_mapping_similarity",
+      "source": ".upstream/task_cyto_batch_integration/src/metrics/flowsom_mapping_similarity/config.vsh.yaml",
+      "source_sha256": "8bce3d7c05055ccf3797619d2b5e12d9e8f1f9b01f4fc3256214688b10b18640",
+      "metrics": [
+        {
+          "name": "flowsom_mean_mapping_similarity",
+          "maximize": true
+        }
+      ]
+    },
+    {
+      "component": "functional_marker_preservation",
+      "source": ".upstream/task_cyto_batch_integration/src/metrics/functional_marker_preservation/config.vsh.yaml",
+      "source_sha256": "9761e2cf9d63098fbc75420d1cfe8d7710da2e557d168af09d843d9f6a3301c1",
+      "metrics": [
+        {
+          "name": "functional_marker_preservation_wilcoxon",
+          "maximize": true
+        },
+        {
+          "name": "functional_marker_preservation_cohens_d",
+          "maximize": false
+        }
+      ]
+    },
+    {
+      "component": "lisi",
+      "source": ".upstream/task_cyto_batch_integration/src/metrics/lisi/config.vsh.yaml",
+      "source_sha256": "3e8eafd9283f0baf9732764fa2bbbba012a5084caa72521f2913d1fe6a480a0b",
+      "metrics": [
+        {
+          "name": "iLisi",
+          "maximize": true
+        },
+        {
+          "name": "cLisi",
+          "maximize": true
+        }
+      ]
+    },
+    {
+      "component": "ratio_consistent_peaks",
+      "source": ".upstream/task_cyto_batch_integration/src/metrics/ratio_consistent_peaks/config.vsh.yaml",
+      "source_sha256": "0f6cc1a069c9a362317e2595f41752e51f48e5dd3f7d1884c33eaf4787b8d165",
+      "metrics": [
+        {
+          "name": "ratio_consistent_peaks",
+          "maximize": true
+        }
+      ]
+    }
+  ],
+  "required_metric_inputs": [
+    "input_unintegrated",
+    "input_integrated_split1",
+    "input_integrated_split2"
+  ],
+  "contract_sources": [
+    "src/api/comp_metric.yaml",
+    "src/api/file_unintegrated.yaml",
+    "src/data_processors/process_dataset/script.py",
+    "src/utils/helper_functions.py",
+    "src/metrics/functional_marker_preservation/script.py",
+    "src/metrics/flowsom_mapping_similarity/script.R"
+  ],
+  "contract_source_sha256": {
+    "src/api/comp_metric.yaml": "014291b7e1af168def8d26ae37677c2099bfdfafd06435840e8b48745c48e617",
+    "src/api/file_unintegrated.yaml": "49473ce11fc7b6f0a4882dbfbde0a0cdc2a4f49e448c8f301bac5394aaef9693",
+    "src/data_processors/process_dataset/script.py": "c4a667674907f763ec155422abd83fa76d6747f8e3c5a049b570d22853ee079d",
+    "src/utils/helper_functions.py": "a8293f7c2de85781ba75e80cef9314407b04b736c727340e0bce01b7043712ce",
+    "src/metrics/functional_marker_preservation/script.py": "58ea9de0990d66245629fe46f4ebf53ab304e6c2b391947c5c15f5e0f250b175",
+    "src/metrics/flowsom_mapping_similarity/script.R": "7b31d85419c9399ae0d940847ba46a989a10fbbe28c77de14108ce6c7bf1f9c9"
+  },
+  "cms_present_at_pin": false,
+  "implementation_or_execution_performed": false,
+  "verification": "Roster and requirements read from clean pinned local source; metadata parsed and asserted against checklist. Remote web retrieval failed; no claim about a newer upstream version."
+}

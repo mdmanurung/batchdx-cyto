@@ -1,0 +1,132 @@
+{
+  "date": "2026-10-10",
+  "task": "P01 candidate failure containment",
+  "branch": "alpha-ci-20261003",
+  "head": "b313006ea175c53c7ce709f7b894d1768b7db0e2",
+  "python": "3.12.13",
+  "checks": {
+    "before": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p01-before-tests.json",
+      "summary": {
+        "failed": 1,
+        "total": 1,
+        "collected": 15,
+        "deselected": 14
+      },
+      "duration_seconds": 33.68363976478577,
+      "nonpassing": [
+        {
+          "nodeid": "tests/integration/test_candidate_failures.py::test_invalid_candidate_leaves_other_candidates_and_report_usable",
+          "outcome": "failed"
+        }
+      ]
+    },
+    "candidate-initial": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p01-candidate-initial-tests.json",
+      "summary": {
+        "passed": 15,
+        "total": 15,
+        "collected": 15
+      },
+      "duration_seconds": 41.565837144851685,
+      "nonpassing": []
+    },
+    "related": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p01-related-tests.json",
+      "summary": {
+        "passed": 307,
+        "skipped": 1,
+        "failed": 1,
+        "total": 309,
+        "collected": 314,
+        "deselected": 5
+      },
+      "duration_seconds": 344.681218624115,
+      "nonpassing": [
+        {
+          "nodeid": "tests/integration/test_stage6_backends.py::test_a_protected_covariate_is_refused_when_the_backend_is_available",
+          "outcome": "skipped"
+        },
+        {
+          "nodeid": "tests/integration/test_stage6_backends.py::test_cytonorm_is_registered_as_a_fit_apply_backend",
+          "outcome": "failed"
+        }
+      ]
+    },
+    "config-final": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p01-config-final-tests.json",
+      "summary": {
+        "passed": 39,
+        "total": 39,
+        "collected": 39
+      },
+      "duration_seconds": 51.360633850097656,
+      "nonpassing": []
+    },
+    "workflow": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p01-workflow-tests.json",
+      "summary": {
+        "passed": 1,
+        "total": 1,
+        "collected": 15,
+        "deselected": 14
+      },
+      "duration_seconds": 402.83221077919006,
+      "nonpassing": []
+    },
+    "baseline": {
+      "report": "review/2026-10-09/prototype-evidence/2026-10-10-p01-baseline-tests.json",
+      "summary": {
+        "failed": 1,
+        "total": 1,
+        "collected": 16,
+        "deselected": 15
+      },
+      "duration_seconds": 0.7698171138763428,
+      "nonpassing": [
+        {
+          "nodeid": "tests/integration/test_stage6_backends.py::test_cytonorm_is_registered_as_a_fit_apply_backend",
+          "outcome": "failed"
+        }
+      ]
+    }
+  },
+  "lint": "ruff check src tests scripts passed",
+  "diff_whitespace": "git diff --check passed",
+  "source_sha256": {
+    "src/batchdx/cyto/config.py": "b350851bc08115d15c4d7d89281edf74a8cd9ba0fbc1a281e356ead436a981f5",
+    "src/batchdx/cyto/pipeline.py": "d8d5a3952f86dfc12edf563b3e7616a27c36c6925a5c227c8c99f6c6502efbd4",
+    "tests/integration/test_candidate_failures.py": "a5cceabffae9e0cc13264fa9201b3648faba72b74f5284d8aee67ca97b0544a4",
+    "tests/integration/test_stage11_workflow.py": "02c54c241aa418ba568d85c913141b4119c3d5210c529d67e5d57eec31728ca0",
+    "src/batchdx/cyto/adapters/cytonorm.py": "2a000d3a6a06a4401abd9764bdd59b4ca08f8319319642791973d44cb5d57372",
+    "tests/integration/test_stage6_backends.py": "8a9295ce8329c01dea832e36c9d9fdaa7b0bf038e7d7e10c76120cbd487861dd"
+  },
+  "baseline_verification": {
+    "snapshot": "git archive HEAD extracted under /tmp/batchdx-p01-baseline",
+    "pythonpath": "/tmp/batchdx-p01-baseline/src",
+    "baseline_config_import_verified": true,
+    "unchanged_cytonorm_source_and_test_match_HEAD": true,
+    "same_availability_assertion_fails_on_baseline": true
+  },
+  "scope_notes": [
+    "Broader related suite started before final candidate-ID guard addition; final config/candidate suite reran after that guard and passed.",
+    "Snakemake regression uses a simulated R interpreter that omits output; no real R or backend validity claim.",
+    "Broad related suite is not green because of independently reproduced existing CytoNorm availability assertion.",
+    "Focused checks do not replace full package/R/interrupt/build/current CI validation."
+  ],
+  "not_executed": [
+    "real R/backend validation",
+    "measured data",
+    "full integration/interrupt suite",
+    "build/install",
+    "remote CI",
+    "scheduler",
+    "commit/push/publication"
+  ],
+  "documentation_checks": {
+    "local_links": "passed",
+    "mycelium_strict_structure": "passed",
+    "source_hashes_rechecked_after_documentation": true,
+    "new_candidate_regression_cases": 23
+  }
+}

@@ -1,0 +1,6 @@
+# Session Log Registry
+
+| Date | Session ID | Project | Branch | Duration | Files Changed | Summary | Key Outputs | Status | Tags | Log |
+|------|-----------|---------|--------|----------|---------------|---------|-------------|--------|------|-----|
+| 2026-10-14 | 01a13760-bf45-7f53-913b-3b7557997163 | batchdx-cyto | alpha-ci-20261003 | — | Existing source, tests, docs, review archive and journals | Split authorized commit/push work into four focused commits; reran scoped checks | 79 Python tests; 110 R assertions; lint and strict structure | Pre-push checks passed; final result in session handoff | git, validation, review | [log](2026-10-14-001-batchdx-cyto.md) |
+| 2026-10-10 | 01a124a2-52de-76d2-a11d-f160f981280f | batchdx-cyto | alpha-ci-20261003 | — | Source, tests, review documents, receipts, preview, and local registries | Reviewed remaining work; required full metric suite/rank visuals; implemented P01/P02 | PROTOTYPE_TASKS.md; BENCHMARK_VISUALIZATION_SPEC.md; P01_FAILURE_CONTAINMENT.md; P02_R_BOUNDARY.md; verification receipts | P01/P02 scoped checks pass; broader runs have existing failures; P03 next | prototype, review, validation, visualization, pipeline, r-boundary | [log](2026-10-10-001-batchdx-cyto.md) |

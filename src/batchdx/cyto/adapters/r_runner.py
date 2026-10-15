@@ -2,13 +2,14 @@
 
 Every R call is a subprocess running a script from ``workflow/scripts``.  Inputs and
 outputs cross the boundary as JSON plus the typed binary matrix format in
-:mod:`batchdx.cyto.io.binary`, so an R-side failure is a non-zero exit status with a
-captured log rather than a corrupted in-process state.
+:mod:`batchdx.cyto.io.binary`. Non-zero exits, timeouts and invalid result envelopes
+are failures with captured logs; domain outputs are checked by each caller.
 """
 
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -16,16 +17,25 @@ from pathlib import Path
 
 from batchdx.cyto.schemas.contracts import SoftwareVersion
 
+DEFAULT_R_TIMEOUT = 4 * 60 * 60  # Matches the workflow correction budget in seconds.
+PROBE_TIMEOUT = 30
+RESULT_LIST_FIELDS = (
+    "warnings", "confounded_nodes", "fitted_labels", "unfitted_labels",
+    "missing_packages", "metaclusters", "outputs",
+)
+
 
 class RNotAvailable(RuntimeError):
     """Raised when no usable R interpreter is on PATH."""
 
 
 class RScriptFailed(RuntimeError):
-    """Raised when an R script exits non-zero.  Carries the captured log."""
+    """A failed, timed-out or invalid R result, carrying the captured log."""
 
-    def __init__(self, script: str, returncode: int, log: str):
-        super().__init__(f"{script} exited with status {returncode}")
+    def __init__(self, script: str, returncode: int | None, log: str,
+                 *, reason: str | None = None):
+        super().__init__(f"{script}: {reason}" if reason else
+                         f"{script} exited with status {returncode}")
         self.script = script
         self.returncode = returncode
         self.log = log
@@ -57,10 +67,14 @@ def r_version(rscript: str = "Rscript") -> SoftwareVersion:
             name="R", available=False, source="PATH",
             detail=f"{rscript!r} was not found on PATH",
         )
-    proc = subprocess.run(
-        [rscript, "-e", "cat(paste(R.version$major, R.version$minor, sep='.'))"],
-        capture_output=True, text=True, check=False,
-    )
+    try:
+        proc = subprocess.run(
+            [rscript, "-e", "cat(paste(R.version$major, R.version$minor, sep='.'))"],
+            capture_output=True, text=True, check=False, timeout=PROBE_TIMEOUT,
+        )
+    except subprocess.TimeoutExpired:
+        return SoftwareVersion(name="R", available=False, source="PATH",
+                               detail=f"R version probe timed out after {PROBE_TIMEOUT} seconds")
     if proc.returncode != 0:
         return SoftwareVersion(name="R", available=False, source="PATH",
                                detail=proc.stderr.strip()[:500])
@@ -77,7 +91,12 @@ def r_package_version(package: str, rscript: str = "Rscript") -> SoftwareVersion
         f"v <- tryCatch(as.character(utils::packageVersion({package!r})), "
         f"error=function(e) NA_character_); cat(ifelse(is.na(v), '', v))"
     )
-    proc = subprocess.run([rscript, "-e", code], capture_output=True, text=True, check=False)
+    try:
+        proc = subprocess.run([rscript, "-e", code], capture_output=True, text=True,
+                              check=False, timeout=PROBE_TIMEOUT)
+    except subprocess.TimeoutExpired:
+        return SoftwareVersion(name=package, available=False, source="R library",
+                               detail=f"package version probe timed out after {PROBE_TIMEOUT} seconds")
     version = proc.stdout.strip()
     if proc.returncode != 0 or not version:
         return SoftwareVersion(
@@ -110,12 +129,18 @@ def run_r_script(
     """Run ``workflow/scripts/<name>`` with ``params`` serialised to JSON.
 
     The script writes its structured result to ``<work_dir>/result.json``; anything it
-    prints is captured into the log.  A non-zero exit raises :class:`RScriptFailed`,
-    never a silently unchanged matrix.
+    prints is captured into the log. Non-zero exits, timeouts and invalid result
+    envelopes raise :class:`RScriptFailed`. ``None`` uses the four-hour default;
+    an explicit timeout must be positive and finite. Domain outputs are checked
+    by the caller. A timed-out process has no reported exit code.
     """
 
     if not r_available(rscript):
         raise RNotAvailable(f"{rscript!r} is not on PATH")
+
+    timeout = DEFAULT_R_TIMEOUT if timeout is None else timeout
+    if not math.isfinite(timeout) or timeout <= 0:
+        raise ValueError("R timeout must be positive and finite")
 
     work = Path(work_dir)
     work.mkdir(parents=True, exist_ok=True)
@@ -126,20 +151,53 @@ def run_r_script(
     params_file.write_text(json.dumps(params, indent=2, default=str) + "\n", encoding="utf-8")
 
     script = script_path(name)
-    proc = subprocess.run(
-        [rscript, "--vanilla", str(script), str(params_file), str(result_file)],
-        capture_output=True, text=True, check=False, timeout=timeout,
-    )
+    def write_log(log: str) -> None:
+        if log_path is not None:
+            Path(log_path).parent.mkdir(parents=True, exist_ok=True)
+            Path(log_path).write_text(log, encoding="utf-8")
+
+    try:
+        proc = subprocess.run(
+            [rscript, "--vanilla", str(script), str(params_file), str(result_file)],
+            capture_output=True, text=True, check=False, timeout=timeout,
+        )
+    except subprocess.TimeoutExpired as exc:
+        reason = f"timed out after {timeout} seconds"
+        stdout = exc.stdout or ""
+        stderr = exc.stderr or ""
+        if isinstance(stdout, bytes):
+            stdout = stdout.decode("utf-8", errors="replace")
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode("utf-8", errors="replace")
+        log = stdout + ("\n" + stderr if stderr else "") + "\n" + reason + "\n"
+        write_log(log)
+        raise RScriptFailed(name, None, log, reason=reason) from exc
+
     log = proc.stdout + ("\n" + proc.stderr if proc.stderr else "")
-    if log_path is not None:
-        Path(log_path).parent.mkdir(parents=True, exist_ok=True)
-        Path(log_path).write_text(log, encoding="utf-8")
+    write_log(log)
 
     if proc.returncode != 0:
         raise RScriptFailed(name, proc.returncode, log)
 
-    payload: dict = {}
-    if result_file.exists():
-        payload = json.loads(result_file.read_text(encoding="utf-8"))
+    try:
+        def invalid_constant(value: str) -> None:
+            raise ValueError(f"non-JSON number {value}")
+
+        payload = json.loads(result_file.read_text(encoding="utf-8"),
+                             parse_constant=invalid_constant)
+        if not isinstance(payload, dict) or payload.get("status") not in ("ok", "not_available"):
+            raise ValueError("expected an object with status 'ok' or 'not_available'")
+        for field in RESULT_LIST_FIELDS:
+            if field in payload and (
+                not isinstance(payload[field], list)
+                or not all(isinstance(item, str) for item in payload[field])
+            ):
+                raise ValueError(f"{field} must be an array of strings")
+    except (OSError, ValueError) as exc:
+        reason = f"invalid result.json: {exc}"
+        log += "\n" + reason + "\n"
+        write_log(log)
+        raise RScriptFailed(name, proc.returncode, log, reason=reason) from exc
+
     return RResult(returncode=proc.returncode, stdout=proc.stdout,
                    stderr=proc.stderr, payload=payload)

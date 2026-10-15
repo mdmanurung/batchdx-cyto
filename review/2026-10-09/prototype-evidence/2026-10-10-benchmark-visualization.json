@@ -1,0 +1,27 @@
+{
+  "date": "2026-10-10",
+  "scope": "User-requested visualization specification and synthetic layout only",
+  "references": [
+    "https://www.openproblems.bio/benchmarks/cyto_batch_integration/",
+    "https://github.com/yoseflab/scib-metrics/blob/main/src/scib_metrics/benchmark/_core.py"
+  ],
+  "checks": {
+    "preview_self_checks": "passed",
+    "repeat_svg_bytes_identical": true,
+    "scoped_ruff": "passed",
+    "reviewed_source_hashes_unchanged": true,
+    "spec_and_plan_local_links": "passed"
+  },
+  "artifacts_sha256": {
+    "benchmark-layout-preview.png": "559fd77820503e91d582d9193a9189e8b6db16f4b91bcebccb5ad28c4e8f05ad",
+    "benchmark-layout-preview.svg": "a9ff6e6d0b30b4379265eda19f64a4924cf900c49aa94f99a0531472b61e391e",
+    "benchmark-layout-preview.pdf": "e41c3f34e7bb354424223f06dba3800e34c38e0d94775b932af9c4d2f154a1d0"
+  },
+  "script_sha256": "cda34e3e829c48715647a3b6137a0299fbc90d19786e9ff5e80018670941158d",
+  "limitations": [
+    "No measured scores or correction performance claims",
+    "No package renderer implementation",
+    "Reference reporting/scaling submodule remains unpopulated; no numerical ranking parity verified",
+    "No package tests rerun for this documentation/preview update"
+  ]
+}

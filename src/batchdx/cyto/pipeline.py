@@ -9,7 +9,9 @@ from __future__ import annotations
 
 import json
 import platform
+import subprocess
 import sys
+import traceback
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,7 +51,7 @@ from batchdx.cyto.schemas.contracts import (
     SamplingManifest,
     StageStatus,
 )
-from batchdx.cyto.schemas.enums import CorrectionStatus
+from batchdx.cyto.schemas.enums import CorrectionStatus, MetricStatus
 
 DETECTOR_FLAGS = {
     "acquisition_drift": "acquisition_drift",
@@ -89,6 +91,12 @@ class RunLayout:
     @property
     def decision(self) -> Path:
         return self.root / "decisions" / "decision_result.json"
+
+    @property
+    def exploratory_overrides(self) -> Path:
+        """The record of every design gate this run bypassed by configuration."""
+
+        return self.root / "decisions" / "exploratory_overrides.json"
 
     @property
     def reductions(self) -> Path:
@@ -132,9 +140,42 @@ def _write_json(path: Path, payload: dict) -> Path:
     return path
 
 
-# --------------------------------------------------------------------------------------
-# Stages
-# --------------------------------------------------------------------------------------
+def _read_exploratory_overrides(layout: RunLayout) -> list[dict[str, str]]:
+    """Every recorded design-gate bypass in this run, oldest first.
+
+    Read here rather than inferred, so the decision layer can carry the fact that a
+    candidate ran on a design the audit called ineligible.  A run that bypassed nothing
+    has no file and reports no overrides, which is the same answer as a run whose only
+    overrides are absent from disk.
+    """
+
+    path = layout.exploratory_overrides
+    if not path.exists():
+        return []
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    return [dict(entry) for entry in payload.get("overrides", [])]
+
+
+def _record_exploratory_override(layout: RunLayout, entry: dict[str, str]) -> str:
+    """Add one bypass to the audit trail and return the sentence to warn with.
+
+    Keyed by candidate so that re-running ``correct`` for the same candidate replaces its
+    record instead of appending a second, contradictory one: the file answers "was this
+    candidate run under an override in this run", not "how many times did the stage
+    execute".
+    """
+
+    existing = [
+        e for e in _read_exploratory_overrides(layout)
+        if e.get("candidate_id") != entry["candidate_id"]
+    ]
+    existing.append(entry)
+    _write_json(layout.exploratory_overrides, {"overrides": existing})
+    return (
+        f"EXPLORATORY OVERRIDE: {entry['backend']} ran on a design its own eligibility "
+        f"rule rejects ({entry['overrode']}), because {entry['declared_by']}. Its output "
+        "is exploratory and cannot support a recommendation."
+    )
 
 
 def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLayout) -> Path:
@@ -176,7 +217,6 @@ def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLay
     export_json_schemas(layout.schemas_dir)
     dataset.manifest.write(layout.dataset_manifest)
     return layout.dataset_manifest
-
 
 def _load(config_path: str | Path, base_dir: str | Path) -> tuple[Config, Dataset]:
     config = load_config(config_path)
@@ -242,23 +282,35 @@ def stage_diagnose(
     result.write(layout.detector_result(detector_name))
     return layout.detector_result(detector_name)
 
-
 def _write_failure_candidate(
     dataset: Dataset, layout: RunLayout, candidate_id: str,
     record: CandidateSpecRecord, status: CorrectionStatus, message: str,
     context: BackendContext, backend: CorrectionBackend,
+    extra_warnings: list[str] | None = None,
 ) -> Path:
     """Record a failed/ineligible candidate and still write its declared output.
 
     The ``correct`` rule declares ``corrected.h5ad`` as an output; for a candidate
     that never produced a correction we write the unmodified baseline so the
     declared output always exists. The result records the failure status, so no
-    consumer mistakes this for a correction.
+    consumer mistakes this for a correction. ``extra_warnings`` carries notes that
+    belong on the result whatever the outcome -- an exploratory-override waiver was
+    granted before the backend ran, so a candidate that then failed is still a
+    candidate whose result must say it ran under a bypassed design gate.
     """
 
-    failure_result(record, status, message, software=backend.availability(context)).write(
-        layout.correction_result(candidate_id)
-    )
+    warnings: list[str] = []
+    try:
+        software = backend.availability(context)
+    except (BackendError, ValueError, OSError, subprocess.TimeoutExpired) as probe_error:
+        # A candidate that failed must still be recorded even if the availability
+        # probe itself is what is broken; the probe failure is preserved as a warning
+        # and never replaces the candidate's own reason.
+        software = []
+        warnings.append(f"software availability could not be recorded: {probe_error}")
+    result = failure_result(record, status, message, software=software)
+    result.warnings = warnings + (extra_warnings or [])
+    result.write(layout.correction_result(candidate_id))
     write_candidate_output(
         dataset, dataset.expression(), layout.corrected_h5ad(candidate_id),
         candidate_id=candidate_id,
@@ -289,14 +341,27 @@ def stage_correct(
     )
     backend = get_backend(spec.backend)
 
+    # A retry invalidates its previous success before anything can fail or be cancelled.
+    for path in (layout.correction_result(candidate_id), layout.corrected_h5ad(candidate_id),
+                 layout.metric_result(candidate_id)):
+        path.unlink(missing_ok=True)
+    log_path = layout.root / "logs" / f"correct_{candidate_id}.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    log_path.write_text(f"Starting candidate {candidate_id!r} ({spec.backend}).\n", encoding="utf-8")
+
     eligibility = next(
         (e for e in design.eligibility if e.name == spec.backend and e.kind == "backend"), None
     )
     waived: list[dict[str, str]] = []
+    override_note: str | None = None
     if eligibility is not None and not eligibility.eligible:
         if config.design.allow_exploratory_override and eligibility.override_allowed:
-            # The waiver is recorded on the correction result and on the decision, so
-            # an exploratory run is never indistinguishable from a fully eligible one.
+            # The gate is bypassed, not satisfied, and the bypass is recorded before the
+            # backend runs so that a crash downstream cannot erase the fact that it was
+            # attempted.  Three places carry it: this audit file, which stage_decide
+            # turns into ``DecisionResult.overrides`` for the report; the waiver on the
+            # correction result, so a reader of that artifact alone still sees it; and
+            # the warning below, in the same words for both.
             waived = [{
                 "candidate_id": candidate_id,
                 "backend": spec.backend,
@@ -304,6 +369,17 @@ def stage_correct(
                 "reason": eligibility.reason or "",
                 "allowed_by": "design.allow_exploratory_override",
             }]
+            override_note = _record_exploratory_override(layout, {
+                "candidate_id": candidate_id,
+                "backend": spec.backend,
+                "overrode": f"{eligibility.reason} (reason code: {eligibility.reason_code})",
+                "declared_by": "design.allow_exploratory_override = true",
+                "effect": (
+                    "the backend was run on a design its own eligibility rule rejects. "
+                    "Its output is exploratory: it is scored and displayed, and it cannot "
+                    "support a recommendation"
+                ),
+            })
         else:
             record = make_spec(candidate_id, spec.backend, None, dict(spec.parameters),
                                config.project.seed, dataset, [])
@@ -313,48 +389,87 @@ def stage_correct(
                 context, backend,
             )
 
+    # Only expected candidate execution/output errors are reportable candidate
+    # failures; shared input loading above and cancellation remain whole-run failures.
+    # OutputValidationError (a ValueError): the backend produced a non-finite or
+    # reshaped matrix.  FileNotFoundError (an OSError): the R script never wrote its
+    # output.  JSONDecodeError (a ValueError): the R script's result payload is
+    # unparseable.  TimeoutExpired: the R script overran its budget.
+    candidate_errors = (
+        BackendError, OutputValidationError, ValueError, OSError, subprocess.TimeoutExpired,
+    )
+
+    def _record_for_exc(exc: Exception) -> CandidateSpecRecord:
+        try:
+            resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
+        except BackendError:
+            resolved = dict(spec.parameters)
+        return make_spec(candidate_id, spec.backend, None, resolved,
+                         config.project.seed, dataset, [])
+
     try:
         matrix, result = backend.run(dataset, candidate_id, dict(spec.parameters), context)
     except BackendNotAvailable as exc:
         # Availability is a property of the environment, decided by the exception
         # type, never by sniffing the error text.
-        try:
-            resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
-        except BackendError:
-            resolved = dict(spec.parameters)
-        record = make_spec(candidate_id, spec.backend, None, resolved,
-                           config.project.seed, dataset, [])
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
         return _write_failure_candidate(
-            dataset, layout, candidate_id, record, CorrectionStatus.NOT_AVAILABLE,
-            str(exc), context, backend,
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.NOT_AVAILABLE, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
         )
-    except (BackendError, OutputValidationError, FileNotFoundError) as exc:
-        # OutputValidationError: the backend produced a non-finite or reshaped
-        # matrix; FileNotFoundError: the R script never wrote its output. Both are
-        # candidate failures and must be recorded, not crash the whole workflow.
-        try:
-            resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
-        except BackendError:
-            resolved = dict(spec.parameters)
-        record = make_spec(candidate_id, spec.backend, None, resolved,
-                           config.project.seed, dataset, [])
+    except candidate_errors as exc:
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
         return _write_failure_candidate(
-            dataset, layout, candidate_id, record, CorrectionStatus.FAILED,
-            str(exc), context, backend,
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.FAILED, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
         )
 
-    path = write_candidate_output(
-        dataset, matrix, layout.corrected_h5ad(candidate_id),
-        candidate_id=candidate_id, output_scale=result.output_scale,
-    )
+    if result.status is not CorrectionStatus.SUCCESS:
+        # The backend reported its own failure and returned no matrix; record that
+        # failure rather than exporting whatever came back.
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, result.candidate,
+            result.status, result.reason or "the backend reported failure",
+            context, backend,
+            extra_warnings=[override_note] if override_note else None,
+        )
+
+    try:
+        path = write_candidate_output(
+            dataset, matrix, layout.corrected_h5ad(candidate_id),
+            candidate_id=candidate_id, output_scale=result.output_scale,
+        )
+    except candidate_errors as exc:
+        # A partial export is removed: a file that is half an H5AD must never be
+        # readable as a corrected output.  The failure candidate writes the
+        # unmodified baseline in its place, so the declared output exists and the
+        # result records that it is not a correction.
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
+        layout.corrected_h5ad(candidate_id).unlink(missing_ok=True)
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.FAILED, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
+        )
+
     result.output_path = str(path)
     result.waived_eligibility = waived
     if waived:
         result.warnings = list(result.warnings) + [
-            "eligibility constraint(s) waived for this candidate: "
-            + "; ".join(f"{w['reason_code']} ({w['reason']})" for w in waived)
+            f"EXPLORATORY OVERRIDE: {w['backend']} ran on a design its own eligibility "
+            f"rule rejects ({w['reason'] or 'unknown'}; reason code: {w['reason_code']}), "
+            "because design.allow_exploratory_override = true. Its output is exploratory "
+            "and cannot support a recommendation."
+            for w in waived
         ]
     result.write(layout.correction_result(candidate_id))
+    with log_path.open("a", encoding="utf-8") as log:
+        log.write(f"Status: {result.status.value}. {result.reason or 'completed'}\n")
     return layout.correction_result(candidate_id)
 
 
@@ -406,6 +521,46 @@ def stage_metrics(
         dataset, matrix, sampling, design,
         run_id=config.project.id, candidate_id=candidate_id,
     )
+
+
+    # The native namespace is optional by construction: it calls upstream R and cannot
+    # run without cyCombine.  A failure here is recorded as a status on those two specs
+    # and never removes the common-namespace records, so an environment gap costs the
+    # native numbers and nothing else.  Only the identity candidate is compared against
+    # itself, because a native reduction is a ratio of the corrected and uncorrected
+    # states and the identity is the only candidate whose uncorrected state is itself.
+    if candidate_id == _identity_candidate_id(config):
+        try:
+            from batchdx.cyto.metrics.native import compute_native_metrics
+
+            result.records.extend(compute_native_metrics(
+                dataset, dataset.expression(), matrix, sampling, design,
+                run_id=config.project.id, candidate_id=candidate_id,
+                context=BackendContext(
+                    design=design, sampling=sampling,
+                    work_dir=str(layout.candidate_dir(candidate_id) / "native"),
+                    seed=config.project.seed, rscript=config.upstream.rscript,
+                    upstream_dir=config.upstream.checkout_dir,
+                ),
+                work_dir=str(layout.candidate_dir(candidate_id) / "native"),
+            ))
+        except Exception as exc:  # noqa: BLE001 - a status is the point
+            from batchdx.cyto.metrics.records import metric_record
+            from batchdx.cyto.metrics.registry import NATIVE_CYCOMBINE_EMD
+
+            # One record, carrying the same fields every other metric record carries, so
+            # the failure is visible in the same place a value would have been and cannot
+            # be mistaken for an omitted metric.
+            result.records.append(metric_record(
+                NATIVE_CYCOMBINE_EMD, sampling,
+                run_id=config.project.id,
+                candidate_id=candidate_id,
+                status=MetricStatus.FAILED,
+                reason=f"the native-namespace metrics could not be produced: {exc}",
+                n_samples=0, n_cells=0, coverage=0.0, aggregation_weight=1.0,
+            ))
+
+
     if config.design.biological_contrasts:
         result.records.extend(compute_biological_contrasts(
             dataset, dataset.expression(), matrix, sampling, design,
@@ -413,6 +568,7 @@ def stage_metrics(
             run_id=config.project.id, candidate_id=candidate_id,
             donor_factor=config.design.donor,
         ))
+
     result.write(layout.metric_result(candidate_id))
     return layout.metric_result(candidate_id)
 
@@ -433,6 +589,11 @@ def stage_decide(
     design = DesignAudit.read(layout.design_audit)
     sampling = SamplingManifest.read(layout.sampling_manifest)
 
+    # The sample table is re-read here only to answer the held-out question, which is a
+    # question about which samples sit in which split.  It is not part of the frozen
+    # manifest, and passing it keeps the decision layer free of any dataset handle.
+    _, dataset = _load(config_path, base_dir)
+
     corrections: dict[str, CorrectionResult] = {}
     metrics: dict[str, MetricResult] = {}
     for candidate in config.correction.candidates:
@@ -450,15 +611,15 @@ def stage_decide(
     _write_json(layout.reductions, {"records": [r.model_dump(mode="json") for r in reductions]})
 
     # Surface any waived eligibility constraints on the decision record, so the
-    # override audit trail promised by the assessment layer exists in real runs.
-    overrides = [
-        {"candidate_id": w["candidate_id"], "reason_code": w["reason_code"],
-         "reason": w["reason"], "allowed_by": w["allowed_by"]}
-        for c in corrections.values() for w in (c.waived_eligibility or [])
-    ]
+    # override audit trail promised by the assessment layer exists in real runs. Read
+    # from the audit file rather than rebuilt from the correction results: the file is
+    # written before the backend runs, so a candidate that crashed mid-correction is
+    # still accounted for here.
+    overrides = _read_exploratory_overrides(layout)
 
     decision = assess_candidates(
         design, sampling, corrections, metrics, reductions,
+        samples=dict(dataset.samples),
         run_id=config.project.id, policy_name=config.evaluation.policy,
         identity_candidate_id=identity, overrides=overrides,
     )
