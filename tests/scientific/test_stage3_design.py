@@ -260,3 +260,29 @@ def test_below_floor_is_a_configuration_value_with_a_declared_origin() -> None:
     assert audit.below_design_floor
     assert audit.design_floor_origin == "declared by the study protocol"
     assert "minimum is 5" in audit.design_floor_reason
+
+
+def test_shared_reference_does_not_rescue_a_confounded_pair() -> None:
+    """A measured reference makes the technical contrast measurable, but a protected
+    factor with disjoint levels across batches still makes the comparison
+    non-identifiable.  Regression: the reference branch used to short-circuit before
+    the disjoint-biology check, presenting a perfectly confounded design as
+    reference-supported."""
+    # Reference aliquots carry no biological group: they are pooled material, not a
+    # case or control donor.  Cases appear only in B1, controls only in B2, and the
+    # shared reference aliquot is present in every batch.
+    samples = [
+        _sample(f"ref_{b}", b, group=None, donor="REF",
+                reference="REF1", role="technical_replicate")
+        for b in ("B1", "B2", "B3")
+    ] + [
+        _sample(f"C{k}_B1", "B1", group="case", donor=f"C{k}") for k in range(3)
+    ] + [
+        _sample(f"H{k}_B2", "B2", group="control", donor=f"H{k}") for k in range(3)
+    ]
+    audit = _audit(samples)
+
+    assert audit.confounded_factors == ["group"]
+    assert _support(audit, "B1", "B2") is ComparisonSupport.NON_IDENTIFIABLE
+    assert "reference" in _support_reason(audit, "B1", "B2").lower()
+    assert "covariate" in _support_reason(audit, "B1", "B2")

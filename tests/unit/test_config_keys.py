@@ -81,13 +81,6 @@ DECLARATIVE_ONLY: dict[str, str] = {
         "forbid whatever the configuration says, so accepting it would be a lie the "
         "design audit could not honour."
     ),
-    "upstream.lock": (
-        "Names the pinned upstream manifest. It is read by the Stage 0 audit "
-        "(scripts/audit_upstream.py, tests/integration/test_stage0_audit.py) and by "
-        "scripts/fetch_upstream.sh, out of band; no stage reads it while a run executes. "
-        "Pinned to the one shipped path so the run and the audit cannot disagree about "
-        "what is pinned."
-    ),
     "report.offline": (
         "The only renderer in this build is one self-contained offline HTML report, so "
         "'false' would name a mode that does not exist. Pinned to true; the key is kept "
@@ -96,11 +89,6 @@ DECLARATIVE_ONLY: dict[str, str] = {
     "exports.h5ad": (
         "The corrected H5AD is not optional: the metrics rule reads it and would have "
         "nothing to score. Pinned to true."
-    ),
-    "exports.fcs": (
-        "No rule calls batchdx.cyto.io.export.export_fcs_per_sample in this build, so "
-        "'true' would promise a file that is never written. Pinned to false. The "
-        "exporter itself is real and tested; the gap is that nothing invokes it."
     ),
 }
 

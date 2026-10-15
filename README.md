@@ -11,14 +11,25 @@ Built for cross-cohort immune studies, where biological differences and technica
 batches are often correlated and where the honest answer is frequently *"this contrast
 cannot be corrected"*.
 
-> **Status: alpha. No gate is BLOCKED; several are PARTIAL.** The Python core, the
-> design audit, the diagnostics, the metrics (including six verified against pinned
-> upstream components), the decision layer, the report and the Snakemake workflow run end
-> to end and are tested. **cyCombine and CytoNorm execute for real**, at their pinned
-> commits, through real upstream calls. **CytoBatchFlagR's detector also executes** in
-> integration tests, but its flags have an uncalibrated false-positive rate. Every
-> scientific result still rests on deterministic synthetic fixtures. Public spectral
-> controls have been downloaded and audited, but no real-data workflow result exists.
+> **Status: 0.1.0 — research preview.** The Python core, the design audit, the
+> diagnostics, the metrics (including six verified against pinned upstream components),
+> the decision layer, the report and the Snakemake workflow run end to end and are
+> tested, including real Snakemake executions and the R-backed cyCombine and CytoNorm
+> paths against their pinned upstream checkouts. CytoBatchFlagR's detector also executes
+> in integration tests, but its flags have an uncalibrated false-positive rate. Three
+> things you must know before using it:
+>
+> 1. **Every decision threshold is an uncalibrated engineering default.** The report
+>    says so next to every recommendation. Do not cite the thresholds as validated
+>    cutoffs; see the calibration program in issue #5.
+> 2. **No real-data validation yet.** All evidence comes from synthetic fixtures of
+>    250–2,000 cells per sample. Production CyTOF acquisitions are orders of magnitude
+>    larger; expect the memory and runtime profile to be untested.
+> 3. **CytoNorm and PeacoQC execute for real** at their pinned versions, and CI builds
+>    the full R environment (cyCombine, CytoNorm, PeacoQC, flowVS) from the pinned
+>    local checkouts, so the R-backed tests run there too. They remain the least
+>    exercised backends, and their GPL licences mean they are called, never vendored.
+>
 > Every partial gate states in
 > [`docs/implementation_status.md`](docs/implementation_status.md) (generated from an
 > executed test report) exactly what is not satisfied, and

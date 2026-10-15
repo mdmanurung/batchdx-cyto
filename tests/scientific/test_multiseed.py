@@ -465,6 +465,10 @@ def test_a_calibrated_policy_can_still_recommend_at_every_seed(worlds, seed: int
             k: "calibrated against the synthetic paired-reference fixture"
             for k in Policy(name="x").threshold_origins
         },
+        calibration_artifacts={
+            k: "tests/scientific/test_multiseed.py::test_a_calibrated_policy_can_still_recommend_at_every_seed"
+            for k in Policy(name="x").threshold_origins
+        },
     )
     try:
         decision = assess_candidates(

@@ -109,7 +109,23 @@ ELIGIBILITY_RULES: dict[str, EligibilityRule] = {
         requires_reference_in_every_batch=True,
         origin=(
             "CytoNorm.train learns per-batch quantile splines from control files; the "
-            "package DESCRIPTION states a control sample is taken along in each batch."
+            "package DESCRIPTION states a control sample is taken along in each batch. "
+            "This is the strongest evidence tier batchdx offers for CytoNorm: the goal "
+            "quantiles come from measured references present in every batch."
+        ),
+    ),
+    "cytonorm_control_free": EligibilityRule(
+        name="cytonorm_control_free",
+        kind="backend",
+        min_batches=2,
+        origin=(
+            "CytoNorm 2.0 supports control-free normalisation: QuantileNorm.train "
+            "accepts goal='mean' (the default), which learns the goal quantile "
+            "distribution as the mean over all batches, or a numeric goal distribution "
+            "supplied by the analyst (R/QuantileNorm.R, goal parameter; pinned 2.0.12). "
+            "No measured reference is required for that route, so the evidence is "
+            "weaker than the reference-based 'cytonorm' tier and the two are reported "
+            "separately."
         ),
     ),
 }
@@ -260,13 +276,23 @@ def _classify_pair(
         elif levels_a and levels_b:
             disjoint.append(factor)
 
-    if shared_refs:
-        return ComparisonAssessment(
-            **base, support=ComparisonSupport.REFERENCE_SUPPORTED,
-            reason=f"measured reference identity/identities {shared_refs} present in both batches",
-            overlapping_biology=overlapping,
-        )
+    # A shared reference makes the *technical* contrast measurable, but never rescues a
+    # protected factor that takes disjoint levels across the two batches: the batch
+    # contrast and that biological contrast remain the same contrast.  Identifiability
+    # is checked first so a confounded design can never present as reference-supported.
     if disjoint:
+        if shared_refs:
+            return ComparisonAssessment(
+                **base, support=ComparisonSupport.NON_IDENTIFIABLE,
+                reason=(
+                    f"measured reference(s) {shared_refs} are present in both batches, but "
+                    f"protected factor(s) {disjoint} take disjoint levels across them; the "
+                    "batch contrast and the biological contrast are not separately "
+                    "estimable, and the shared reference does not change that. Adding the "
+                    "same factor as a covariate does not resolve this."
+                ),
+                overlapping_biology=overlapping,
+            )
         return ComparisonAssessment(
             **base, support=ComparisonSupport.NON_IDENTIFIABLE,
             reason=(
@@ -274,6 +300,12 @@ def _classify_pair(
                 "the batch contrast and the biological contrast are not separately estimable. "
                 "Adding the same factor as a covariate does not resolve this."
             ),
+            overlapping_biology=overlapping,
+        )
+    if shared_refs:
+        return ComparisonAssessment(
+            **base, support=ComparisonSupport.REFERENCE_SUPPORTED,
+            reason=f"measured reference identity/identities {shared_refs} present in both batches",
             overlapping_biology=overlapping,
         )
     if overlapping:
@@ -334,12 +366,17 @@ def _evaluate_rule(
             ))
 
     if failures:
-        code, detail = failures[0]
+        # Every failed requirement is reported: a method can fail several at once
+        # (e.g. too few batches AND a missing reference), and a lossy reason would
+        # hide what else must be fixed.
+        codes = [code for code, _ in failures]
+        details = "; ".join(detail for _, detail in failures)
         return MethodEligibility(
-            name=rule.name, kind=rule.kind, eligible=False, reason_code=code,
-            reason=f"{detail}. Constraint origin: {rule.origin}",
+            name=rule.name, kind=rule.kind, eligible=False,
+            reason_code="+".join(codes),
+            reason=f"{details}. Constraint origin: {rule.origin}",
             requirements_met=requirements,
-            override_allowed=code != "batch_not_identifiable",
+            override_allowed="batch_not_identifiable" not in codes,
         )
     return MethodEligibility(
         name=rule.name, kind=rule.kind, eligible=True, reason_code="eligible",

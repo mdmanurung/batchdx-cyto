@@ -80,6 +80,11 @@ automatically the correction scope.
 `scale` is mandatory. `corrected: true` is refused: the input is the uncorrected
 baseline, and chained correction is not supported by default. There is **no universal
 cofactor** — declare it per panel, and do not apply spectral-flow defaults to CyTOF.
+The community conventions from the cyCombine paper are cofactor **5 for CyTOF**,
+**150 for conventional flow** and **6000 for spectral flow**; they are conventions,
+not defaults, so declare the value that matches the instrument and panel. A `scale` of
+the form `asinh_cofactor<N>` must agree with `transformation_parameters.cofactor`; a
+disagreement is rejected at load time.
 
 ## 3. Configuring a run
 
@@ -115,12 +120,13 @@ reference implementation contains none either.
 | Capability | Needs |
 |---|---|
 | descriptive diagnosis | nothing beyond a batch column |
-| drift diagnostic | an acquisition order or event index |
+| drift diagnostic | an acquisition axis: the FCS Time channel (ingested as `acquisition_time`) when present, otherwise the event index |
 | composition diagnostic | frozen labels and ≥ 2 samples per batch |
 | `reference_supported` evidence | a measured reference id shared by both batches of the pair |
 | cyCombine cluster detector | 3–30 batches (upstream restriction, quoted in the eligibility manifest) |
 | CytoBatchFlagR | a control sample in **every** batch, and ≥ 4 batches |
-| CytoNorm | a measured reference in every batch |
+| CytoNorm (strongest tier) | a measured reference in every batch |
+| CytoNorm (control-free tier) | nothing beyond ≥ 2 batches; weaker evidence (CytoNorm 2.0 `QuantileNorm.train goal="mean"` or a manual goal distribution) |
 
 ### Confounding
 

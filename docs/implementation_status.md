@@ -2,9 +2,11 @@
 
 **This file is generated. Do not edit it by hand.**
 
-Derived by `scripts/generate_status.py` from `report.json` on 2026-10-03 00:46 UTC.
-Every line below corresponds to test identifiers that were executed; a claim
-without an executed test cannot appear here.
+Derived by `scripts/generate_status.py` from `report.json` on 2026-10-15 11:25 UTC.
+Every COMPLETE line below corresponds to test identifiers that were executed in
+the referenced report; a claim without an executed test cannot appear here.
+Lines marked BLOCKED or PARTIAL come from the hand-maintained gate map
+(scripts/gates.yaml) and state why the executed evidence stops where it does.
 
 Regenerate with:
 
@@ -30,17 +32,17 @@ python scripts/generate_status.py --report build/report.json
 |---|---|---|---|---|
 | A | X | Cross-stage contracts (typed, versioned, round-tripped across the R boundary) | ✅ PASSED | 10/10 |
 | A | 0 | Audit upstream resources and establish contracts | ✅ PASSED | 8/8 |
-| A | 1 | Runnable package and minimal Snakemake workflow | ❔ NOT RUN | 25/32 |
+| A | 1 | Runnable package and minimal Snakemake workflow | ✅ PASSED | 32/32 |
 | A | 2 | Ingestion, immutable data, preprocessing machinery (not yet in a run) | 🟡 PARTIAL | 64/64 |
 | A | 3 | Design audit and correction eligibility | ✅ PASSED | 12/12 |
 | A | 5 | Detection adapters and diagnosis report | ✅ PASSED | 19/19 |
 | A | 6 | Correction backends and output validation | 🟡 PARTIAL | 33/33 |
-| A | 7 | Native and common comparative metrics | 🟡 PARTIAL | 51/52 |
+| A | 7 | Native and common comparative metrics | 🟡 PARTIAL | 52/52 |
 | A | 10 | Reporting and safe exports | 🟡 PARTIAL | 34/34 |
 | B | 4 | Freeze evaluation populations, sampling and splits | 🟡 PARTIAL | 26/26 |
 | B | 8 | Biological preservation and uncertainty | 🟡 PARTIAL | 18/18 |
 | B | 9 | Candidate assessment and recommendation rules | ✅ PASSED | 13/13 |
-| C | 11 | Snakemake execution, performance, deployment | ❔ NOT RUN | 0/11 |
+| C | 11 | Snakemake execution, performance, deployment | 🟡 PARTIAL | 11/11 |
 | C | 12 | Scientific validation, documentation, release readiness | 🟡 PARTIAL | 4/4 |
 
 ## Gate detail
@@ -83,27 +85,17 @@ python scripts/generate_status.py --report build/report.json
 
 ### Stage 1 (Tier A) — Runnable package and minimal Snakemake workflow
 
-**❔ NOT RUN** — 25 passed, 0 failed, 0 skipped, 7 not executed.
-
-Tests needing attention:
-
-* `tests/integration/test_stage1_slice.py::test_cli_module_entry_point_is_importable_and_reports_what_it_ships — not executed in this report`
-* `tests/integration/test_stage1_slice.py::test_example_initialises_every_file_it_references — not executed in this report`
-* `tests/integration/test_stage1_slice.py::test_snakemake_runs_the_slice_and_a_second_invocation_does_no_analytical_work — not executed in this report`
-* `tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code — not executed in this report`
-* `tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate — not executed in this report`
-* `tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout — not executed in this report`
-* `tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped — not executed in this report`
+**✅ PASSED** — 32 passed, 0 failed, 0 skipped, 0 not executed.
 
 <details><summary>All test identifiers for this gate</summary>
 
-* `tests/integration/test_stage1_slice.py::test_cli_module_entry_point_is_importable_and_reports_what_it_ships` — not executed
-* `tests/integration/test_stage1_slice.py::test_example_initialises_every_file_it_references` — not executed
-* `tests/integration/test_stage1_slice.py::test_snakemake_runs_the_slice_and_a_second_invocation_does_no_analytical_work` — not executed
-* `tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code` — not executed
-* `tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate` — not executed
-* `tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout` — not executed
-* `tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped` — not executed
+* `tests/integration/test_stage1_slice.py::test_cli_module_entry_point_is_importable_and_reports_what_it_ships` — passed
+* `tests/integration/test_stage1_slice.py::test_example_initialises_every_file_it_references` — passed
+* `tests/integration/test_stage1_slice.py::test_snakemake_runs_the_slice_and_a_second_invocation_does_no_analytical_work` — passed
+* `tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code` — passed
+* `tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate` — passed
+* `tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout` — passed
+* `tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped` — passed
 * `tests/unit/test_release_metadata.py::test_the_mit_licence_text_ships` — passed
 * `tests/unit/test_release_metadata.py::test_the_declared_licence_is_mit_in_all_three_places` — passed
 * `tests/unit/test_release_metadata.py::test_every_declared_licence_file_exists` — passed
@@ -339,13 +331,9 @@ Tests needing attention:
 
 ### Stage 7 (Tier A) — Native and common comparative metrics
 
-**🟡 PARTIAL** — 51 passed, 0 failed, 1 skipped, 0 not executed.
+**🟡 PARTIAL** — 52 passed, 0 failed, 0 skipped, 0 not executed.
 
 > **Partial:** The NATIVE namespace now executes: workflow/scripts/cycombine_evaluate.R calls cyCombine::evaluate_emd and cyCombine::evaluate_mad as-is and src/batchdx/cyto/metrics/native.py reports their return values, so the two specs have a producer and the "executed upstream, not reimplemented" clause is met. The external obstacle that made this gate BLOCKED (an unreachable CRAN, Bioconductor and an uninstalled cyCombine) no longer holds; see scripts/setup_r_env.sh. Six OpenProblems components are now registered in the `compatibility` namespace with upstream_verified=True, each proven by a test that imports the pinned helper from the pinned commit and compares outputs against a recorded tolerance: emd_mean_ct_horiz, emd_mean_ct_vert, ratio_consistent_peaks, average_batch_r2_ct, iLisi and cLisi. Extraction did NOT need the Nextflow runtime, which retired B-007's open question. NOT satisfied: three rows remain deferred, each with a currently-true obstacle — flowsom_mean_mapping_similarity needs FlowSOM (Bioconductor-only) plus three benchmark parameters this package does not define, and the two functional_marker_preservation rows are a retention ratio and an effect-size drift rather than the statistic Stage 8 computes, so they need two integrated splits and a significance baseline this package's one-candidate-per-frozen-partition contract does not supply. `openproblems.cms` is genuinely absent at the pinned commit and stays recorded as such. scripts/audit_upstream.py fails the build if a `compatibility` row ever appears without a recorded verification.
-
-Tests needing attention:
-
-* `tests/scientific/test_stage7_openproblems.py::test_a_design_with_no_within_donor_pair_says_so_instead_of_scoring_zero — skipped`
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -387,7 +375,7 @@ Tests needing attention:
 * `tests/scientific/test_stage7_openproblems.py::test_the_pinned_cohens_d_helper_matches_the_local_cohens_d` — passed
 * `tests/scientific/test_stage7_openproblems.py::test_every_record_carries_the_frozen_partition_provenance` — passed
 * `tests/scientific/test_stage7_openproblems.py::test_a_thin_comparison_reports_a_reason_and_never_a_zero` — passed
-* `tests/scientific/test_stage7_openproblems.py::test_a_design_with_no_within_donor_pair_says_so_instead_of_scoring_zero` — skipped
+* `tests/scientific/test_stage7_openproblems.py::test_a_design_with_no_within_donor_pair_says_so_instead_of_scoring_zero` — passed
 * `tests/scientific/test_stage7_openproblems.py::test_the_horizontal_component_responds_to_a_removed_batch_offset` — passed
 * `tests/scientific/test_stage7_openproblems.py::test_the_vertical_component_sees_what_the_horizontal_one_cannot` — passed
 * `tests/scientific/test_stage7_openproblems.py::test_every_extracted_component_is_produced_for_the_frozen_partition` — passed
@@ -408,7 +396,7 @@ Tests needing attention:
 
 **🟡 PARTIAL** — 18 passed, 0 failed, 0 skipped, 0 not executed.
 
-> **Partial:** Prespecified contrasts, paired and unpaired sample-level models, donor-block bootstrap and restricted permutation are implemented in src/batchdx/cyto/metrics/preservation.py and tested, and every emitted record carries uncertainty_low/uncertainty_high/uncertainty_kind. The replicate unit is the sample or the donor and never the cell, which is proven directly by test_the_replicate_unit_is_the_sample_not_the_cell. NOT satisfied: the results are established on deterministic synthetic fixtures only, with no real cytometry data (docs/blocked.md B-008) and a single seed, so the preservation evidence is a demonstration that the machinery is correct, not a calibration for any real cohort. The OpenProblems functional-marker component remains unreconciled against its pinned implementation.
+> **Partial:** Prespecified contrasts, paired and unpaired sample-level models, donor-block bootstrap and restricted permutation are implemented in src/batchdx/cyto/metrics/preservation.py and tested, and every emitted record carries uncertainty_low/uncertainty_high/uncertainty_kind. The replicate unit is the sample or the donor and never the cell, which is proven directly by test_the_replicate_unit_is_the_sample_not_the_cell. NOT satisfied: the results are established on deterministic synthetic fixtures only. Public spectral controls have been audited but no real-data workflow has run (docs/blocked.md B-008); selected checks cover five seeds but the whole scientific suite has not been rerun at every seed. The preservation evidence remains a demonstration that the machinery is correct, not a calibration for any real cohort. The OpenProblems functional-marker component remains unreconciled against its pinned implementation.
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -502,37 +490,23 @@ Tests needing attention:
 
 ### Stage 11 (Tier C) — Snakemake execution, performance, deployment
 
-**❔ NOT RUN** — 0 passed, 0 failed, 0 skipped, 11 not executed.
+**🟡 PARTIAL** — 11 passed, 0 failed, 0 skipped, 0 not executed.
 
 > **Partial:** Deferred as Tier C, with the execution behaviour the Tier A slice depends on implemented and tested. NOT done: interruption-recovery testing, checkpoint-driven data-dependent branches (none are needed, because expansion is static), a built and digest-pinned Apptainer image, environment prefetching for offline nodes, and any cluster execution. The SLURM profile is shipped labelled UNTESTED.
 
-Tests needing attention:
-
-* `tests/integration/test_stage11_workflow.py::test_clean_execution_then_a_no_op_rerun — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_deleting_a_real_artifact_forces_recomputation — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_changing_the_configuration_invalidates_downstream_results — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_diagnose_mode_stops_before_any_correction — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_correct_mode_runs_only_the_selected_candidate — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_correct_mode_without_a_candidate_fails_at_parse_time — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_an_unavailable_method_produces_a_partial_report_not_a_failed_run — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_no_rule_hides_a_failure_behind_true_or_blanket_suppression — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_rules_declare_logs_threads_resources_and_benchmarks — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_the_candidate_roster_comes_from_the_configuration_not_the_results_tree — not executed in this report`
-* `tests/integration/test_stage11_workflow.py::test_slurm_profile_is_present_but_labelled_untested — not executed in this report`
-
 <details><summary>All test identifiers for this gate</summary>
 
-* `tests/integration/test_stage11_workflow.py::test_clean_execution_then_a_no_op_rerun` — not executed
-* `tests/integration/test_stage11_workflow.py::test_deleting_a_real_artifact_forces_recomputation` — not executed
-* `tests/integration/test_stage11_workflow.py::test_changing_the_configuration_invalidates_downstream_results` — not executed
-* `tests/integration/test_stage11_workflow.py::test_diagnose_mode_stops_before_any_correction` — not executed
-* `tests/integration/test_stage11_workflow.py::test_correct_mode_runs_only_the_selected_candidate` — not executed
-* `tests/integration/test_stage11_workflow.py::test_correct_mode_without_a_candidate_fails_at_parse_time` — not executed
-* `tests/integration/test_stage11_workflow.py::test_an_unavailable_method_produces_a_partial_report_not_a_failed_run` — not executed
-* `tests/integration/test_stage11_workflow.py::test_no_rule_hides_a_failure_behind_true_or_blanket_suppression` — not executed
-* `tests/integration/test_stage11_workflow.py::test_rules_declare_logs_threads_resources_and_benchmarks` — not executed
-* `tests/integration/test_stage11_workflow.py::test_the_candidate_roster_comes_from_the_configuration_not_the_results_tree` — not executed
-* `tests/integration/test_stage11_workflow.py::test_slurm_profile_is_present_but_labelled_untested` — not executed
+* `tests/integration/test_stage11_workflow.py::test_clean_execution_then_a_no_op_rerun` — passed
+* `tests/integration/test_stage11_workflow.py::test_deleting_a_real_artifact_forces_recomputation` — passed
+* `tests/integration/test_stage11_workflow.py::test_changing_the_configuration_invalidates_downstream_results` — passed
+* `tests/integration/test_stage11_workflow.py::test_diagnose_mode_stops_before_any_correction` — passed
+* `tests/integration/test_stage11_workflow.py::test_correct_mode_runs_only_the_selected_candidate` — passed
+* `tests/integration/test_stage11_workflow.py::test_correct_mode_without_a_candidate_fails_at_parse_time` — passed
+* `tests/integration/test_stage11_workflow.py::test_an_unavailable_method_produces_a_partial_report_not_a_failed_run` — passed
+* `tests/integration/test_stage11_workflow.py::test_no_rule_hides_a_failure_behind_true_or_blanket_suppression` — passed
+* `tests/integration/test_stage11_workflow.py::test_rules_declare_logs_threads_resources_and_benchmarks` — passed
+* `tests/integration/test_stage11_workflow.py::test_the_candidate_roster_comes_from_the_configuration_not_the_results_tree` — passed
+* `tests/integration/test_stage11_workflow.py::test_slurm_profile_is_present_but_labelled_untested` — passed
 
 </details>
 
@@ -540,7 +514,7 @@ Tests needing attention:
 
 **🟡 PARTIAL** — 4 passed, 0 failed, 0 skipped, 0 not executed.
 
-> **Partial:** Release metadata, compatibility documentation, synthetic scientific fixtures and selected multi-seed checks execute. The separate R exchange suite passes locally but is not a pytest gate or CI job. NOT satisfied: real-cohort validation, calibrated thresholds, suite-wide multi-seed coverage, a built container, or cluster execution. This release remains Alpha.
+> **Partial:** Release metadata, compatibility documentation, synthetic scientific fixtures and selected multi-seed checks execute. The separate R exchange suite passed locally and in draft-PR CI, but is not a pytest gate. NOT satisfied: real-cohort validation, calibrated thresholds, suite-wide multi-seed coverage, a built container, or cluster execution. This release remains Alpha.
 
 <details><summary>All test identifiers for this gate</summary>
 
@@ -553,11 +527,7 @@ Tests needing attention:
 
 ## Report totals
 
-* collected: 356
-* passed: 355
-* failed: 0
-* skipped: 1
-* errors: 0
+The referenced report's raw counts are environment-dependent (a test that skips in one environment runs in another), so they are not reproduced here; the gate table above is the environment-independent statement.
 
 Tests outside the gate lists (helpers and additional checks) are counted in the
 totals but do not decide a gate.

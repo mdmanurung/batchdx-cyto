@@ -22,18 +22,28 @@ from batchdx.cyto.adapters import (
     BackendContext,
     BackendError,
     BackendNotAvailable,
+    CorrectionBackend,
+    OutputValidationError,
+    failure_result,
     get_backend,
+    make_spec,
+    resolve_parameters,
 )
-from batchdx.cyto.config import Config, load_config
+from batchdx.cyto.config import Config, ConfigError, load_config
 from batchdx.cyto.decisions import assess_candidates
 from batchdx.cyto.design import audit_design
 from batchdx.cyto.diagnostics import DetectorContext, get_detector
 from batchdx.cyto.io import load_dataset, write_candidate_output
 from batchdx.cyto.io.dataset import Dataset
-from batchdx.cyto.metrics import compute_common_metrics, compute_reductions
+from batchdx.cyto.metrics import (
+    compute_biological_contrasts,
+    compute_common_metrics,
+    compute_reductions,
+)
 from batchdx.cyto.sampling import build_sampling_manifest, resolve_labels
 from batchdx.cyto.schemas import export_json_schemas
 from batchdx.cyto.schemas.contracts import (
+    CandidateSpecRecord,
     CorrectionResult,
     DatasetManifest,
     DesignAudit,
@@ -168,17 +178,36 @@ def _record_exploratory_override(layout: RunLayout, entry: dict[str, str]) -> st
     )
 
 
-# --------------------------------------------------------------------------------------
-# Stages
-# --------------------------------------------------------------------------------------
-
-
 def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLayout) -> Path:
     """Validate the configuration and the input, then freeze the dataset manifest."""
 
     config = load_config(config_path)
     dataset = load_dataset(config, base_dir)
     dataset.assert_baseline_unchanged()
+
+    # A declared upstream lock is a real input: if it is named, it must exist and
+    # name the pinned commits the adapters were verified against. An unread lock
+    # would let a configuration claim a pin it cannot enforce.
+    if config.upstream.lock:
+        lock_path = Path(base_dir) / config.upstream.lock
+        if not lock_path.exists():
+            raise ConfigError(
+                f"upstream.lock names {config.upstream.lock!r} but the file does not "
+                f"exist under {base_dir}; run scripts/fetch_upstream.sh or remove the key"
+            )
+        try:
+            import yaml
+
+            lock_data = yaml.safe_load(lock_path.read_text(encoding="utf-8"))
+        except yaml.YAMLError as exc:
+            raise ConfigError(
+                f"upstream.lock {config.upstream.lock!r} is not valid YAML: {exc}"
+            ) from exc
+        if not isinstance(lock_data, dict) or not lock_data:
+            raise ConfigError(
+                f"upstream.lock {config.upstream.lock!r} must be a non-empty mapping of "
+                "tool name to pinned commit"
+            )
 
     _write_json(layout.resolved_config, {
         "config": config.resolved_dict(),
@@ -188,7 +217,6 @@ def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLay
     export_json_schemas(layout.schemas_dir)
     dataset.manifest.write(layout.dataset_manifest)
     return layout.dataset_manifest
-
 
 def _load(config_path: str | Path, base_dir: str | Path) -> tuple[Config, Dataset]:
     config = load_config(config_path)
@@ -254,6 +282,41 @@ def stage_diagnose(
     result.write(layout.detector_result(detector_name))
     return layout.detector_result(detector_name)
 
+def _write_failure_candidate(
+    dataset: Dataset, layout: RunLayout, candidate_id: str,
+    record: CandidateSpecRecord, status: CorrectionStatus, message: str,
+    context: BackendContext, backend: CorrectionBackend,
+    extra_warnings: list[str] | None = None,
+) -> Path:
+    """Record a failed/ineligible candidate and still write its declared output.
+
+    The ``correct`` rule declares ``corrected.h5ad`` as an output; for a candidate
+    that never produced a correction we write the unmodified baseline so the
+    declared output always exists. The result records the failure status, so no
+    consumer mistakes this for a correction. ``extra_warnings`` carries notes that
+    belong on the result whatever the outcome -- an exploratory-override waiver was
+    granted before the backend ran, so a candidate that then failed is still a
+    candidate whose result must say it ran under a bypassed design gate.
+    """
+
+    warnings: list[str] = []
+    try:
+        software = backend.availability(context)
+    except (BackendError, ValueError, OSError, subprocess.TimeoutExpired) as probe_error:
+        # A candidate that failed must still be recorded even if the availability
+        # probe itself is what is broken; the probe failure is preserved as a warning
+        # and never replaces the candidate's own reason.
+        software = []
+        warnings.append(f"software availability could not be recorded: {probe_error}")
+    result = failure_result(record, status, message, software=software)
+    result.warnings = warnings + (extra_warnings or [])
+    result.write(layout.correction_result(candidate_id))
+    write_candidate_output(
+        dataset, dataset.expression(), layout.corrected_h5ad(candidate_id),
+        candidate_id=candidate_id,
+    )
+    return layout.correction_result(candidate_id)
+
 
 def stage_correct(
     candidate_id: str, config_path: str | Path, base_dir: str | Path, layout: RunLayout
@@ -269,8 +332,6 @@ def stage_correct(
     spec = next((c for c in config.correction.candidates if c.id == candidate_id), None)
     if spec is None:
         raise KeyError(f"candidate {candidate_id!r} is not in the configuration")
-
-    from batchdx.cyto.adapters.base import failure_result, make_spec, resolve_parameters
 
     context = BackendContext(
         design=design, sampling=sampling,
@@ -291,23 +352,23 @@ def stage_correct(
     eligibility = next(
         (e for e in design.eligibility if e.name == spec.backend and e.kind == "backend"), None
     )
+    waived: list[dict[str, str]] = []
     override_note: str | None = None
-
-    def finish(result: CorrectionResult) -> Path:
-        if override_note is not None:
-            result.warnings = [*result.warnings, override_note]
-        path = result.write(layout.correction_result(candidate_id))
-        with log_path.open("a", encoding="utf-8") as log:
-            log.write(f"Status: {result.status.value}. {result.reason or 'completed'}\n")
-        return path
-
     if eligibility is not None and not eligibility.eligible:
         if config.design.allow_exploratory_override and eligibility.override_allowed:
             # The gate is bypassed, not satisfied, and the bypass is recorded before the
             # backend runs so that a crash downstream cannot erase the fact that it was
-            # attempted.  Two places carry it: this audit file, which stage_decide turns
-            # into ``DecisionResult.overrides`` for the report, and a warning on the
-            # correction result itself, so a reader of that artifact alone still sees it.
+            # attempted.  Three places carry it: this audit file, which stage_decide
+            # turns into ``DecisionResult.overrides`` for the report; the waiver on the
+            # correction result, so a reader of that artifact alone still sees it; and
+            # the warning below, in the same words for both.
+            waived = [{
+                "candidate_id": candidate_id,
+                "backend": spec.backend,
+                "reason_code": eligibility.reason_code or "unknown",
+                "reason": eligibility.reason or "",
+                "allowed_by": "design.allow_exploratory_override",
+            }]
             override_note = _record_exploratory_override(layout, {
                 "candidate_id": candidate_id,
                 "backend": spec.backend,
@@ -322,46 +383,94 @@ def stage_correct(
         else:
             record = make_spec(candidate_id, spec.backend, None, dict(spec.parameters),
                                config.project.seed, dataset, [])
-            return finish(failure_result(
-                record, CorrectionStatus.INELIGIBLE,
+            return _write_failure_candidate(
+                dataset, layout, candidate_id, record, CorrectionStatus.INELIGIBLE,
                 f"{eligibility.reason} (reason code: {eligibility.reason_code})",
-            ))
-
-    try:
-        matrix, result = backend.run(dataset, candidate_id, dict(spec.parameters), context)
-        if result.status is CorrectionStatus.SUCCESS:
-            path = write_candidate_output(
-                dataset, matrix, layout.corrected_h5ad(candidate_id),
-                candidate_id=candidate_id, output_scale=result.output_scale,
+                context, backend,
             )
-            result.output_path = str(path)
-    except (BackendError, ValueError, OSError, subprocess.TimeoutExpired) as exc:
-        # Only expected candidate execution/output errors are reportable skips;
-        # shared input loading above and cancellation remain whole-run failures.
-        layout.corrected_h5ad(candidate_id).unlink(missing_ok=True)
-        with log_path.open("a", encoding="utf-8") as log:
-            log.write(traceback.format_exc())
+
+    # Only expected candidate execution/output errors are reportable candidate
+    # failures; shared input loading above and cancellation remain whole-run failures.
+    # OutputValidationError (a ValueError): the backend produced a non-finite or
+    # reshaped matrix.  FileNotFoundError (an OSError): the R script never wrote its
+    # output.  JSONDecodeError (a ValueError): the R script's result payload is
+    # unparseable.  TimeoutExpired: the R script overran its budget.
+    candidate_errors = (
+        BackendError, OutputValidationError, ValueError, OSError, subprocess.TimeoutExpired,
+    )
+
+    def _record_for_exc(exc: Exception) -> CandidateSpecRecord:
         try:
             resolved = resolve_parameters(backend.capabilities, dict(spec.parameters))
         except BackendError:
             resolved = dict(spec.parameters)
-        record = make_spec(candidate_id, spec.backend, None, resolved,
-                           config.project.seed, dataset, [])
-        warnings = []
-        try:
-            software = backend.availability(context)
-        except (BackendError, ValueError, OSError, subprocess.TimeoutExpired) as probe_error:
-            software = []
-            warnings.append(f"Software availability could not be recorded: {probe_error}")
-            with log_path.open("a", encoding="utf-8") as log:
-                log.write(traceback.format_exc())
-        status = (
-            CorrectionStatus.NOT_AVAILABLE if isinstance(exc, BackendNotAvailable)
-            else CorrectionStatus.FAILED
+        return make_spec(candidate_id, spec.backend, None, resolved,
+                         config.project.seed, dataset, [])
+
+    try:
+        matrix, result = backend.run(dataset, candidate_id, dict(spec.parameters), context)
+    except BackendNotAvailable as exc:
+        # Availability is a property of the environment, decided by the exception
+        # type, never by sniffing the error text.
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.NOT_AVAILABLE, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
         )
-        result = failure_result(record, status, str(exc), software=software)
-        result.warnings = warnings
-    return finish(result)
+    except candidate_errors as exc:
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.FAILED, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
+        )
+
+    if result.status is not CorrectionStatus.SUCCESS:
+        # The backend reported its own failure and returned no matrix; record that
+        # failure rather than exporting whatever came back.
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, result.candidate,
+            result.status, result.reason or "the backend reported failure",
+            context, backend,
+            extra_warnings=[override_note] if override_note else None,
+        )
+
+    try:
+        path = write_candidate_output(
+            dataset, matrix, layout.corrected_h5ad(candidate_id),
+            candidate_id=candidate_id, output_scale=result.output_scale,
+        )
+    except candidate_errors as exc:
+        # A partial export is removed: a file that is half an H5AD must never be
+        # readable as a corrected output.  The failure candidate writes the
+        # unmodified baseline in its place, so the declared output exists and the
+        # result records that it is not a correction.
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
+        layout.corrected_h5ad(candidate_id).unlink(missing_ok=True)
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.FAILED, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
+        )
+
+    result.output_path = str(path)
+    result.waived_eligibility = waived
+    if waived:
+        result.warnings = list(result.warnings) + [
+            f"EXPLORATORY OVERRIDE: {w['backend']} ran on a design its own eligibility "
+            f"rule rejects ({w['reason'] or 'unknown'}; reason code: {w['reason_code']}), "
+            "because design.allow_exploratory_override = true. Its output is exploratory "
+            "and cannot support a recommendation."
+            for w in waived
+        ]
+    result.write(layout.correction_result(candidate_id))
+    with log_path.open("a", encoding="utf-8") as log:
+        log.write(f"Status: {result.status.value}. {result.reason or 'completed'}\n")
+    return layout.correction_result(candidate_id)
 
 
 def _read_candidate_matrix(
@@ -413,6 +522,7 @@ def stage_metrics(
         run_id=config.project.id, candidate_id=candidate_id,
     )
 
+
     # The native namespace is optional by construction: it calls upstream R and cannot
     # run without cyCombine.  A failure here is recorded as a status on those two specs
     # and never removes the common-namespace records, so an environment gap costs the
@@ -449,6 +559,15 @@ def stage_metrics(
                 reason=f"the native-namespace metrics could not be produced: {exc}",
                 n_samples=0, n_cells=0, coverage=0.0, aggregation_weight=1.0,
             ))
+
+
+    if config.design.biological_contrasts:
+        result.records.extend(compute_biological_contrasts(
+            dataset, dataset.expression(), matrix, sampling, design,
+            config.design.biological_contrasts,
+            run_id=config.project.id, candidate_id=candidate_id,
+            donor_factor=config.design.donor,
+        ))
 
     result.write(layout.metric_result(candidate_id))
     return layout.metric_result(candidate_id)
@@ -491,12 +610,18 @@ def stage_decide(
     )
     _write_json(layout.reductions, {"records": [r.model_dump(mode="json") for r in reductions]})
 
+    # Surface any waived eligibility constraints on the decision record, so the
+    # override audit trail promised by the assessment layer exists in real runs. Read
+    # from the audit file rather than rebuilt from the correction results: the file is
+    # written before the backend runs, so a candidate that crashed mid-correction is
+    # still accounted for here.
+    overrides = _read_exploratory_overrides(layout)
+
     decision = assess_candidates(
         design, sampling, corrections, metrics, reductions,
         samples=dict(dataset.samples),
         run_id=config.project.id, policy_name=config.evaluation.policy,
-        identity_candidate_id=identity,
-        overrides=_read_exploratory_overrides(layout),
+        identity_candidate_id=identity, overrides=overrides,
     )
     decision.write(layout.decision)
     return layout.decision

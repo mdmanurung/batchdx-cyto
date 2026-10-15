@@ -85,7 +85,9 @@ def _csv_text(html_text: str) -> str:
 #: string-matched: the template emits it through ``tojson``, which escapes ``<`` as
 #: ``<``, so a raw substring search for ``<redacted>/…`` would never match.
 CONFIG_BLOCK = re.compile(
-    r"Resolved configuration</h3>\s*<pre><code>(.*?)</code></pre>", re.S
+    # The heading may be followed by the pseudonymization notice before the block
+    # itself; only the <pre> content is the resolved configuration.
+    r"Resolved configuration</h3>.*?<pre><code>(.*?)</code></pre>", re.S
 )
 
 

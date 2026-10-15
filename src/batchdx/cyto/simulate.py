@@ -87,7 +87,16 @@ class SimulationSpec:
 
 
 def simulate(spec: SimulationSpec) -> tuple[ad.AnnData, pd.DataFrame, pd.DataFrame, dict]:
-    """Generate an AnnData plus the sample, marker and processing manifests."""
+    """Generate an AnnData plus the sample, marker and processing manifests.
+
+    The real expression matrix is written to ``adata.X`` *and* to the declared
+    ``preprocessed`` layer.  An earlier build wrote zeros to ``X`` on the grounds
+    that the declared layer is the only source of truth; that zero was a trap for
+    any generic AnnData reader of the fixture, so it is gone.  Within this package
+    the declared layer remains the source of truth
+    (:meth:`batchdx.cyto.io.dataset.Dataset.expression` reads it and nothing reads
+    ``X``).
+    """
 
     markers = LINEAGE_MARKERS + FUNCTIONAL_MARKERS
     rng = np.random.default_rng(spec.seed)
@@ -141,8 +150,11 @@ def simulate(spec: SimulationSpec) -> tuple[ad.AnnData, pd.DataFrame, pd.DataFra
 
     X = np.vstack(blocks)
     obs = pd.concat(obs_rows, ignore_index=True)
+    # X carries the same values as the declared "preprocessed" layer.  The declared
+    # layer stays the source of truth for this package, but a zero X in a fixture is
+    # not a convention, it is a footgun for every external reader.
     adata = ad.AnnData(
-        X=np.zeros(X.shape, dtype=np.float32),
+        X=X.astype(np.float32),
         obs=obs,
         var=pd.DataFrame(index=pd.Index(markers, dtype=object)),
     )
@@ -240,7 +252,76 @@ def paired_reference_spec(seed: int = DEFAULT_SEED, n_cells: int = 1500) -> Simu
     )
 
 
-def confounded_spec(seed: int = DEFAULT_SEED, n_cells: int = 1500) -> SimulationSpec:
+def subtle_effect_spec(seed: int = 473, n_cells: int = 1500) -> SimulationSpec:
+    """Batch shifts of 0.1-0.2 SD: 0.05-0.1 on the declared scale (sd = 0.35).
+
+    The layout matches :func:`paired_reference_spec`, including the 0.9 biological
+    case/control difference on CD69, but the technical offsets are an order of
+    magnitude smaller.  A correction that removes these small offsets must leave the
+    biological contrast in place, so a test can state a tolerance that is small
+    relative to the biology yet large relative to the residual technical error.
+    """
+
+    samples: list[SampleSpec] = []
+    for b_i, batch in enumerate(["B1", "B2", "B3"]):
+        samples.append(SampleSpec(
+            sample_id=f"ref_{batch}", donor_id="REFDONOR", batch=batch, group="reference",
+            reference_id="REF1", reference_role="technical_replicate", n_cells=n_cells,
+        ))
+        for k in range(2):
+            for group, tag in (("case", "CA"), ("control", "CO")):
+                donor = f"D{b_i}{k}{tag}"
+                samples.append(SampleSpec(
+                    sample_id=f"{donor}_{batch}", donor_id=donor, batch=batch,
+                    group=group, n_cells=n_cells,
+                ))
+    return SimulationSpec(
+        samples=samples,
+        seed=seed,
+        batch_shift={
+            "B2": {"CD4": 0.08, "HLADR": -0.06},
+            "B3": {"CD4": -0.07, "HLADR": 0.09},
+        },
+        group_shift={"case": {"CD69": 0.9}},
+    )
+
+
+def rare_population_spec(seed: int = 473, n_cells: int = 1500) -> SimulationSpec:
+    """A fifth population below the 30-cell reporting floor in some samples.
+
+    Every sample devotes either 0.05% or 0.2% of its cells to the rare population
+    (roughly one to three cells per 1500-cell sample), so every (population, batch)
+    group and every group-level contrast sits far below the 30-cell minimum.  Any
+    metric that needs a minimum number of cells must report ``insufficient_data``
+    for this population, never a zero.
+    """
+
+    populations = {k: dict(v) for k, v in DEFAULT_POPULATIONS.items()}
+    populations["Rare"] = {
+        "CD3": 0.4, "CD4": 0.3, "CD8": 0.3, "CD19": 1.8, "CD14": 0.2, "CD56": 1.2,
+        "HLADR": 2.4, "CD69": 0.9,
+    }
+    samples = []
+    for b_i, batch in enumerate(["B1", "B2", "B3"]):
+        for k in range(2):
+            for group, tag in (("case", "CA"), ("control", "CO")):
+                donor = f"D{b_i}{k}{tag}"
+                freqs = dict(DEFAULT_FREQUENCIES)
+                freqs["Rare"] = 0.0005 if (b_i + k) % 2 == 0 else 0.002
+                samples.append(SampleSpec(
+                    sample_id=f"{donor}_{batch}", donor_id=donor, batch=batch,
+                    group=group, n_cells=n_cells, frequencies=freqs,
+                ))
+    return SimulationSpec(
+        samples=samples,
+        seed=seed,
+        populations=populations,
+        batch_shift={"B2": {"CD4": 0.8}, "B3": {"CD4": -0.6}},
+        group_shift={"case": {"CD69": 0.9}},
+    )
+
+
+def confounded_spec(seed: int = 473, n_cells: int = 1500) -> SimulationSpec:
     """Two batches, perfectly confounded with biological group, no reference."""
 
     samples = []

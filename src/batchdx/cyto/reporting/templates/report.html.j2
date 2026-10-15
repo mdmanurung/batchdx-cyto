@@ -295,6 +295,10 @@
         <td>{{ a.status }}</td><td>{{ a.evidence_class }}</td><td>{{ a.reason }}</td></tr>
     {% endfor %}
   </table></div>
+  {% if d.flagged | length > 250 %}
+  <p class="sub">Showing the first 250 of {{ d.flagged | length }} flagged assessments;
+  the full list is in the detector result files.</p>
+  {% endif %}
   {% else %}
   <h3>Flagged assessments (0)</h3>
   <p class="sub">No assessment crossed its reported threshold.</p>
@@ -466,6 +470,12 @@
   the fingerprint, so changing the report title does not invalidate a correction.
 </div>
 <h3>Resolved configuration</h3>
+{% if redacted %}
+<p class="sub">⚠ Identifiers in this report are pseudonymized with a per-run salt stored
+in this run directory (<code>identifier_salt.json</code>). Anyone holding the run
+directory can reverse the pseudonyms; share the report without the salt file if the
+mapping must stay private.</p>
+{% endif %}
 <pre><code>{{ config | tojson(indent=2) }}</code></pre>
 <h3>Citation</h3>
 <p class="sub">Cite the components actually enabled in this run. See

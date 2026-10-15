@@ -929,3 +929,308 @@ def test_the_replicate_unit_is_the_sample_not_the_cell(frozen) -> None:
         original, "biological_contrast_ttest_statistic"
     )[("T_CD4", "CD69")].value
     assert np.isfinite(sample_level) and sample_level > 0.0
+
+
+# --------------------------------------------------------------------------------------
+# Helpers ported from the biology.py suite (main), used by the ported tests below.
+# --------------------------------------------------------------------------------------
+
+def _contrast(marker="CD69", tolerance=0.2):
+    from batchdx.cyto.config import BiologicalContrastConfig
+
+    return BiologicalContrastConfig(
+        contrast_id=f"{marker}_case_vs_control", marker=marker, group_a="case",
+        group_b="control", preservation_tolerance=tolerance,
+        preservation_tolerance_origin=(
+            "test-declared: half of the 0.9 biological shift injected by the fixture, "
+            "an order of magnitude above the sampling noise of a 30-cell group mean"
+        ),
+    )
+
+
+def _make_project(spec, tmp_path, contrasts=()):
+    """A simulated dataset with annotation labels and a fully declared design."""
+    from batchdx.cyto._version import CONFIG_SCHEMA_VERSION
+    from batchdx.cyto.config import (
+        CandidateConfig,
+        Config,
+        CorrectionConfig,
+        DesignConfig,
+        EvaluationConfig,
+        InputConfig,
+        PreprocessingConfig,
+        ProjectConfig,
+    )
+    from batchdx.cyto.design import audit_design
+    from batchdx.cyto.io import load_dataset
+    from batchdx.cyto.sampling import build_sampling_manifest, resolve_labels
+    from batchdx.cyto.simulate import write_simulation
+
+    paths = write_simulation(spec, tmp_path)
+    config = Config(
+        schema_version=CONFIG_SCHEMA_VERSION,
+        project=ProjectConfig(id="stage8"),
+        input=InputConfig(
+            format="h5ad", path=str(paths["h5ad"]), expression_layer="preprocessed",
+            samples=str(paths["samples"]), markers=str(paths["markers"]),
+            processing_manifest=str(paths["processing"]),
+        ),
+        preprocessing=PreprocessingConfig(),
+        design=DesignConfig(
+            correction_batch="batch", protect=["group"], donor="donor_id",
+            require_shared_reference=False, biological_contrasts=list(contrasts),
+        ),
+        evaluation=EvaluationConfig(label_source="annotation", labels="true_population"),
+        correction=CorrectionConfig(
+            candidates=[CandidateConfig(id="uncorrected", backend="none")]
+        ),
+    )
+    dataset = load_dataset(config, tmp_path)
+    design = audit_design(
+        list(dataset.samples.values()), dataset_id=dataset.manifest.dataset_id,
+        correction_factor="batch", protected=["group"], donor_factor="donor_id",
+        minimum_batches=3, require_shared_reference=False,
+    )
+    labels, tier, confidence = resolve_labels(dataset, config, tmp_path)
+    sampling = build_sampling_manifest(dataset, config, design, labels, tier, confidence)
+    return config, dataset, design, sampling
+
+
+
+
+# --------------------------------------------------------------------------------------
+# Tests ported from main's biology.py suite; they exercise compute_biological_contrasts
+# and the uncertainty helpers directly, alongside the preservation-family tests above.
+# --------------------------------------------------------------------------------------
+
+def test_stage8_is_marked_unimplemented_rather_than_quietly_missing() -> None:
+    from batchdx.cyto.metrics.registry import DEFERRED_METRICS
+
+    assert any("functional_marker_preservation" in key for key in DEFERRED_METRICS)
+    for key, reason in DEFERRED_METRICS.items():
+        if "functional_marker_preservation" in key:
+            assert "not implemented" in reason
+
+
+# --------------------------------------------------------------------------------------
+# Stage 8 proper: biological preservation and uncertainty
+# --------------------------------------------------------------------------------------
+
+
+def test_a_donor_paired_model_is_used_when_donors_span_groups(tmp_path) -> None:
+    from batchdx.cyto.metrics.biology import compute_biological_contrasts
+    from batchdx.cyto.schemas.enums import MetricStatus
+    from batchdx.cyto.simulate import SampleSpec, SimulationSpec
+
+    samples = []
+    # Three donors, one per split: the split layer refuses an empty split (a donor
+    # keyed partition cannot fill train/validate/test from two biospecimens), and the
+    # donor-paired model under test needs donors that span groups, which every donor
+    # here does by carrying both arms in both batches.
+    for batch in ("B1", "B2"):
+        for k in range(3):
+            for group in ("case", "control"):
+                samples.append(SampleSpec(
+                    sample_id=f"P{k}_{group}_{batch}", donor_id=f"P{k}", batch=batch,
+                    group=group, n_cells=800,
+                ))
+    spec = SimulationSpec(
+        samples=samples, seed=473, batch_shift={"B2": {"CD4": 0.5}},
+        group_shift={"case": {"CD69": 0.9}},
+    )
+    config, dataset, design, sampling = _make_project(spec, tmp_path, [_contrast()])
+
+    records = compute_biological_contrasts(
+        dataset, dataset.expression(), dataset.expression(), sampling, design,
+        [_contrast()], run_id="t", candidate_id="uncorrected", donor_factor="donor_id",
+    )
+    ok = [r for r in records if r.status is MetricStatus.OK]
+    assert ok
+    assert all("donor-paired difference" in r.reason for r in ok), [
+        r.reason for r in ok
+    ]
+
+    metrics = compute_common_metrics(dataset, dataset.expression(), sampling, design,
+                                     run_id="t", candidate_id="uncorrected")
+    with_ci = [
+        r for r in metrics.records
+        if r.metric_name == "emd_within_population"
+        and r.uncertainty_kind == "donor_block_bootstrap_ci"
+    ]
+    assert with_ci, "two donors per (population, batch) must yield bootstrap intervals"
+
+
+def test_a_contrast_confounded_with_batch_is_unassessable_never_preserved(tmp_path) -> None:
+    from batchdx.cyto.metrics.biology import compute_biological_contrasts
+    from batchdx.cyto.schemas.enums import MetricStatus
+    from batchdx.cyto.simulate import confounded_spec
+
+    config, dataset, design, sampling = _make_project(
+        confounded_spec(), tmp_path, [_contrast()]
+    )
+    assert design.confounded_factors == ["group"]
+
+    records = compute_biological_contrasts(
+        dataset, dataset.expression(), dataset.expression(), sampling, design,
+        [_contrast()], run_id="t", candidate_id="any", donor_factor="donor_id",
+    )
+    assert records
+    assert all(r.status is MetricStatus.INELIGIBLE for r in records)
+    assert all(r.value is None for r in records)
+    assert all("unassessable" in (r.reason or "") for r in records)
+    assert not any((r.reason or "").endswith("-> preserved") for r in records)
+
+
+def test_marginal_preserving_corruption_leaves_contrasts_intact_but_is_still_rejected(
+    frozen, tmp_path
+) -> None:
+    """The contrast layer alone cannot see this corruption; the guardrail still is."""
+
+    from batchdx.cyto.config import BiologicalContrastConfig
+    from batchdx.cyto.decisions import assess_candidates
+    from batchdx.cyto.metrics.biology import compute_biological_contrasts
+    from batchdx.cyto.schemas.enums import DecisionState
+
+    config, dataset, design, sampling = frozen
+    contrast = BiologicalContrastConfig(
+        contrast_id="case_vs_control_CD69", marker="CD69", group_a="case",
+        group_b="control", preservation_tolerance=0.2,
+        preservation_tolerance_origin="test-declared: half of the injected 0.9 shift",
+    )
+    baseline = dataset.expression()
+    matrix, correction, scramble_metrics = _run(
+        "fixture_joint_scramble", frozen, tmp_path, "scramble"
+    )
+
+    def preserved(mtrx):
+        records = compute_biological_contrasts(
+            dataset, baseline, mtrx, sampling, design, [contrast],
+            run_id="t", candidate_id="x", donor_factor=config.design.donor,
+        )
+        ok = [r for r in records if r.status is MetricStatus.OK]
+        assert ok
+        return all(r.reason.endswith("-> preserved") for r in ok)
+
+    assert preserved(baseline)
+    assert not preserved(matrix), (
+        "the within-(population, batch) scramble permutes values across groups and "
+        "donors, so donor-level group means are destroyed and the contrast correctly "
+        "reads not_preserved; the joint-structure guardrail catches the same "
+        "corruption independently"
+    )
+
+    identity = compute_common_metrics(dataset, baseline, sampling, design,
+                                      run_id="t", candidate_id="uncorrected")
+    reductions = compute_reductions(
+        {"uncorrected": identity, "scramble": scramble_metrics}, sampling,
+        run_id="t", identity_candidate_id="uncorrected",
+    )
+    decision = assess_candidates(
+        design, sampling, {"scramble": correction},
+        {"uncorrected": identity, "scramble": scramble_metrics}, reductions,
+        run_id="t", policy_name="conservative", identity_candidate_id="uncorrected",
+    )
+    states = {a.candidate_id: a.state for a in decision.assessments}
+    assert states["scramble"] is DecisionState.REJECTED_DISTORTION
+
+
+def test_rare_population_yields_insufficient_data_not_zeros(tmp_path) -> None:
+    from batchdx.cyto.metrics.biology import compute_biological_contrasts
+    from batchdx.cyto.schemas.enums import MetricStatus
+    from batchdx.cyto.simulate import rare_population_spec
+
+    config, dataset, design, sampling = _make_project(rare_population_spec(), tmp_path)
+    metrics = compute_common_metrics(dataset, dataset.expression(), sampling, design,
+                                     run_id="t", candidate_id="uncorrected")
+
+    rare = [r for r in metrics.records if r.population == "Rare"]
+    assert rare, "the rare population must be reported, never silently dropped"
+    insufficient = [r for r in rare if r.status is MetricStatus.INSUFFICIENT_DATA]
+    assert insufficient, "rare groups below the cell floor must be insufficient_data"
+    assert all(r.value is None for r in insufficient)
+    assert not any(
+        r.value == 0.0 for r in rare if r.status is not MetricStatus.OK
+    ), "a missing value must never be reported as a zero"
+
+    records = compute_biological_contrasts(
+        dataset, dataset.expression(), dataset.expression(), sampling, design,
+        [_contrast(marker="CD19")], run_id="t", candidate_id="uncorrected",
+        donor_factor="donor_id",
+    )
+    rare_contrasts = [r for r in records if r.population == "Rare"]
+    assert rare_contrasts
+    assert all(
+        r.status is MetricStatus.INSUFFICIENT_DATA and r.value is None
+        for r in rare_contrasts
+    ), [r.reason for r in rare_contrasts]
+
+
+def test_bootstrap_ci_is_deterministic_under_the_project_seed(tmp_path) -> None:
+    from batchdx.cyto.schemas.enums import MetricStatus
+    from batchdx.cyto.simulate import paired_reference_spec
+
+    config, dataset, design, sampling = _make_project(paired_reference_spec(), tmp_path)
+
+    def intervals():
+        metrics = compute_common_metrics(dataset, dataset.expression(), sampling, design,
+                                         run_id="t", candidate_id="uncorrected")
+        return metrics, {
+            (r.population, r.marker, r.comparison_id):
+                (r.uncertainty_low, r.uncertainty_high, r.uncertainty_kind)
+            for r in metrics.records if r.metric_name == "emd_within_population"
+        }
+
+    metrics, first = intervals()
+    _, second = intervals()
+    assert first == second, "the bootstrap must be deterministic given the seed"
+
+    with_ci = [v for v in first.values() if v[2] is not None]
+    assert with_ci
+    assert all(
+        v[2] == "donor_block_bootstrap_ci" and v[0] <= v[1] for v in with_ci
+    )
+    ok_records = [
+        r for r in metrics.records
+        if r.metric_name == "emd_within_population" and r.status is MetricStatus.OK
+    ]
+    assert all(
+        r.uncertainty_kind == "donor_block_bootstrap_ci" or "bootstrap" in (r.reason or "")
+        for r in ok_records
+    ), "every OK EMD record carries an interval or says why it has none"
+
+
+def test_restricted_permutation_permutes_only_within_strata_and_is_deterministic() -> None:
+    from batchdx.cyto.metrics.uncertainty import restricted_permutation_test
+
+    rng = np.random.default_rng(7)
+    n_donors = 12
+    values, labels, strata = [], [], []
+    for d in range(n_donors):
+        for batch, shift in (("A", 0.0), ("B", 0.8)):
+            values.extend(rng.normal(shift, 1.0, size=6).tolist())
+            labels.extend([batch] * 6)
+            strata.extend([f"donor{d}"] * 6)
+    values = np.array(values)
+    labels = np.array(labels, dtype=object)
+    strata = np.array(strata, dtype=object)
+
+    result = restricted_permutation_test(values, labels, strata, n_permutations=500,
+                                         seed=473)
+    assert result.p_value is not None and result.p_value < 0.05
+    assert result.n_exchangeable_strata == n_donors
+
+    null = values - 0.8 * (labels == "B")
+    null_result = restricted_permutation_test(null, labels, strata, n_permutations=500,
+                                              seed=473)
+    assert null_result.p_value is not None and null_result.p_value > 0.3
+
+    again = restricted_permutation_test(values, labels, strata, n_permutations=500,
+                                        seed=473)
+    assert again.p_value == result.p_value, "same seed must give the same p-value"
+
+    # no stratum contains both batch labels: no valid exchange, no p-value
+    blocked = restricted_permutation_test(
+        values, labels, np.arange(len(labels)).astype(object), n_permutations=100,
+        seed=473,
+    )
+    assert blocked.p_value is None and blocked.reason

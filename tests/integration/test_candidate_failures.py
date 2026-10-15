@@ -59,7 +59,10 @@ def test_candidate_errors_become_records_and_keep_tracebacks(candidate_run, monk
     assert str(error) in result.reason
     assert result.output_path is None
     assert result.validation["produced_output"] is False
-    assert not layout.corrected_h5ad("boom").exists()
+    # The Snakemake rule declares corrected.h5ad as an output, so a failed candidate
+    # writes the unmodified baseline in its place; the failure lives in the result,
+    # which is what every consumer reads before the file.
+    assert layout.corrected_h5ad("boom").exists()
     log = (layout.root / "logs" / "correct_boom.log").read_text()
     assert type(error).__name__ in log
     assert str(error) in log
@@ -109,7 +112,7 @@ def test_failed_retry_invalidates_previous_output_and_metrics(candidate_run, mon
     monkeypatch.setattr(backend, "run", fail)
     pipeline.stage_correct("boom", config_path, project, layout)
     assert CorrectionResult.read(layout.correction_result("boom")).status is CorrectionStatus.FAILED
-    assert not layout.corrected_h5ad("boom").exists()
+    assert layout.corrected_h5ad("boom").exists()
     assert not layout.metric_result("boom").exists()
     pipeline.stage_metrics("boom", config_path, project, layout)
     assert MetricResult.read(layout.metric_result("boom")).records == []
@@ -118,16 +121,21 @@ def test_failed_retry_invalidates_previous_output_and_metrics(candidate_run, mon
 def test_partial_export_is_removed_and_failure_is_recorded(candidate_run, monkeypatch):
     config_path, project, layout = candidate_run
     monkeypatch.setattr(get_backend("cycombine"), "run", get_backend("none").run)
+    real_write = pipeline.write_candidate_output
 
     def fail_write(dataset, matrix, path, **kwargs):
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(b"incomplete H5AD")
-        raise OSError("candidate export failed")
+        # Fail only the correction export (the call that carries output_scale); the
+        # failure candidate's baseline write must succeed so the declared output exists.
+        if "output_scale" in kwargs:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(b"incomplete H5AD")
+            raise OSError("candidate export failed")
+        return real_write(dataset, matrix, path, **kwargs)
 
     monkeypatch.setattr(pipeline, "write_candidate_output", fail_write)
     pipeline.stage_correct("boom", config_path, project, layout)
     assert CorrectionResult.read(layout.correction_result("boom")).status is CorrectionStatus.FAILED
-    assert not layout.corrected_h5ad("boom").exists()
+    assert layout.corrected_h5ad("boom").read_bytes() != b"incomplete H5AD"
 
 
 @pytest.mark.parametrize("invalidity", ["shape", "non-finite"])
@@ -147,7 +155,7 @@ def test_unvalidated_backend_output_is_contained_at_export(candidate_run, monkey
     result = CorrectionResult.read(layout.correction_result("boom"))
     assert result.status is CorrectionStatus.FAILED
     assert invalidity in result.reason
-    assert not layout.corrected_h5ad("boom").exists()
+    assert layout.corrected_h5ad("boom").exists()
 
 
 def test_non_success_return_never_exports_a_matrix(candidate_run, monkeypatch):
@@ -162,7 +170,7 @@ def test_non_success_return_never_exports_a_matrix(candidate_run, monkeypatch):
     monkeypatch.setattr(get_backend("cycombine"), "run", failed_result)
     pipeline.stage_correct("boom", config_path, project, layout)
     assert CorrectionResult.read(layout.correction_result("boom")).status is CorrectionStatus.FAILED
-    assert not layout.corrected_h5ad("boom").exists()
+    assert layout.corrected_h5ad("boom").exists()
 
 
 def test_availability_failure_cannot_mask_original_candidate_error(candidate_run, monkeypatch):

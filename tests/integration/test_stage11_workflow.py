@@ -193,7 +193,9 @@ def test_missing_backend_output_keeps_the_workflow_and_report_usable(tmp_path: P
     candidate_dir = outdir / "candidates" / "broken_output"
     correction = json.loads((candidate_dir / "correction_result.json").read_text())
     assert correction["status"] == "failed"
-    assert not (candidate_dir / "corrected.h5ad").exists()
+    # The declared output always exists: a failed candidate's corrected.h5ad is the
+    # unmodified baseline, and the result is what records that it is not a correction.
+    assert (candidate_dir / "corrected.h5ad").exists()
     metrics = json.loads((outdir / "metrics" / "broken_output" / "metric_result.json").read_text())
     assert metrics["records"] == [] and metrics["status"] == "ineligible"
     assert outdir.joinpath("candidates", "uncorrected", "corrected.h5ad").exists()

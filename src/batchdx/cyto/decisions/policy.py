@@ -50,7 +50,6 @@ class Policy:
     #: correcting.  Uncalibrated.
     no_effect_emd: float = 0.05
     require_reference_supported: bool = True
-    allow_clustering_labels_to_support_recommendation: bool = False
     threshold_origins: dict[str, str] = field(default_factory=lambda: {
         "min_coverage": "uncalibrated engineering default",
         "min_emd_reduction": "uncalibrated engineering default",
@@ -58,19 +57,34 @@ class Policy:
         "max_joint_structure_change": "uncalibrated engineering default",
         "no_effect_emd": "uncalibrated engineering default",
     })
+    #: Per-threshold calibration evidence: threshold name -> reference to a calibration
+    #: artifact (path, URI or hash).  Origins are self-declared and the artifact is not
+    #: re-verified here, but a policy that declares itself calibrated must at least name
+    #: what it was calibrated against, for every threshold, by construction.
+    calibration_artifacts: dict[str, str] = field(default_factory=dict)
 
     @property
     def any_threshold_uncalibrated(self) -> bool:
-        return any("uncalibrated" in v for v in self.threshold_origins.values())
+        for name, origin in self.threshold_origins.items():
+            if "uncalibrated" in origin:
+                return True
+            if not self.calibration_artifacts.get(name):
+                # An origin that merely avoids the word "uncalibrated" is not
+                # calibration evidence; a calibrated policy must name its artifact.
+                return True
+        return False
 
 
 POLICIES: dict[str, Policy] = {
     "conservative": Policy(name="conservative"),
+    # Relaxes the evidence-quantity gates, never the attribution gates: clustering
+    # labels can never support a recommendation under any policy, and neither can a
+    # confounded design.  "Permissive" loosens how much evidence is required, not
+    # what kind of evidence counts.
     "permissive": Policy(
         name="permissive",
         min_coverage=0.4,
         require_reference_supported=False,
-        allow_clustering_labels_to_support_recommendation=True,
     ),
 }
 
@@ -151,14 +165,15 @@ def assess_candidates(
     warnings: list[str] = []
     assessments: list[CandidateAssessment] = []
 
-    reference_supported = any(
-        c.support is ComparisonSupport.REFERENCE_SUPPORTED
-        for c in design.comparisons if c.population is None
-    )
     all_non_identifiable = bool(design.comparisons) and all(
         c.support is ComparisonSupport.NON_IDENTIFIABLE
         for c in design.comparisons if c.population is None
     )
+    # Support status per population-free comparison, so the reference gate can be
+    # evaluated on the comparisons a candidate's evidence actually rests on.
+    support_by_comparison = {
+        c.comparison_id: c.support for c in design.comparisons if c.population is None
+    }
 
     identity_metrics = metrics.get(identity_candidate_id)
     baseline_emd = (
@@ -219,6 +234,18 @@ def assess_candidates(
             ))
             continue
 
+        # Which comparisons does this candidate's EMD evidence actually rest on, and is
+        # every one of them reference-supported?  A global any() would let improvement
+        # measured on conditional contrasts ride on an unrelated reference-supported pair.
+        evidence_comparisons = {
+            r.comparison_id for r in records
+            if r.metric_name == "emd_within_population" and r.status is MetricStatus.OK
+        }
+        candidate_reference_supported = bool(evidence_comparisons) and all(
+            support_by_comparison.get(cid) is ComparisonSupport.REFERENCE_SUPPORTED
+            for cid in evidence_comparisons
+        )
+
         reduction_record = reduction_by_candidate.get(candidate_id)
         reduction = (
             float(reduction_record.value)
@@ -227,7 +254,11 @@ def assess_candidates(
             and reduction_record.value is not None
             else None
         )
-        coverage = float(reduction_record.coverage or 0.0) if reduction_record else 0.0
+        coverage = (
+            float(reduction_record.coverage)
+            if reduction_record is not None and reduction_record.coverage is not None
+            else None
+        )
         emd_median, emd_ok = _summarise(records, "emd_within_population")
         joint_median, joint_ok = _summarise(records, "joint_structure_distance")
         compression, _ = _summarise(records, "mad_compression_fraction")
@@ -272,28 +303,56 @@ def assess_candidates(
                     f"joint_structure_distance median {joint_median:.3g} exceeds "
                     f"{policy.max_joint_structure_change:.3g}"
                 )
-            if guardrails:
+            if design.confounded_factors:
+                # Design-level backstop, independent of per-backend eligibility rules: a
+                # batch factor perfectly confounded with a protected biological factor
+                # makes the batch contrast unattributable, whatever a measured reference
+                # or a backend's own identifiability check says.
+                state, reason = DecisionState.NON_IDENTIFIABLE, (
+                    f"protected factor(s) {design.confounded_factors} are perfectly "
+                    f"confounded with the batch factor {design.correction_factor!r}; no "
+                    "automatic correction recommendation is possible for the affected "
+                    "contrast, and adding the factor as a covariate does not help"
+                )
+            elif guardrails:
                 state, reason = DecisionState.REJECTED_DISTORTION, "; ".join(guardrails)
-            elif coverage < policy.min_coverage or reduction is None:
+            elif reduction is None:
                 state, reason = DecisionState.INSUFFICIENT_EVIDENCE, (
-                    f"comparison coverage {coverage:.2f} is below the declared minimum "
-                    f"{policy.min_coverage:.2f}" if reduction is not None else
                     "no relative reduction could be computed against the identity candidate"
+                )
+            elif coverage is None or coverage < policy.min_coverage:
+                state, reason = DecisionState.INSUFFICIENT_EVIDENCE, (
+                    "comparison coverage is unavailable for this candidate"
+                    if coverage is None else
+                    f"comparison coverage {coverage:.2f} is below the declared minimum "
+                    f"{policy.min_coverage:.2f}"
+                )
+            elif compression is None or joint_median is None:
+                # A guardrail metric with no usable record cannot be shown to be
+                # satisfied; an unguarded candidate is insufficient evidence, not a
+                # silent pass.
+                missing = [name for name, v in (
+                    ("mad_compression_fraction", compression),
+                    ("joint_structure_distance", joint_median),
+                ) if v is None]
+                state, reason = DecisionState.INSUFFICIENT_EVIDENCE, (
+                    f"preservation guardrail(s) {missing} have no usable record for this "
+                    "candidate, so distortion cannot be ruled out"
                 )
             elif reduction < policy.min_emd_reduction:
                 state, reason = DecisionState.ELIGIBLE_FOR_REVIEW, (
                     f"technical improvement {reduction:.3g} is below the declared minimum "
                     f"{policy.min_emd_reduction:.3g}"
                 )
-            elif policy.require_reference_supported and not reference_supported:
+            elif policy.require_reference_supported and not candidate_reference_supported:
                 state, reason = DecisionState.ELIGIBLE_FOR_REVIEW, (
                     "no batch contrast is supported by a measured reference; the evidence "
                     "is conditional on comparable biological samples behaving identically"
                 )
-            elif (
-                sampling.label_source is LabelTier.CLUSTERING
-                and not policy.allow_clustering_labels_to_support_recommendation
-            ):
+            elif sampling.label_source is LabelTier.CLUSTERING:
+                # Invariant, not a policy option: labels derived from clustering of the
+                # uncorrected baseline may themselves be batch-driven, so they can never
+                # alone support a recommendation under any policy.
                 state, reason = DecisionState.ELIGIBLE_FOR_REVIEW, (
                     "evaluation labels come from clustering of the uncorrected baseline and "
                     "may themselves be batch-driven; they cannot alone support a recommendation"
@@ -317,7 +376,8 @@ def assess_candidates(
             else:
                 state, reason = DecisionState.RECOMMENDED_UNDER_POLICY, (
                     f"coverage {coverage:.2f}, improvement {reduction:.3g}, no guardrail "
-                    "triggered"
+                    "triggered" if coverage is not None else
+                    f"improvement {reduction:.3g}, no guardrail triggered"
                 )
 
         assessments.append(CandidateAssessment(
@@ -333,6 +393,14 @@ def assess_candidates(
         withheld = (
             "no candidate cleared every gate under this policy; review the assessments and "
             "their reasons. Retaining the uncorrected data is a valid outcome."
+        )
+    elif len(recommended) > 1:
+        # A tie is not a silent None: the report must say why no single candidate is named.
+        withheld = (
+            f"{len(recommended)} candidates cleared every gate under this policy "
+            f"({', '.join(sorted(recommended))}); the policy does not break ties between "
+            "fully qualified candidates. Choose on grounds the policy does not encode "
+            "(cost, throughput, laboratory preference) and record the choice."
         )
 
     groups: dict[str, list[CandidateAssessment]] = defaultdict(list)

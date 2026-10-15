@@ -126,12 +126,8 @@ SUPPORTED_VALUES: dict[str, tuple[tuple[Any, ...], str]] = {
         "reads that file and would otherwise have nothing to score; 'false' would leave "
         "the run unable to proceed",
     ),
-    "exports.fcs": (
-        (False,),
-        "no rule calls the FCS exporter in this build "
-        "(batchdx.cyto.io.export.export_fcs_per_sample has no caller), so 'true' would "
-        "promise a file that is never written. See docs/blocked.md",
-    ),
+    # exports.fcs is deliberately absent: the report stage calls the exporter when the
+    # key is true, so both values are supported and none is pinned.
 }
 
 
@@ -253,6 +249,49 @@ class PreprocessingConfig(_Strict):
         return self
 
 
+class BiologicalContrastConfig(_Strict):
+    """One prespecified biological contrast that correction must not destroy.
+
+    A contrast is a difference between two levels of a sample-level factor (usually
+    the biological ``group``) on one declared marker.  The tolerance is the maximum
+    change in that difference a candidate may cause for the contrast to count as
+    preserved.  Both the tolerance and *where it came from* are configuration: a
+    tolerance without a declared origin is rejected, because an unexplained cutoff is
+    not a predeclared tolerance.
+    """
+
+    contrast_id: str
+    marker: str
+    group_a: str
+    group_b: str
+    #: Sample-level factor whose levels ``group_a``/``group_b`` are.  Must resolve on
+    #: the sample manifest; ``group`` is the usual choice.
+    group_factor: str = "group"
+    #: Maximum tolerated change in the contrast's effect size (in units of the declared
+    #: expression scale), after correction relative to before.
+    preservation_tolerance: float
+    #: Declared origin of ``preservation_tolerance`` (e.g. a preanalysis document, a
+    #: published minimal clinically important difference, or an explicit pilot).
+    preservation_tolerance_origin: str
+
+    @field_validator("preservation_tolerance")
+    @classmethod
+    def _positive_tolerance(cls, v: float) -> float:
+        if v <= 0:
+            raise ValueError("preservation_tolerance must be strictly positive")
+        return v
+
+    @field_validator("preservation_tolerance_origin")
+    @classmethod
+    def _origin_declared(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError(
+                "preservation_tolerance_origin must name where the tolerance comes from; "
+                "a threshold without a declared origin is not predeclared"
+            )
+        return v
+
+
 class DesignConfig(_Strict):
     correction_batch: str
     nested_within: str | None = None
@@ -270,6 +309,21 @@ class DesignConfig(_Strict):
     minimum_batches_origin: str = (
         "package default; declared in config/ and reported in design_audit.json"
     )
+    #: Prespecified biological contrasts that every candidate is assessed against.
+    #: Empty by default: no contrast is invented that the analyst did not declare.
+    biological_contrasts: list[BiologicalContrastConfig] = Field(default_factory=list)
+
+    @field_validator("biological_contrasts")
+    @classmethod
+    def _unique_contrast_ids(
+        cls, v: list[BiologicalContrastConfig]
+    ) -> list[BiologicalContrastConfig]:
+        seen: set[str] = set()
+        for c in v:
+            if c.contrast_id in seen:
+                raise ValueError(f"duplicate biological contrast id {c.contrast_id!r}")
+            seen.add(c.contrast_id)
+        return v
 
     @model_validator(mode="after")
     def _check_reference_columns(self) -> DesignConfig:
@@ -407,15 +461,14 @@ class ReportConfig(_Strict):
 
 
 class ExportsConfig(_Strict):
-    #: Pinned: see ``SUPPORTED_VALUES``.  The corrected H5AD is not optional, and the
-    #: FCS exporter is not called by any rule in this build.
+    #: Pinned: see ``SUPPORTED_VALUES``.  The corrected H5AD is not optional.  The FCS
+    #: exporter is called by the report stage when ``fcs`` is true, so both values work.
     h5ad: bool = True
     fcs: bool = False
 
     @model_validator(mode="after")
     def _exports_are_pinned(self) -> ExportsConfig:
         _check_supported("exports.h5ad", self.h5ad)
-        _check_supported("exports.fcs", self.fcs)
         return self
 
 

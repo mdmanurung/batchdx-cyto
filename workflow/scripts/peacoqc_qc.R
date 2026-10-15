@@ -227,7 +227,10 @@ main <- function() {
     peacoqc_version = as.character(utils::packageVersion("PeacoQC")),
     flowcore_version = as.character(utils::packageVersion("flowCore")),
     r_version = paste(R.version$major, R.version$minor, sep = "."),
-    warnings = c(warnings_all, unlist(lapply(results, function(r) as.character(r$warnings)))),
+    ## unname(): lapply over the named `results` list attaches the sample_id as a
+    ## name, and a named character vector serialises as a JSON object rather than
+    ## the array of strings the Python validator requires.
+    warnings = unname(c(warnings_all, unlist(lapply(results, function(r) as.character(r$warnings))))),
     elapsed_seconds = as.numeric(difftime(Sys.time(), started, units = "secs"))
   ))
 }

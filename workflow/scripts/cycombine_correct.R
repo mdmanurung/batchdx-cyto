@@ -45,7 +45,46 @@ main <- function() {
     df[[covar_name]] <- as.character(p$covar)
   }
 
+  ## Per-cell sample ids and reference identity, supplied by the Python adapter.
+  sample_ids <- if (is.null(p$sample)) rep("", nrow(mat)) else as.character(p$sample)
+  ref_ids <- if (is.null(p$reference)) rep("", nrow(mat)) else as.character(p$reference)
+  if (length(sample_ids) != nrow(mat) || length(ref_ids) != nrow(mat)) {
+    stop("per-cell sample/reference vectors do not match the number of input events")
+  }
+  df$sample <- sample_ids
+
+  ## Anchor route.  Upstream correct_data(anchor=...) is marked Experimental and uses
+  ## the anchor as a ComBat covariate, treating cells that share an anchor value as
+  ## replicates.  The anchor is therefore built from reference identity: cells from
+  ## measured reference samples carry their reference id, every other cell carries its
+  ## own sample id, so non-replicate samples never share an anchor value.
+  anchor_requested <- !is.null(as_opt(p$anchor))
+  if (anchor_requested) {
+    anchor <- ifelse(ref_ids != "", ref_ids, sample_ids)
+    collision <- intersect(unique(ref_ids[ref_ids != ""]), unique(sample_ids[ref_ids == ""]))
+    if (length(collision)) {
+      stop(sprintf(
+        "anchor construction is ambiguous: reference id(s) %s also occur as sample id(s) of non-reference samples; reference ids and sample ids share one anchor namespace",
+        paste(collision, collapse = ", ")))
+    }
+    per_anchor <- tapply(sample_ids, anchor, function(x) length(unique(x)))
+    shared <- unique(ref_ids[ref_ids != ""])
+    bad <- setdiff(names(per_anchor)[per_anchor > 1], shared)
+    if (length(bad)) {
+      stop(sprintf(
+        "anchor value(s) %s cover more than one sample without being a shared reference id; upstream treats cells sharing an anchor value as replicates, so every non-replicate sample needs a unique anchor value",
+        paste(bad, collapse = ", ")))
+    }
+    df$anchor <- anchor
+  }
+
   warnings_out <- character(0)
+  if (anchor_requested && !any(ref_ids != "")) {
+    warnings_out <- c(warnings_out, paste(
+      "no measured reference sample was supplied, so every cell carries its own sample id",
+      "as anchor value; upstream marks the anchor route experimental and warns it may be",
+      "confounded with the condition"))
+  }
 
   set.seed(as.integer(p$seed))
   normalised <- cyCombine::normalize(df,
@@ -74,6 +113,17 @@ main <- function() {
     confounded_nodes <- union(confounded_nodes,
                               names(node_confound)[vapply(node_confound, isTRUE, logical(1))])
   }
+  ## The per-node identifiability check extends to the anchor column: upstream runs
+  ## check_confound(batch, model.matrix(~anchor)) inside every label group, and a node
+  ## where the anchor is confounded with batch contributes no anchor adjustment.
+  if (anchor_requested) {
+    node_anchor <- tapply(seq_along(labels), labels, function(idx) {
+      if (length(unique(df$anchor[idx])) < 2) return(FALSE)
+      isTRUE(cyCombine:::check_confound(df$batch[idx],
+                                        stats::model.matrix(~df$anchor[idx])))
+    })
+    confounded_nodes <- union(confounded_nodes, names(node_anchor)[node_anchor])
+  }
 
   corrected <- cyCombine::correct_data(
     df,
@@ -81,7 +131,7 @@ main <- function() {
     markers = markers,
     method = "ComBat",
     covar = covar_name,
-    anchor = as_opt(p$anchor),
+    anchor = if (anchor_requested) "anchor" else NULL,
     ref.batch = as_opt(p$ref_batch),
     parametric = isTRUE(p$parametric)
   )

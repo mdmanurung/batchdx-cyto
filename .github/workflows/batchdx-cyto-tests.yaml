@@ -141,3 +141,32 @@ jobs:
             build/status.md
             build/r-env.log
             docs/audit/
+
+  # The wheel is the shipped artifact; CI must test it, not only the editable tree.
+  # This is the check that would have caught the audit CLI resolving scripts/ outside
+  # the installed package.
+  wheel-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Build the wheel
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+      - name: Install into a fresh venv and smoke the CLI
+        run: |
+          python -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install dist/*.whl
+          /tmp/smoke/bin/batchdx-cyto info
+          /tmp/smoke/bin/python -c "
+          from pathlib import Path
+          import batchdx.cyto.cli as m
+          p = Path(m.__file__).resolve().parent / 'workflow_assets' / 'scripts'
+          assert (p / 'audit_upstream.py').exists(), 'audit scripts missing from wheel'
+          assert (p / 'audit_upstream.R').exists(), 'audit R script missing from wheel'
+          print('wheel contents ok')
+          "

@@ -81,6 +81,7 @@ packages = ["src/batchdx"]
 "workflow" = "batchdx/cyto/workflow_assets/workflow"
 "config" = "batchdx/cyto/workflow_assets/config"
 "examples" = "batchdx/cyto/workflow_assets/examples"
+"scripts" = "batchdx/cyto/workflow_assets/scripts"
 
 [tool.hatch.build.targets.sdist]
 # LICENSE is always included by hatchling; CITATION.cff and THIRD_PARTY_NOTICES.md are

@@ -26,7 +26,7 @@ from batchdx.cyto.schemas.enums import CorrectionStatus
 
 
 class BackendError(RuntimeError):
-    """Raised when a backend cannot run as configured."""
+    """A correction backend failed or refused to run."""
 
 
 class BackendNotAvailable(BackendError):

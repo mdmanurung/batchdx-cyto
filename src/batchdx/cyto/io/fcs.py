@@ -14,6 +14,7 @@ values is told rather than discovering it later.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -36,6 +37,10 @@ CANDIDATE_KEYWORD = "BATCHDX_CANDIDATE"
 #: expecting bit equality fails on values that were never wrong.
 FCS_STORAGE_DTYPE = np.float32
 
+#: How the FCS Time channel is recognised.  The FCS standard does not fix the name;
+#: instruments in practice use $PnN/$PnS values beginning with "Time".
+TIME_CHANNEL_PATTERN = re.compile(r"^time", re.IGNORECASE)
+
 
 class FCSError(ValueError):
     """Raised for an unreadable FCS file or an unusable channel layout."""
@@ -47,13 +52,39 @@ class FCSContents:
 
     path: Path
     events: np.ndarray  # (n_events, n_channels), float64
-    channel_names: list[str]  # $PnN
+    channel_names: list[str]  # resolved channel names (see ``channel_key``)
     channel_labels: list[str]  # $PnS, empty string where absent
     keywords: dict[str, str]
+    #: Which keyword the resolved channel names came from: "$PnN", "$PnS", or
+    #: "positional" when both keyword columns were duplicate or empty.
+    channel_key: str = "$PnN"
+    #: Name of the FCS Time channel and its per-event values, when the file has one.
+    time_channel: str | None = None
+    time_values: np.ndarray | None = None
 
     @property
     def n_events(self) -> int:
         return int(self.events.shape[0])
+
+
+def _usable(values: list[str]) -> bool:
+    """A keyword column is usable when every value is non-empty and unique."""
+    return bool(values) and all(v.strip() for v in values) and len(set(values)) == len(values)
+
+
+def _resolve_channel_names(names: list[str], labels: list[str]) -> tuple[list[str], str]:
+    """Resolve channel identity: $PnN, then $PnS, then positional mapping.
+
+    Duplicate or empty $PnN values used to be a hard error; they are now resolved by
+    falling back to $PnS and then to the channel position, and the key that was used
+    is recorded on :class:`FCSContents`.  Positional mapping is unambiguous by
+    construction, so no genuine ambiguity remains once it is reached.
+    """
+    if _usable(names):
+        return names, "$PnN"
+    if _usable(labels):
+        return labels, "$PnS"
+    return [f"P{i + 1}" for i in range(len(names))], "positional"
 
 
 def read_fcs(path: str | Path) -> FCSContents:
@@ -68,26 +99,37 @@ def read_fcs(path: str | Path) -> FCSContents:
         raise FCSError(f"{p}: could not be read as FCS: {exc}") from exc
 
     n_channels = int(fd.channel_count)
+    if n_channels <= 0:
+        raise FCSError(f"{p}: the file declares {n_channels} channels")
     events = np.reshape(np.asarray(fd.events, dtype=np.float64), (-1, n_channels))
 
-    names: list[str] = []
-    labels: list[str] = []
+    names_raw: list[str] = []
+    labels_raw: list[str] = []
     for i in range(1, n_channels + 1):
         # flowio keys channels by integer and lower-cases the FCS keyword names.
         meta = fd.channels.get(i) or fd.channels.get(str(i)) or {}
-        names.append(str(meta.get("pnn", meta.get("PnN", f"P{i}"))))
-        labels.append(str(meta.get("pns", meta.get("PnS", "")) or ""))
+        names_raw.append(str(meta.get("pnn", meta.get("PnN", "")) or ""))
+        labels_raw.append(str(meta.get("pns", meta.get("PnS", "")) or ""))
 
-    if len(set(names)) != len(names):
-        dupes = sorted({n for n in names if names.count(n) > 1})
-        raise FCSError(
-            f"{p}: channel name(s) {dupes} appear more than once; "
-            "the channel to feature mapping would be ambiguous"
-        )
+    names, channel_key = _resolve_channel_names(names_raw, labels_raw)
+
+    time_idx = next(
+        (i for i in range(n_channels)
+         if TIME_CHANNEL_PATTERN.search(names_raw[i])
+         or TIME_CHANNEL_PATTERN.search(labels_raw[i])),
+        None,
+    )
+    time_channel = None
+    time_values = None
+    if time_idx is not None:
+        time_channel = names_raw[time_idx] or labels_raw[time_idx] or names[time_idx]
+        time_values = events[:, time_idx].copy()
 
     keywords = {str(k): str(v) for k, v in fd.text.items()}
     return FCSContents(path=p, events=events, channel_names=names,
-                       channel_labels=labels, keywords=keywords)
+                       channel_labels=labels_raw, keywords=keywords,
+                       channel_key=channel_key,
+                       time_channel=time_channel, time_values=time_values)
 
 
 def write_fcs(

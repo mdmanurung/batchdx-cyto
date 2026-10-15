@@ -132,6 +132,9 @@ rule diagnose:
         sampling=str(LAYOUT.sampling_manifest),
     output:
         result=str(LAYOUT.root / "diagnostics" / "{detector}" / "detector_result.json"),
+        # Detector tables and plots are written next to the result; declaring the
+        # directory keeps deletion of any of them a rebuild trigger.
+        artifacts=directory(str(LAYOUT.root / "diagnostics" / "{detector}")),
     log:
         str(OUTDIR / "logs" / "diagnose_{detector}.log"),
     threads: 2
@@ -153,6 +156,7 @@ rule correct:
         sampling=str(LAYOUT.sampling_manifest),
     output:
         result=str(LAYOUT.root / "candidates" / "{candidate}" / "correction_result.json"),
+        corrected=str(LAYOUT.root / "candidates" / "{candidate}" / "corrected.h5ad"),
     log:
         str(OUTDIR / "logs" / "correct_{candidate}.log"),
     threads: 4

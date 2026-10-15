@@ -242,3 +242,34 @@ def test_flag_counts_are_not_presented_as_probabilities(frozen, tmp_path) -> Non
             )
         if assessment.value is not None:
             assert np.isfinite(assessment.value)
+
+
+def test_drift_detector_reports_undefined_never_zero_for_a_constant_marker(
+    frozen, tmp_path
+) -> None:
+    """Regression: a constant marker has no defined rank trend.  The detector used to
+    coerce the NaN Spearman to 0.0 with status OK — a missing value recorded as a
+    measured zero, violating the package's own contract."""
+    config, dataset, design, sampling = frozen
+
+    # Force one marker to be constant within one sample of the baseline.
+    marker = "CD8"
+    sid = sorted(dataset.samples)[0]
+    obs = dataset.adata.obs
+    mask = (obs["sample_id"] == sid).to_numpy()
+    layer = dataset.adata.layers["preprocessed"]
+    col = list(dataset.adata.var_names).index(marker)
+    layer[mask, col] = 1.0
+
+    result = get_detector("acquisition_drift").run(
+        dataset, _context(frozen, tmp_path / "const")
+    )
+    assert result.status == "ok"
+    target = [
+        a for a in result.assessments
+        if a.sample_id == sid and a.marker == marker
+        and a.statistic == "spearman_rho_vs_acquisition_order"
+    ]
+    assert target, "no drift assessment for the constant sample-marker pair"
+    assert all(a.status is MetricStatus.UNDEFINED and a.value is None for a in target)
+    assert not any(a.flag for a in target)

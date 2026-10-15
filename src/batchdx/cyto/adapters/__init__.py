@@ -23,12 +23,14 @@ from batchdx.cyto.adapters.base import (
     register_backend,
     resolve_parameters,
 )
+from batchdx.cyto.adapters.validate import OutputValidationError
 
 __all__ = [
     "BackendCapabilities",
     "BackendContext",
     "BackendError",
     "BackendNotAvailable",
+    "OutputValidationError",
     "CorrectionBackend",
     "available_backends",
     "candidate_signature",
