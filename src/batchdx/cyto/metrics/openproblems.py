@@ -55,7 +55,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 import numpy as np
-import scib_metrics
 from scipy.signal import find_peaks
 from scipy.stats import gaussian_kde, wasserstein_distance
 
@@ -76,6 +75,25 @@ from batchdx.cyto.schemas.contracts import (
     SamplingManifest,
 )
 from batchdx.cyto.schemas.enums import MetricStatus
+
+try:
+    import scib_metrics
+except ModuleNotFoundError:  # exercised by the wheel-smoke job's fresh venv
+    # The LISI components are the only consumers.  The package imports and every
+    # non-LISI metric works without it; the LISI rows report the obstacle instead of
+    # a value, as the extras contract in pyproject.toml promises.
+    scib_metrics = None
+
+
+def _scib_metrics_obstacle() -> str | None:
+    """Why the LISI components cannot run here, or ``None`` when they can."""
+
+    if scib_metrics is not None:
+        return None
+    return (
+        "scib-metrics is not installed in this environment; the LISI components are "
+        "deferred until it is (install batchdx-cyto[metrics])"
+    )
 
 #: Cells required on *each* side of a comparison, as declared in the pinned components:
 #: ``emd/helper.py`` skips a cell type below 50 cells, ``average_batch_r2/script.py``
@@ -990,6 +1008,13 @@ def _ilisi(
             ),
         )]
 
+    obstacle = _scib_metrics_obstacle()
+    if obstacle:
+        return [_lisi_record(
+            I_LISI, sampling, run_id, candidate_id, None, per_cell=np.array([]),
+            n_cells=n_cells, n_levels=len(batches), n_donors=len(set(cells.donor)),
+            status=MetricStatus.FAILED, reason=obstacle,
+        )]
     per_cell = local_inverse_simpson_index(
         candidate.expression, cells.batch, seed=ILISI_SEED
     )
@@ -1038,6 +1063,13 @@ def _clisi(
             ),
         )]
 
+    obstacle = _scib_metrics_obstacle()
+    if obstacle:
+        return [_lisi_record(
+            C_LISI, sampling, run_id, candidate_id, None, per_cell=np.array([]),
+            n_cells=n_cells, n_levels=len(populations), n_donors=n_donors,
+            status=MetricStatus.FAILED, reason=obstacle,
+        )]
     per_cell = local_inverse_simpson_index(
         candidate.expression, cells.population, seed=CLISI_SEED
     )
