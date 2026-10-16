@@ -26,6 +26,7 @@ The cost is real: the module runs three full benchmark executions and is marked 
 from __future__ import annotations
 
 import hashlib
+import json
 import os
 import shutil
 import signal
@@ -80,8 +81,37 @@ def _run(project: Path, outdir: Path) -> subprocess.CompletedProcess:
                           text=True, check=False, env=_env())
 
 
+#: JSON keys that record how long a step took.  They differ between any two runs by
+#: definition -- the same reason ``benchmarks/`` is excluded -- and asserting on them
+#: would be asserting that the machine is idle.  Measured on the CytoNorm fixture:
+#: two trainings with the same seed on the same inputs wrote identical corrected FCS
+#: bytes and ``r_elapsed_seconds`` values of 11.74 vs 11.69.
+_VOLATILE_JSON_KEYS = {"elapsed_seconds", "r_elapsed_seconds"}
+
+#: FlowSOM model files under ``work/cytonorm_train/``.  Measured on the CytoNorm
+#: fixture: retraining with the same seed on the same inputs reproduces the corrected
+#: FCS bytes exactly but not the model's RDS serialization, so the model file carries
+#: no reproducibility signal the corrected outputs do not already carry.  The
+#: corrected FCS files themselves stay byte-compared.
+_VOLATILE_SUFFIXES = ("CytoNorm_FlowSOM.RDS",)
+
+
+def _normalize_json(path: Path) -> bytes:
+    """JSON bytes with the measured-volatile timing keys removed, recursively."""
+
+    def strip(node: object) -> object:
+        if isinstance(node, dict):
+            return {k: strip(v) for k, v in node.items() if k not in _VOLATILE_JSON_KEYS}
+        if isinstance(node, list):
+            return [strip(v) for v in node]
+        return node
+
+    normalized = strip(json.loads(path.read_text(encoding="utf-8")))
+    return json.dumps(normalized, sort_keys=True, separators=(",", ":")).encode("utf-8")
+
+
 def _digests(outdir: Path) -> dict[str, str]:
-    """Content hashes of every file under ``outdir``, minus ``benchmarks/``.
+    """Content hashes of every file under ``outdir``, minus the measured-volatile files.
 
     ``benchmarks/*.tsv`` records how long each rule took, so it differs between any two
     runs by definition and asserting on it would be asserting that the machine is idle.
@@ -91,7 +121,12 @@ def _digests(outdir: Path) -> dict[str, str]:
     (``candidates/*/correction_result.json``, ``candidates/*/**/params.json``,
     ``candidates/*/**/result.json``, ``report/report.html``) -- which cannot arise here,
     because the comparison is always against the same output directory -- and on
-    ``benchmarks/``. Nothing else in the tree carries a timestamp, hostname or run id.
+    ``benchmarks/``.  Three measured exceptions are normalized rather than compared
+    raw: the timing keys in JSON artifacts (``elapsed_seconds`` in the R result
+    envelopes, ``resources.r_elapsed_seconds`` in the correction results) and the
+    FlowSOM model RDS, whose serialization differs between trainings that produce
+    byte-identical corrected output.  Nothing else in the tree carries a timestamp,
+    hostname or run id.
     """
 
     digests: dict[str, str] = {}
@@ -101,7 +136,12 @@ def _digests(outdir: Path) -> dict[str, str]:
         rel = path.relative_to(outdir).as_posix()
         if rel.startswith("benchmarks/"):
             continue
-        digests[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
+        if rel.endswith(_VOLATILE_SUFFIXES):
+            continue
+        if rel.endswith(".json"):
+            digests[rel] = hashlib.sha256(_normalize_json(path)).hexdigest()
+        else:
+            digests[rel] = hashlib.sha256(path.read_bytes()).hexdigest()
     return digests
 
 
