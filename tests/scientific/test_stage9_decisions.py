@@ -9,8 +9,13 @@ from batchdx.cyto.adapters import BackendContext, get_backend
 from batchdx.cyto.decisions import POLICIES, assess_candidates
 from batchdx.cyto.decisions.policy import Policy
 from batchdx.cyto.metrics import compute_common_metrics, compute_reductions
-from batchdx.cyto.schemas.contracts import MetricResult
-from batchdx.cyto.schemas.enums import CorrectionStatus, DecisionState, LabelTier
+from batchdx.cyto.schemas.contracts import MetricRecord, MetricResult
+from batchdx.cyto.schemas.enums import (
+    CorrectionStatus,
+    DecisionState,
+    LabelTier,
+    MetricStatus,
+)
 
 
 def _score(frozen, backend_name, candidate_id, tmp_path):
@@ -111,6 +116,75 @@ def test_a_calibrated_policy_can_recommend(frozen, tmp_path) -> None:
         assert decision.recommended_candidate_id == "offset"
     finally:
         POLICIES.pop("calibrated_for_test")
+
+
+def _contrast_record(candidate_id: str, change: float, verdict: str) -> MetricRecord:
+    """A biological_contrast_change record as biology.py would emit it."""
+
+    return MetricRecord(
+        run_id="t", candidate_id=candidate_id, metric_namespace="common",
+        metric_name="biological_contrast_change", metric_version="1.0.0",
+        stage="biological_preservation", marker="CD69",
+        population="Activated", comparison_id="contrast:case_vs_control_CD69",
+        value=change, status=MetricStatus.OK,
+        reason=(
+            f"effect before 0.9, after {0.9 + change:.4g} (donor-level means); "
+            f"change {change:.4g} is beyond the predeclared preservation tolerance "
+            f"0.2 (origin: test-declared) -> {verdict}"
+        ),
+    )
+
+
+def test_a_contrast_that_moved_beyond_its_tolerance_rejects_the_candidate(
+    frozen, tmp_path
+) -> None:
+    """Biology preservation is measured in stage 8 and enforced here.
+
+    A correction can align every technical metric and still erase the effect of
+    interest; until the contrast records reached the guardrails that candidate
+    sailed through the decision on technical merit alone.
+    """
+
+    _, dataset, design, sampling = frozen
+    identity_metrics = compute_common_metrics(
+        dataset, dataset.expression(), sampling, design,
+        run_id="t", candidate_id="uncorrected",
+    )
+    identity_correction, _ = _score(frozen, "none", "uncorrected", tmp_path)
+    correction, metrics = _score(frozen, "fixture_offset_removal", "offset", tmp_path)
+
+    metrics.records.append(_contrast_record("offset", change=0.75, verdict="not_preserved"))
+    decision = _decide(
+        frozen,
+        {"uncorrected": identity_correction, "offset": correction},
+        {"uncorrected": identity_metrics, "offset": metrics},
+    )
+    assessment = next(a for a in decision.assessments if a.candidate_id == "offset")
+    assert assessment.state is DecisionState.REJECTED_DISTORTION
+    assert "biological_contrast_change" in assessment.reason
+    assert "contrast:case_vs_control_CD69" in assessment.reason
+    assert decision.recommended_candidate_id is None
+
+
+def test_a_preserved_contrast_leaves_the_candidate_eligible(frozen, tmp_path) -> None:
+    """The guardrail fires on the verdict, not on the mere presence of a change."""
+
+    _, dataset, design, sampling = frozen
+    identity_metrics = compute_common_metrics(
+        dataset, dataset.expression(), sampling, design,
+        run_id="t", candidate_id="uncorrected",
+    )
+    identity_correction, _ = _score(frozen, "none", "uncorrected", tmp_path)
+    correction, metrics = _score(frozen, "fixture_offset_removal", "offset", tmp_path)
+
+    metrics.records.append(_contrast_record("offset", change=0.02, verdict="preserved"))
+    decision = _decide(
+        frozen,
+        {"uncorrected": identity_correction, "offset": correction},
+        {"uncorrected": identity_metrics, "offset": metrics},
+    )
+    assessment = next(a for a in decision.assessments if a.candidate_id == "offset")
+    assert assessment.state is DecisionState.ELIGIBLE_FOR_REVIEW
 
 
 def test_information_destroying_correction_is_rejected(frozen, tmp_path) -> None:

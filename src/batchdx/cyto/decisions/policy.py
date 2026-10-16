@@ -303,6 +303,28 @@ def assess_candidates(
                     f"joint_structure_distance median {joint_median:.3g} exceeds "
                     f"{policy.max_joint_structure_change:.3g}"
                 )
+            # A measured biological contrast that moved beyond its own predeclared
+            # tolerance is a preservation failure, whatever the technical metrics say:
+            # a correction that erases the effect of interest has nothing to offer the
+            # downstream analysis.  The verdict lives in the record reason by the
+            # metric's declared contract, and a contrast is never aggregated across
+            # contrasts, so any single not_preserved record fails the candidate.
+            # Records that are not OK (unassessable, insufficient data) do not fire
+            # here: unassessability is attributed at the design layer, where its
+            # cause -- confounding or disjoint batch support -- is known.
+            not_preserved = [
+                r for r in records
+                if r.metric_name == "biological_contrast_change"
+                and r.status is MetricStatus.OK
+                and r.reason is not None and r.reason.endswith("-> not_preserved")
+            ]
+            if not_preserved:
+                worst = max(not_preserved, key=lambda r: abs(float(r.value)))
+                guardrails.append(
+                    f"biological_contrast_change for {worst.comparison_id} population "
+                    f"{worst.population!r} moved {worst.value:.3g}, beyond the "
+                    "contrast's predeclared preservation tolerance"
+                )
             if design.confounded_factors:
                 # Design-level backstop, independent of per-backend eligibility rules: a
                 # batch factor perfectly confounded with a protected biological factor
