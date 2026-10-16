@@ -79,7 +79,7 @@ gates:
 
   - stage: "2"
     tier: A
-    title: Ingestion, immutable data, preprocessing machinery (not yet in a run)
+    title: Ingestion, immutable data, and preprocessing wired into the run
     tests:
       - "tests/unit/test_stage2_io.py::test_h5ad_roundtrip_preserves_marker_and_channel_order"
       - "tests/unit/test_stage2_io.py::test_cell_identity_is_stable_and_unique"
@@ -150,12 +150,17 @@ gates:
       writer are implemented in `src/batchdx/cyto/preprocess/` and tested against the
       pinned reference implementation's OWN configuration files, which load unchanged; the
       transform is verified element-wise against `flowVS::transFlowVS`, and `logicle` was
-      removed from the schema because nothing here implements it. NOT satisfied: none of
-      it is wired into a run. `preprocess` operates on raw events before a baseline exists,
-      so there is no preprocessing stage, no Snakemake rule and no report section for the
-      removal log, and every shipped example takes the already-QCed bypass path. A run must
-      therefore still be handed preprocessed data, which is the behaviour this package
-      documents. See docs/blocked.md B-009.
+      removed from the schema because nothing here implements it. The chain is now wired
+      into a run: `pipeline.stage_preprocess` applies the declared gate table, the
+      per-panel asinh cofactors and the optional PeacoQC pass to raw FCS events, freezes
+      the baseline and its processing manifest, writes the removal log and a summary, and
+      owns the dataset manifest (workflow rule `preprocess`, present in the DAG only when
+      `preprocessing.enabled`); the report renders a "What the preprocessing step did"
+      section whose numbers are the summary's, and the whole path is tested end to end on
+      synthetic raw FCS (tests/integration/test_preprocess_in_run.py). NOT satisfied:
+      PeacoQC is exercised through its monkeypatched runner in that file and through its
+      own backend suite, never on real raw data, and no real-data run has used the
+      preprocessing path yet (see stage 12). See docs/blocked.md B-009.
 
   - stage: "3"
     tier: A
@@ -210,9 +215,12 @@ gates:
       the unit is recorded in the manifest rather than inferred by the reader, and
       `decisions/policy.py` refuses to let a contrast that only the training split can
       estimate support a recommendation
-      (test_a_contrast_only_the_training_split_can_estimate_blocks_approval). NOT
-      satisfied: the 60/20/20 proportions are uncalibrated engineering defaults with a
-      declared origin, and they are not configurable by a user. On a design too thin to
+      (test_a_contrast_only_the_training_split_can_estimate_blocks_approval). The split
+      proportions are user-configurable since 2026-10-16, with whatever value a run
+      declares recorded in the manifest alongside its origin
+      (test_the_split_proportions_are_user_configurable_and_recorded_with_their_origin).
+      NOT satisfied: the 60/20/20 defaults remain uncalibrated engineering defaults; no
+      calibration study has informed them. On a design too thin to
       stratify the manifest is emitted with the deficiency reported as a coverage
       warning rather than refused, because refusing would take the detectors, metrics
       and report down with it; the fit-and-apply backend still refuses such a design
@@ -350,19 +358,22 @@ gates:
       have a producer and the "executed upstream, not reimplemented" clause is met.
       The external obstacle that made this gate BLOCKED (an unreachable CRAN,
       Bioconductor and an uninstalled cyCombine) no longer holds; see
-      scripts/setup_r_env.sh. Six OpenProblems components are now registered in the
+      scripts/setup_r_env.sh. Seven OpenProblems components are now registered in the
       `compatibility` namespace with upstream_verified=True, each proven by a test that
       imports the pinned helper from the pinned commit and compares outputs against a
       recorded tolerance: emd_mean_ct_horiz, emd_mean_ct_vert, ratio_consistent_peaks,
-      average_batch_r2_ct, iLisi and cLisi. Extraction did NOT need the Nextflow
-      runtime, which retired B-007's open question. NOT satisfied: three rows remain
-      deferred, each with a currently-true obstacle — flowsom_mean_mapping_similarity
-      needs FlowSOM (Bioconductor-only) plus three benchmark parameters this package
-      does not define, and the two functional_marker_preservation rows are a retention
-      ratio and an effect-size drift rather than the statistic Stage 8 computes, so
-      they need two integrated splits and a significance baseline this package's
-      one-candidate-per-frozen-partition contract does not supply. `openproblems.cms` is
-      genuinely absent at the pinned commit and stays recorded as such.
+      average_batch_r2_ct, iLisi, cLisi and — since 2026-10-16 —
+      flowsom_mean_mapping_similarity, whose clustering runs upstream's FlowSOM through
+      workflow/scripts/flowsom_clusters.R with three named adaptation parameters
+      (num_clusters=15, som_xdim=10, som_ydim=10, seed=42) and R-side parity tests
+      against the pinned helpers. Extraction did NOT need the Nextflow runtime, which
+      retired B-007's open question. NOT satisfied: two rows remain deferred, each with
+      a currently-true obstacle — the two functional_marker_preservation rows are a
+      retention ratio and an effect-size drift rather than the statistic Stage 8
+      computes, so they need two integrated splits and a significance baseline this
+      package's one-candidate-per-frozen-partition contract does not supply.
+      `openproblems.cms` is genuinely absent at the pinned commit and stays recorded as
+      such.
       scripts/audit_upstream.py fails the build if a `compatibility` row ever appears
       without a recorded verification.
 
