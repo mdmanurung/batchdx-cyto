@@ -318,7 +318,23 @@ def _biospecimens(
 # --------------------------------------------------------------------------------------
 
 
-def _normalise_proportions(proportions: Mapping[str, float] | None) -> dict[str, float]:
+def normalise_split_proportions(
+    proportions: Mapping[str, float] | None,
+) -> dict[str, float]:
+    """Validate and normalise split shares to fractions summing to one.
+
+    Public because the configuration schema validates a user-declared
+    ``evaluation.sampling.split_proportions`` with exactly this function, so the
+    schema refuses with the same error type, naming the same keys, that the split
+    itself refuses with.  ``None`` means the caller configured no split and gets
+    :data:`DEFAULT_SPLIT_PROPORTIONS`.
+
+    The rules, in the order they are refused: exactly the three keys
+    :data:`SPLIT_NAMES` (an unknown or missing key is a misdeclaration, not a
+    default), every share strictly positive (a split with no members is not held
+    out, so a zero share is refused rather than emitted empty), and a positive sum.
+    """
+
     raw = dict(DEFAULT_SPLIT_PROPORTIONS if proportions is None else proportions)
     unknown = sorted(set(raw) - set(SPLIT_NAMES))
     missing = sorted(set(SPLIT_NAMES) - set(raw))
@@ -490,7 +506,7 @@ def build_splits(
     fit on a partition that cannot be compared.
     """
 
-    shares = _normalise_proportions(proportions)
+    shares = normalise_split_proportions(proportions)
     if unit_field is None:
         unit_field, reason = resolve_biospecimen_unit(samples, donor_factor)
     else:

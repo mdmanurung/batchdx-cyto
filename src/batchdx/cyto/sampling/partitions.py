@@ -22,7 +22,7 @@ import pandas as pd
 
 from batchdx.cyto.config import Config
 from batchdx.cyto.io.dataset import CELL_ID, SAMPLE_ID, Dataset
-from batchdx.cyto.sampling.splits import build_splits
+from batchdx.cyto.sampling.splits import SPLIT_PROPORTION_ORIGIN, build_splits
 from batchdx.cyto.schemas.contracts import (
     DesignAudit,
     ProvenanceRef,
@@ -354,9 +354,18 @@ def build_sampling_manifest(
     # exposes missing_arms() so any consumer that must not use an unbalanced split
     # (notably the fit-and-apply CytoNorm backend) can refuse it.  A deficiency the
     # allocator could have fixed still raises, because that one is a defect.
+    proportions = config.evaluation.sampling.split_proportions
+    if proportions is None:
+        proportion_origin = SPLIT_PROPORTION_ORIGIN
+    else:
+        proportion_origin = (
+            "declared in the run configuration at evaluation.sampling.split_proportions; "
+            "these user-configured shares replace the package default and are recorded "
+            "here so a reader can disagree with them explicitly rather than inherit them"
+        )
     assignment = build_splits(
         dataset.samples, donor_factor=config.design.donor, seed=config.project.seed,
-        require_all_arms=False,
+        proportions=proportions, require_all_arms=False,
     )
     warnings.extend(assignment.warnings)
 
@@ -389,6 +398,8 @@ def build_sampling_manifest(
         representation=representation,
         aggregation_weights=weights,
         splits=assignment.to_manifest(),
+        split_proportions=dict(assignment.proportions),
+        split_proportion_origin=proportion_origin,
         provenance=[ProvenanceRef(kind="dataset", identifier=dataset.manifest.dataset_id,
                                   content_hash=dataset.baseline_hash())],
     )

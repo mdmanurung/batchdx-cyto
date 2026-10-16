@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from batchdx.cyto.config import SamplingConfig
 from batchdx.cyto.metrics import compute_common_metrics
 from batchdx.cyto.sampling import build_sampling_manifest, resolve_labels
 from batchdx.cyto.sampling.partitions import UNGATED
@@ -23,6 +24,7 @@ from batchdx.cyto.sampling.splits import (
     build_splits,
     held_out_batch_pairs,
     missing_arms,
+    normalise_split_proportions,
     resolve_biospecimen_unit,
     split_for_comparison,
     split_members,
@@ -570,3 +572,71 @@ def _load(project: Path):
         protected=["group"], donor_factor="donor_id",
     )
     return config, dataset, design
+
+
+# --------------------------------------------------------------------------------------
+# Configurable split proportions, recorded with their origin
+# --------------------------------------------------------------------------------------
+
+
+def test_configured_split_proportions_are_honoured(frozen, example_project: Path) -> None:
+    """A declared share reaches the split, not just the manifest's own record."""
+
+    config, dataset, design, _ = frozen
+    config.evaluation.sampling.split_proportions = {
+        "train": 0.5, "tune": 0.25, "validate": 0.25,
+    }
+    manifest = _rebuild(config, dataset, design, example_project)
+    assert manifest.split_proportions == {
+        "train": 0.5, "tune": 0.25, "validate": 0.25,
+    }
+    members = split_members(manifest.splits)
+    assert set(members) == set(SPLIT_NAMES)
+    assert all(members[name] for name in SPLIT_NAMES), (
+        "a configured share must still leave every split populated"
+    )
+
+
+def test_the_manifest_records_the_proportions_used_and_their_origin(
+    frozen, example_project: Path
+) -> None:
+    """The frozen manifest states which shares were used and who declared them."""
+
+    config, dataset, design, sampling = frozen
+    assert sampling.split_proportions == {"train": 0.6, "tune": 0.2, "validate": 0.2}
+    assert "engineering default" in sampling.split_proportion_origin
+
+    config.evaluation.sampling.split_proportions = {"train": 2, "tune": 1, "validate": 1}
+    configured = _rebuild(config, dataset, design, example_project)
+    assert configured.split_proportions == {
+        "train": 0.5, "tune": 0.25, "validate": 0.25,
+    }
+    assert "evaluation.sampling.split_proportions" in configured.split_proportion_origin
+
+
+def test_invalid_split_proportions_are_refused_with_the_existing_error_types() -> None:
+    """A zero share, a missing key and an unknown key are refused, not repaired."""
+
+    with pytest.raises(SplitError):
+        normalise_split_proportions({"train": 0.6, "tune": 0.0, "validate": 0.2})
+    with pytest.raises(SplitError):
+        normalise_split_proportions({"train": 0.6, "tune": 0.4})
+    with pytest.raises(SplitError):
+        normalise_split_proportions({"train": 0.6, "tune": 0.2, "validate": 0.2, "holdout": 0.1})
+    # The schema refuses with the same error the split raises, so a bad configuration
+    # fails at parse time rather than mid-run.
+    with pytest.raises(ValueError, match="strictly positive"):
+        SamplingConfig(split_proportions={"train": 0.6, "tune": 0.0, "validate": 0.2})
+    with pytest.raises(ValueError, match="exactly"):
+        SamplingConfig(split_proportions={"train": 0.6, "tune": 0.4})
+
+
+def test_the_analytical_fingerprint_moves_with_the_split_proportions(frozen) -> None:
+    """Proportions are material: changing them changes the analysis identity."""
+
+    config, *_ = frozen
+    before = config.analytical_fingerprint()
+    config.evaluation.sampling.split_proportions = {
+        "train": 0.34, "tune": 0.33, "validate": 0.33,
+    }
+    assert config.analytical_fingerprint() != before

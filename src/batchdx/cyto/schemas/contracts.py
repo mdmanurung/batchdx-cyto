@@ -259,6 +259,12 @@ class SamplingManifest(_Contract):
     representation: RepresentationSettings = Field(default_factory=RepresentationSettings)
     aggregation_weights: dict[str, float] = Field(default_factory=dict)
     splits: dict[str, list[str]] = Field(default_factory=dict)
+    #: The shares the split actually used, normalised, and where they were declared.
+    #: ``None`` on both means the manifest predates the field or the split was built
+    #: without one; a manifest written by this build always populates both, so a
+    #: reader can disagree with the proportions explicitly rather than inherit them.
+    split_proportions: dict[str, float] | None = None
+    split_proportion_origin: str | None = None
     provenance: list[ProvenanceRef] = Field(default_factory=list)
 
 

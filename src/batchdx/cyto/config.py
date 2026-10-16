@@ -361,6 +361,23 @@ class SamplingConfig(_Strict):
     unit: str = "sample_id"
     max_cells_per_sample: int | None = 5000
     min_cells_per_population: int = 50
+    #: The train/tune/validate shares the partition stage splits biospecimens into.
+    #: ``None`` means the package default (60/20/20) applies and the frozen manifest
+    #: says so with its declared origin; a declared value is validated by
+    #: :func:`batchdx.cyto.sampling.splits.normalise_split_proportions` — exactly the
+    #: three keys, strictly positive, summing above zero — so an invalid split is
+    #: refused at configuration time with the same error the split itself raises.
+    split_proportions: dict[str, float] | None = None
+
+    @field_validator("split_proportions", mode="before")
+    @classmethod
+    def _proportions_are_a_valid_split(cls, v: Any) -> Any:
+        from batchdx.cyto.sampling.splits import normalise_split_proportions
+
+        if v is None:
+            return None
+        normalise_split_proportions(v)
+        return v
 
     @field_validator("unit", mode="before")
     @classmethod
