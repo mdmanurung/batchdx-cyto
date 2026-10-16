@@ -126,6 +126,30 @@ class RunLayout:
     def metric_result(self, candidate_id: str) -> Path:
         return self.root / "metrics" / candidate_id / "metric_result.json"
 
+    @property
+    def baseline_dir(self) -> Path:
+        """The frozen preprocessed baseline and everything it was written with."""
+        return self.root / "baseline"
+
+    @property
+    def preprocess_baseline(self) -> Path:
+        return self.baseline_dir / "preprocessed.h5ad"
+
+    @property
+    def removal_log(self) -> Path:
+        """The per-event removal log of the preprocessing step (preprocess/removals.py)."""
+        return self.baseline_dir / "removed_events.csv"
+
+    @property
+    def baseline_processing_manifest(self) -> Path:
+        """The processing manifest of the baseline, not of the raw input."""
+        return self.baseline_dir / "processing.json"
+
+    @property
+    def preprocess_summary(self) -> Path:
+        """What each declared preprocessing step did, as written by the stage."""
+        return self.baseline_dir / "preprocess_summary.json"
+
 
 def environment_report() -> dict:
     return {
@@ -216,12 +240,281 @@ def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLay
         "environment": environment_report(),
     })
     export_json_schemas(layout.schemas_dir)
-    dataset.manifest.write(layout.dataset_manifest)
+    # When preprocessing is enabled the dataset manifest is frozen by stage_preprocess
+    # from the reloaded baseline, so the counts the design audit sees are the post-QC
+    # ones.  Writing the raw-input manifest here as well would put two contradictory
+    # manifests behind one path, and the last writer would win silently.
+    if not config.preprocessing.enabled:
+        dataset.manifest.write(layout.dataset_manifest)
     return layout.dataset_manifest
 
-def _load(config_path: str | Path, base_dir: str | Path) -> tuple[Config, Dataset]:
+#: The expression layer the frozen baseline carries.  One name here, read by the
+#: derived configuration below, so the layer is never re-typed at a call site.
+BASELINE_LAYER = "preprocessed"
+
+
+def _baseline_config(config: Config, layout: RunLayout) -> Config:
+    """The configuration that reads the frozen baseline instead of the raw input.
+
+    The baseline is an h5ad with its own processing manifest, and it is already
+    transformed: the derived configuration declares no further preprocessing, because
+    ``_validate_processing`` (io/dataset.py) refuses a run that would transform twice.
+    That refusal is the contract working -- the baseline manifest records the
+    transformation that was applied, and the derived configuration records that nothing
+    further was.
+    """
+
+    derived = config.model_copy(deep=True)
+    derived.input.format = "h5ad"
+    derived.input.path = str(layout.preprocess_baseline)
+    derived.input.expression_layer = BASELINE_LAYER
+    derived.input.processing_manifest = str(layout.baseline_processing_manifest)
+    derived.preprocessing.enabled = False
+    derived.preprocessing.transformation = None
+    return derived
+
+
+def _load(
+    config_path: str | Path, base_dir: str | Path, layout: RunLayout | None = None
+) -> tuple[Config, Dataset]:
     config = load_config(config_path)
+    if layout is not None and config.preprocessing.enabled and layout.preprocess_baseline.exists():
+        return config, load_dataset(_baseline_config(config, layout), base_dir)
     return config, load_dataset(config, base_dir)
+
+
+def stage_preprocess(config_path: str | Path, base_dir: str | Path, layout: RunLayout) -> Path:
+    """Apply the declared preprocessing chain to the raw input and freeze the baseline.
+
+    The chain is the one the configuration declares -- preliminary 2-D gating
+    (``preprocess/gating.py``), the per-panel asinh transform (``preprocess/transform.py``,
+    with the cofactor for each panel taken from ``preprocessing.cofactor_by_panel``),
+    and the PeacoQC pass (``preprocess/peacoqc.py``) when a settings file declares one --
+    applied in that order, because a gate is evaluated on the events the previous step
+    kept and PeacoQC is evaluated on the transformed values the run will analyse.
+
+    Four artifacts are written under the run's ``baseline/`` directory: the preprocessed
+    baseline itself (immutable, the input every later stage loads), the per-event
+    removal log (``preprocess/removals.py``), the processing manifest *of the baseline*
+    (declared scale, compensated/unmixed null with a note, transformation provenance),
+    and a summary of what each step did.  The dataset manifest is then frozen from the
+    reloaded baseline, so cell identity and the per-sample counts the design audit sees
+    are the post-QC ones and not the raw ones.
+    """
+
+    import anndata as ad
+    import pandas as pd
+
+    from batchdx.cyto.io.fcs import read_fcs
+    from batchdx.cyto.io.hashing import file_sha256
+    from batchdx.cyto.io.manifests import (
+        read_marker_table,
+        read_processing_manifest,
+        read_sample_table,
+        write_removed_events,
+    )
+    from batchdx.cyto.preprocess.gating import apply_gates, gates_from_config
+    from batchdx.cyto.preprocess.peacoqc import run_peacoqc, settings_from_config
+    from batchdx.cyto.preprocess.removals import STEP_GATE, STEP_QC, empty_removal_log
+    from batchdx.cyto.preprocess.transform import asinh_transform, resolve_convention
+
+    config = load_config(config_path)
+    if not config.preprocessing.enabled:
+        raise ConfigError(
+            "stage_preprocess: preprocessing.enabled is false; the stage exists only for "
+            "a configuration that declares an upstream preprocessing step"
+        )
+    if config.input.format != "fcs":
+        raise ConfigError(
+            f"preprocessing: the declared input format is {config.input.format!r}; the "
+            "preprocessing stage applies the declared chain to raw events, so it "
+            "requires FCS input"
+        )
+    base = Path(base_dir)
+    samples = {r.sample_id: r for r in read_sample_table(base / config.input.samples)}
+    markers = read_marker_table(base / config.input.markers)
+    raw_processing = read_processing_manifest(base / config.input.processing_manifest)
+    marker_channels = [m.channel for m in markers]
+    if any(c is None for c in marker_channels):
+        unnamed = [
+            m.feature_id for m, c in zip(markers, marker_channels, strict=True) if c is None
+        ]
+        raise ConfigError(
+            f"marker manifest: feature(s) {unnamed} declare no channel, which FCS input "
+            "requires; a marker without a channel cannot be read from raw events"
+        )
+
+    gate_table = gates_from_config(config, base_dir)
+    qc_settings = settings_from_config(config, base_dir)
+    convention = (
+        resolve_convention(config.preprocessing.transformation)
+        if config.preprocessing.transformation not in (None, "none") else None
+    )
+    cofactors = config.preprocessing.cofactor_by_panel
+    panels = sorted({m.panel_id for m in markers if m.panel_id})
+    if convention is not None:
+        missing = [p for p in panels if p not in cofactors]
+        if missing:
+            raise ConfigError(
+                f"preprocessing.cofactor_by_panel: no cofactor is declared for panel(s) "
+                f"{missing}; there is no universal cofactor, so the transform is refused "
+                "rather than applied with a guessed one"
+            )
+
+    raw_dir = base / config.input.path
+    blocks: list[np.ndarray] = []
+    obs_rows: list[pd.DataFrame] = []
+    removals: list[pd.DataFrame] = []
+    gate_records: list[dict] = []
+    qc_records: list[dict] = []
+    qc_warnings: list[str] = []
+    n_input_total = 0
+
+    for sid, rec in samples.items():
+        if not rec.source_file:
+            raise ConfigError(
+                f"sample {sid!r}: source_file is required for FCS input and is never "
+                "inferred from file names"
+            )
+        path = raw_dir / rec.source_file
+        contents = read_fcs(path)
+        events = contents.events
+        n = contents.n_events
+        n_input_total += n
+        index = np.arange(n, dtype=np.int64)
+        ids = np.repeat(str(sid), n)
+        keep = np.ones(n, dtype=bool)
+        if gate_table is not None:
+            result = apply_gates(
+                gate_table, events, contents.channel_names,
+                sample_ids=ids, original_event_index=index, step=STEP_GATE,
+            )
+            keep = result.keep
+            if len(result.removed):
+                removals.append(result.removed)
+            gate_records.extend({
+                "step": STEP_GATE, "detail": (
+                    f"gate {o.gate.name} ({o.gate.kind} over "
+                    f"{'/'.join(o.gate.channels)}): kept {o.kept} of {o.n_input} events "
+                    f"({o.removed} removed)"
+                ),
+            } for o in result.outcomes)
+        kept = events[keep]
+        kept_index = index[keep]
+        if convention is not None:
+            transformed = np.array(kept, copy=True)
+            for panel in panels:
+                cols = [
+                    contents.channel_names.index(str(markers[j].channel))
+                    for j in range(len(markers)) if markers[j].panel_id == panel
+                ]
+                transformed[:, cols] = asinh_transform(
+                    transformed[:, cols], float(cofactors[panel])
+                )
+            kept = transformed
+        if qc_settings is not None:
+            qc = run_peacoqc(
+                kept, contents.channel_names, sample_ids=ids[keep],
+                original_event_index=kept_index, settings=qc_settings,
+                work_dir=layout.baseline_dir / "peacoqc" / str(sid),
+                rscript=config.upstream.rscript,
+            )
+            if len(qc.removed):
+                removals.append(qc.removed)
+                removed_here = qc.removed["original_event_index"].to_numpy(np.int64)
+                alive = ~np.isin(kept_index, removed_here)
+                kept, kept_index = kept[alive], kept_index[alive]
+            qc_records.extend({
+                "step": STEP_QC, "detail": (
+                    f"sample {o.sample_id}: kept {o.n_input - o.n_removed} of "
+                    f"{o.n_input} events ({o.n_removed} removed); criteria applied: "
+                    f"{', '.join(o.criteria_applied) or 'none'}"
+                ),
+            } for o in qc.samples)
+            qc_warnings.extend(qc.warnings)
+
+        cols = [contents.channel_names.index(str(c)) for c in marker_channels]
+        blocks.append(kept[:, cols])
+        checksum = file_sha256(path)
+        obs_rows.append(pd.DataFrame({
+            "sample_id": np.repeat(str(sid), kept.shape[0]),
+            "original_event_index": kept_index,
+            "acquisition_order": kept_index,
+            "source_checksum": np.repeat(checksum, kept.shape[0]),
+        }))
+
+    matrix = np.vstack(blocks) if blocks else np.zeros((0, len(marker_channels)))
+    obs = pd.concat(obs_rows, ignore_index=True)
+    adata = ad.AnnData(
+        X=np.zeros((matrix.shape[0], matrix.shape[1]), dtype=np.float32),
+        obs=obs,
+        var=pd.DataFrame(index=pd.Index([m.feature_id for m in markers], dtype=object)),
+    )
+    adata.layers[BASELINE_LAYER] = matrix
+    layout.preprocess_baseline.parent.mkdir(parents=True, exist_ok=True)
+    adata.write_h5ad(layout.preprocess_baseline)
+
+    log = pd.concat(removals, ignore_index=True) if removals else empty_removal_log()
+    write_removed_events(log, layout.removal_log)
+    by_step = log.groupby("step").size().to_dict() if len(log) else {}
+
+    scale = (
+        "asinh (per-panel cofactors: "
+        + ", ".join(f"{p}={float(cofactors[p]):g}" for p in panels) + ")"
+        if convention is not None else str(raw_processing.scale)
+    )
+    processing = {
+        "compensated": None,
+        "unmixed": None,
+        "compensation_source": None,
+        "qc_history": [r["detail"] for r in gate_records + qc_records],
+        "transformation": convention.name if convention is not None else None,
+        "transformation_parameters": (
+            {f"cofactor[{p}]": float(cofactors[p]) for p in panels}
+            if convention is not None else {}
+        ),
+        "scale": scale,
+        "units": (
+            "arcsinh units (per-panel cofactors)" if convention is not None
+            else raw_processing.units
+        ),
+        "corrected": False,
+        "notes": (
+            "written by batchdx.cyto.pipeline.stage_preprocess from the raw input "
+            f"({config.input.path}); compensated/unmixed are null because the raw "
+            f"processing manifest ({config.input.processing_manifest}) declares "
+            f"compensated={raw_processing.compensated}, unmixed={raw_processing.unmixed} "
+            "and this stage performs neither, so it does not re-assert them"
+        ),
+    }
+    layout.baseline_processing_manifest.parent.mkdir(parents=True, exist_ok=True)
+    layout.baseline_processing_manifest.write_text(
+        json.dumps(processing, indent=2) + "\n", encoding="utf-8"
+    )
+
+    _write_json(layout.preprocess_summary, {
+        "n_events_input": n_input_total,
+        "n_events_kept": int(matrix.shape[0]),
+        "n_events_removed": n_input_total - int(matrix.shape[0]),
+        "n_samples": len(samples),
+        "steps": gate_records + qc_records,
+        "removals_by_step": {str(k): int(v) for k, v in by_step.items()},
+        "declared": {
+            "gating": config.preprocessing.gating,
+            "transformation": config.preprocessing.transformation,
+            "cofactor_by_panel": {str(k): float(v) for k, v in cofactors.items()},
+            "peacoqc": config.preprocessing.peacoqc,
+        },
+        "processing": processing,
+        "warnings": qc_warnings,
+    })
+
+    # The manifest is frozen from the reloaded baseline, not from the in-memory frame,
+    # so cell identity and the per-sample counts are exactly what every later stage
+    # will load -- the same guarantee stage_validate gives the raw input.
+    dataset = load_dataset(_baseline_config(config, layout), base_dir)
+    dataset.manifest.write(layout.dataset_manifest)
+    return layout.dataset_manifest
 
 
 def stage_design(
@@ -229,7 +522,7 @@ def stage_design(
 ) -> Path:
     """Audit the design and emit the eligibility manifest."""
 
-    config, dataset = _load(config_path, base_dir)
+    config, dataset = _load(config_path, base_dir, layout)
     design = audit_design(
         list(dataset.samples.values()),
         dataset_id=dataset.manifest.dataset_id,
@@ -250,7 +543,7 @@ def stage_partition(
 ) -> Path:
     """Freeze evaluation labels, sampling and the common comparison set."""
 
-    config, dataset = _load(config_path, base_dir)
+    config, dataset = _load(config_path, base_dir, layout)
     design = DesignAudit.read(layout.design_audit)
     labels, tier, confidence = resolve_labels(dataset, config, base_dir)
     manifest = build_sampling_manifest(dataset, config, design, labels, tier, confidence)
@@ -263,7 +556,7 @@ def stage_diagnose(
 ) -> Path:
     """Run one detector and write its result, including a scientific skip."""
 
-    config, dataset = _load(config_path, base_dir)
+    config, dataset = _load(config_path, base_dir, layout)
     design = DesignAudit.read(layout.design_audit)
     sampling = (
         SamplingManifest.read(layout.sampling_manifest)
@@ -324,7 +617,7 @@ def stage_correct(
 ) -> Path:
     """Run one correction candidate from the immutable baseline."""
 
-    config, dataset = _load(config_path, base_dir)
+    config, dataset = _load(config_path, base_dir, layout)
     design = DesignAudit.read(layout.design_audit)
     sampling = (
         SamplingManifest.read(layout.sampling_manifest)
@@ -513,7 +806,7 @@ def stage_metrics(
 ) -> Path:
     """Score one candidate on the frozen common partition."""
 
-    config, dataset = _load(config_path, base_dir)
+    config, dataset = _load(config_path, base_dir, layout)
     design = DesignAudit.read(layout.design_audit)
     sampling = SamplingManifest.read(layout.sampling_manifest)
     correction = CorrectionResult.read(layout.correction_result(candidate_id))
@@ -606,7 +899,7 @@ def stage_decide(
     # The sample table is re-read here only to answer the held-out question, which is a
     # question about which samples sit in which split.  It is not part of the frozen
     # manifest, and passing it keeps the decision layer free of any dataset handle.
-    _, dataset = _load(config_path, base_dir)
+    _, dataset = _load(config_path, base_dir, layout)
 
     corrections: dict[str, CorrectionResult] = {}
     metrics: dict[str, MetricResult] = {}

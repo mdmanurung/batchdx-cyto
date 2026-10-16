@@ -184,6 +184,31 @@
 {% if design.warnings %}<ul class="reasons">{% for w in design.warnings %}<li>{{ w }}</li>{% endfor %}</ul>{% endif %}
 
 <h2 id="processing">Preprocessing and QC</h2>
+{% if preprocess_section %}
+<h3>What the preprocessing step did</h3>
+<div class="panel">
+  The preprocessing stage read <strong>{{ preprocess_section.n_events_input }}</strong>
+  raw events and kept <strong>{{ preprocess_section.n_events_kept }}</strong>
+  ({{ preprocess_section.n_events_removed }} removed). The baseline frozen from the
+  survivors is the input every stage of this run analysed.
+</div>
+<table>
+  <tr><th>Step</th><th>What it did</th></tr>
+  {% for s in preprocess_section.steps %}
+  <tr><td><code>{{ s.step }}</code></td><td>{{ s.detail }}</td></tr>
+  {% endfor %}
+</table>
+<table>
+  <tr><th>Step</th><th>Reason</th><th>Sample</th><th>Events removed</th></tr>
+  {% for r in preprocess_section.removal_table %}
+  <tr><td>{{ r.step }}</td><td>{{ r.reason }}</td><td>{{ r.sample_id }}</td>
+      <td>{{ r.n_removed }}</td></tr>
+  {% endfor %}
+</table>
+{% if preprocess_section.warnings %}
+<ul class="reasons">{% for w in preprocess_section.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+{% endif %}
+{% endif %}
 <table>
   <tr><th>Property</th><th>Declared value</th></tr>
   <tr><td>scale</td><td><code>{{ processing.scale }}</code></td></tr>

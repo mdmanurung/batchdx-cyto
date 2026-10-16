@@ -55,13 +55,6 @@ NOT_CONSUMERS = {
 #: Declared keys that no non-schema module reads, each with the reason it is still
 #: declared, and with the schema pinning it to the single value the package delivers.
 DECLARATIVE_ONLY: dict[str, str] = {
-    "preprocessing.cofactor_by_panel": (
-        "This package reads an already-preprocessed baseline and never transforms events. "
-        "The per-panel cofactors are required to be declared (there is no universal "
-        "cofactor) and are read by the schema to refuse an undeclared one; the cofactor "
-        "that actually inverts an FCS export is the one in the processing manifest, "
-        "which batchdx.cyto.io.export.plan_inversion reads."
-    ),
     "design.reference_identity": (
         "Names the sample-manifest column carrying reference identity. The reader "
         "fixes the column at 'reference_id', so the key is pinned to that name (or "
@@ -99,7 +92,11 @@ REFUSED_KEYS = frozenset(UNSUPPORTED_KEYS)
 #: Declarative keys whose annotation is a free-form mapping, so there is no set of values
 #: to pin.  The gate for these is not a value set but that the schema reads them: each
 #: one must be refused when the mapping is empty and the thing it declares is in force.
-DECLARATIVE_MAPPINGS = {"preprocessing.cofactor_by_panel"}
+#:
+#: ``preprocessing.cofactor_by_panel`` was the only entry until the preprocessing stage
+#: (``batchdx.cyto.pipeline.stage_preprocess``) began applying the per-panel cofactors to
+#: raw events; it is now a live key, read by that stage, and left this table.
+DECLARATIVE_MAPPINGS: set[str] = set()
 
 
 # -- the model walk ------------------------------------------------------------------------

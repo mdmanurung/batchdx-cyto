@@ -64,25 +64,67 @@ rule all:
         _targets(),
 
 
-rule validate:
-    """Strictly validate the configuration and freeze the dataset manifest."""
-    input:
-        config=str(CONFIG_PATH),
-    output:
-        manifest=str(LAYOUT.dataset_manifest),
-        resolved=str(LAYOUT.resolved_config),
-    log:
-        str(OUTDIR / "logs" / "validate.log"),
-    threads: 1
-    resources:
-        mem_mb=4000,
-        runtime=30,
-    benchmark:
-        str(OUTDIR / "benchmarks" / "validate.tsv")
-    run:
-        from batchdx.cyto.pipeline import stage_validate
+if CFG.preprocessing.enabled:
+    rule validate:
+        """Strictly validate the configuration.  The manifest is frozen by preprocess."""
+        input:
+            config=str(CONFIG_PATH),
+        output:
+            resolved=str(LAYOUT.resolved_config),
+        log:
+            str(OUTDIR / "logs" / "validate.log"),
+        threads: 1
+        resources:
+            mem_mb=4000,
+            runtime=30,
+        benchmark:
+            str(OUTDIR / "benchmarks" / "validate.tsv")
+        run:
+            from batchdx.cyto.pipeline import stage_validate
 
-        stage_validate(CONFIG_PATH, BASE_DIR, LAYOUT)
+            stage_validate(CONFIG_PATH, BASE_DIR, LAYOUT)
+
+    rule preprocess:
+        """Apply the declared preprocessing chain and freeze the baseline and its manifest.  The rule exists only when ``preprocessing.enabled`` is true, and it owns the dataset manifest: every later stage loads the baseline it froze, so the DAG runs preprocess first and design_audit after it, and the counts the design audit sees are the post-QC ones."""
+        input:
+            config=str(CONFIG_PATH),
+        output:
+            manifest=str(LAYOUT.dataset_manifest),
+            baseline=str(LAYOUT.preprocess_baseline),
+            removals=str(LAYOUT.removal_log),
+            summary=str(LAYOUT.preprocess_summary),
+        log:
+            str(OUTDIR / "logs" / "preprocess.log"),
+        threads: 1
+        resources:
+            mem_mb=8000,
+            runtime=120,
+        benchmark:
+            str(OUTDIR / "benchmarks" / "preprocess.tsv")
+        run:
+            from batchdx.cyto.pipeline import stage_preprocess
+
+            stage_preprocess(CONFIG_PATH, BASE_DIR, LAYOUT)
+else:
+    rule validate:
+        """Strictly validate the configuration and freeze the dataset manifest."""
+        input:
+            config=str(CONFIG_PATH),
+        output:
+            manifest=str(LAYOUT.dataset_manifest),
+            resolved=str(LAYOUT.resolved_config),
+        log:
+            str(OUTDIR / "logs" / "validate.log"),
+        threads: 1
+        resources:
+            mem_mb=4000,
+            runtime=30,
+        benchmark:
+            str(OUTDIR / "benchmarks" / "validate.tsv")
+        run:
+            from batchdx.cyto.pipeline import stage_validate
+
+            stage_validate(CONFIG_PATH, BASE_DIR, LAYOUT)
 
 
 rule design_audit:

@@ -335,6 +335,36 @@ def _marker_selection(all_markers: list[str], limit: int) -> tuple[list[str], li
     return ordered[:limit], ordered[limit:]
 
 
+def _preprocess_view(layout) -> dict | None:
+    """The preprocessing step's own record, for the "What the preprocessing step did" section.
+
+    Read from the artifacts stage_preprocess wrote -- the summary and the per-event
+    removal log -- and never recomputed: the numbers on the page are the numbers on
+    disk.  A run whose log records nothing still renders, with the zero stated, because
+    "no events were removed" is a result and not an omission.
+    """
+
+    from batchdx.cyto.io.manifests import ManifestError, read_removed_events
+    from batchdx.cyto.preprocess.removals import empty_removal_log, summarise_removals
+
+    if not layout.preprocess_summary.exists():
+        return None
+    summary = json.loads(layout.preprocess_summary.read_text(encoding="utf-8"))
+    try:
+        log = read_removed_events(layout.removal_log)
+    except ManifestError:
+        log = empty_removal_log()
+    return {
+        "n_events_input": summary["n_events_input"],
+        "n_events_kept": summary["n_events_kept"],
+        "n_events_removed": summary["n_events_removed"],
+        "steps": summary["steps"],
+        "removals_by_step": summary["removals_by_step"],
+        "removal_table": summarise_removals(log).to_dict("records"),
+        "warnings": summary.get("warnings", []),
+    }
+
+
 def render_report(
     config_path: str | Path,
     base_dir: str | Path,
@@ -346,7 +376,16 @@ def render_report(
     config = load_config(config_path)
     redactor = Redactor(enabled=config.report.redact_identifiers, base_dir=base_dir,
                         salt=run_salt(layout.root))
-    dataset = load_dataset(config, base_dir)
+    # When preprocessing is enabled the run's input is the frozen baseline, not the
+    # raw file the configuration names: the report's figures are drawn from the same
+    # matrix every other stage analysed, and the raw input's row count would not even
+    # align with a corrected candidate's output.
+    if config.preprocessing.enabled and layout.preprocess_baseline.exists():
+        from batchdx.cyto.pipeline import _baseline_config
+
+        dataset = load_dataset(_baseline_config(config, layout), base_dir)
+    else:
+        dataset = load_dataset(config, base_dir)
 
     design = DesignAudit.read(layout.design_audit)
     sampling = (
@@ -545,6 +584,9 @@ def render_report(
         "comparison_markers_omitted": comparison_omitted,
         "comparison_figures": comparison_figures,
         "composition_figure": composition_figure,
+        "preprocess_section": (
+            _preprocess_view(layout) if config.preprocessing.enabled else None
+        ),
         "joint_rows": joint_rows[:JOINT_ROW_LIMIT],
         "joint_note": _shown(len(joint_rows), JOINT_ROW_LIMIT),
         "failures": failures,

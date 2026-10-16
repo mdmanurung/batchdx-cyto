@@ -187,9 +187,12 @@ class PreprocessingConfig(_Strict):
 
     ``enabled`` and ``transformation`` are read exactly once, to refuse a configuration
     that claims a transformation the processing manifest contradicts, and
-    ``cofactor_by_panel`` is read only to refuse a universal default.  The *run* still
-    never transforms events: it reads an already-preprocessed baseline, and
-    ``_validate_processing`` in ``io.dataset`` refuses a configuration that asks it to.
+    ``cofactor_by_panel`` is read by ``batchdx.cyto.pipeline.stage_preprocess``, which
+    applies the per-panel cofactors to raw events when this run, and not an upstream
+    step, performs the preprocessing.  When the stage runs, the frozen baseline it
+    writes is already transformed, and the derived configuration every later stage
+    loads declares no further transformation -- ``_validate_processing`` in
+    ``io.dataset`` refuses a run that would transform twice.
 
     ``gating`` and ``peacoqc`` are **paths to the upstream step's own declaration**, not
     instructions to this run.  They are read by
@@ -210,9 +213,10 @@ class PreprocessingConfig(_Strict):
     # failure this module exists to prevent.  preprocess.transform.LOGICLE keeps the
     # refusal reason reachable in code.
     transformation: Literal["asinh", "none"] | None = None
-    #: Declared per-panel cofactors.  Never applied: the cofactor that the FCS
-    #: exporter inverts is the one in the processing manifest, which is what a run
-    #: actually uses.
+    #: Declared per-panel cofactors.  Applied to raw events by
+    #: ``batchdx.cyto.pipeline.stage_preprocess`` when this run performs the
+    #: preprocessing; the cofactor that the FCS exporter inverts is still the one in
+    #: the processing manifest of the values a run actually reads.
     cofactor_by_panel: dict[str, float] = Field(default_factory=dict)
     #: Path to a two-dimensional gate table in the reference implementation's YAML
     #: shape.  ``None`` means no gate is declared, which is a statement about the
