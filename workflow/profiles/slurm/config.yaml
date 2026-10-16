@@ -4,6 +4,12 @@
 # It is provided as a starting point and is labelled untested deliberately; do not cite
 # it as evidence of cluster support. A dry run is not execution validation.
 #
+# What HAS been measured (2026-10-16): with snakemake 9.27 and
+# snakemake-executor-plugin-slurm installed, `snakemake --lint` over this profile
+# passes with no errors or warnings, and the profile parses. That is a syntax and
+# schema check only -- it says nothing about whether a SLURM scheduler accepts the
+# submitted jobs, which is what UNTESTED here still means.
+#
 # Requires the SLURM executor plugin:
 #     pip install snakemake-executor-plugin-slurm
 executor: slurm

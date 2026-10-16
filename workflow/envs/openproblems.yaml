@@ -15,6 +15,11 @@
 # The other three -- emd_mean_ct_horiz, emd_mean_ct_vert and ratio_consistent_peaks --
 # are pure numpy/scipy/pandas and need nothing beyond python.yaml.
 #
+# The seventh verified component, flowsom_mean_mapping_similarity, runs on the R
+# side (FlowSOM through workflow/scripts/flowsom_clusters.R) and needs nothing
+# from this file: its environment is the R layer built by scripts/setup_r_env.sh
+# (R 4.4.x with FlowSOM, pinned in renv/), not a conda dependency here.
+#
 # These are the packages `pyproject.toml` declares in the `metrics` extra, pinned here to
 # the versions the `compatibility` rows were verified against, so that a later run
 # reproduces the recorded tolerances rather than merely re-running the tests.

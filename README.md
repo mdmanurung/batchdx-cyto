@@ -12,7 +12,7 @@ batches are often correlated and where the honest answer is frequently *"this co
 cannot be corrected"*.
 
 > **Status: 0.1.0 — research preview.** The Python core, the design audit, the
-> diagnostics, the metrics (including six verified against pinned upstream components),
+> diagnostics, the metrics (including seven verified against pinned upstream components),
 > the decision layer, the report and the Snakemake workflow run end to end and are
 > tested, including real Snakemake executions and the R-backed cyCombine and CytoNorm
 > paths against their pinned upstream checkouts. CytoBatchFlagR's detector also executes

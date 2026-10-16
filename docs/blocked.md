@@ -100,9 +100,12 @@ Both now resolve (307 / 200), and `scripts/setup_r_env.sh` uses micromamba again
 conda-forge and bioconda to build `renv/` — which is how the whole R layer became
 executable at all.
 
-**What is still open, and is a tooling gap rather than a network one:** this node has no
-`apptainer`, no `singularity` and no `docker`. The container image in
-`containers/Dockerfile.r-backends` therefore **still cannot be built or verified here**,
+**What is still open, and is a tooling gap rather than a network one:** an apptainer
+was later installed via conda (apptainer 1.5.4, 2026-10-16) and it can **build** a SIF
+from a `docker://` source, but it **cannot execute one on this node**: every `apptainer
+run` fails with a setgroups permission error (the sandbox requires user namespaces this
+node does not grant). The container image in `containers/Dockerfile.r-backends`
+therefore **still cannot be built from its own Dockerfile or verified by execution**,
 and it remains labelled **NOT BUILT OR TESTED**. Its base image is also still a tag
 (`rocker/r-ver:4.4.1`) rather than a digest pin, which is a real reproducibility gap for
 a deployment artifact. The conda environment is the local substitute, not a replacement:
