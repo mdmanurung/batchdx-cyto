@@ -497,3 +497,248 @@ def test_the_report_shows_what_the_preprocessing_step_did(fcs_project, tmp_path)
 def _tail(proc: subprocess.CompletedProcess) -> str:
     out = (proc.stdout or "") + (proc.stderr or "")
     return out[-3000:]
+
+
+# --------------------------------------------------------------------------------------
+# The stage with a real PeacoQC run on the R environment
+# --------------------------------------------------------------------------------------
+
+#: Cells per sample for the real-PeacoQC fixture.  PeacoQC's defaults
+#: (min_cells=150, step=500) need far more events per sample than the 300-cell
+#: fixture above provides: with 20 000 events a sample yields 40 bins, which is
+#: below force_IT=150, so the pass runs in the MAD-only regime -- the same regime
+#: the backend suite's ground-truth test exercises, and the only one whose
+#: behaviour this fixture can predict.
+PEACOQC_N_CELLS = 20_000
+
+#: A contiguous contaminated block in the first sample: 15% of the sample.  The
+#: backend suite's fixture contaminates the same way (a brightness spike, not a
+#: dropout) because a spike is what a clog or a flow-rate change looks like and it
+#: is what PeacoQC's MAD criterion reliably finds.
+PEACOQC_BLOCK = (7_000, 10_000)
+
+#: The dedicated QC channel.  It is not a panel marker, so no gate touches it and
+#: no transform rescales it; its distribution is the backend suite's ground-truth
+#: one, ``abs(normal(2500, 700))`` -- strictly positive and unimodal.  The panel
+#: markers themselves are *not* good PeacoQC targets in this fixture: on the
+#: transformed scale they carry a ~12% negative tail, and a real PeacoQC call on
+#: such a channel removes 100% of a clean sample (its peak detection degenerates).
+#: That is a property of the distribution, not of the stage, and the stage test
+#: must not depend on it.
+PEACOQC_CHANNEL = "QCCHECK"
+
+
+@pytest.fixture(scope="module")
+def peacoqc_r_project(tmp_path_factory):
+    """A project whose first sample carries a known contaminated acquisition block.
+
+    Everything else matches the ``fcs_project`` fixture: same simulation, same
+    rectangle debris gate, same per-panel cofactor, same raw export convention.
+    The contamination is a brightness spike on ``QCCHECK`` at ``PEACOQC_BLOCK`` of
+    the first sample, applied at the raw scale.  The scatter channels are
+    untouched, so the debris gate keeps the block and PeacoQC -- which runs after
+    the gate and the transform -- sees it.
+    """
+
+    from batchdx.cyto.examples import materialise_example
+
+    project = tmp_path_factory.mktemp("preprocess_peacoqc_r") / "project"
+    materialise_example("paired_reference", project,
+                        cells_per_sample=PEACOQC_N_CELLS, seed=SEED)
+
+    (project / "config" / "gates.yaml").write_text(GATES_YAML, encoding="utf-8")
+    (project / "config" / "peacoqc.yaml").write_text(
+        f"channels: [{PEACOQC_CHANNEL}]\n"
+        "criteria: all\n"
+        "mad: 7.0\n"
+        "it_limit: 0.6\n"
+        "report: false\n",
+        encoding="utf-8",
+    )
+
+    _write_raw_fcs_contaminated(project)
+
+    samples_path = project / "config" / "samples.tsv"
+    samples = pd.read_csv(samples_path, sep="\t")
+    samples["source_file"] = samples["sample_id"].astype(str) + ".fcs"
+    samples.to_csv(samples_path, sep="\t", index=False)
+
+    (project / "config" / "processing.json").write_text(
+        json.dumps(RAW_PROCESSING, indent=2) + "\n", encoding="utf-8"
+    )
+    _enable_preprocessing(
+        project, candidates=[{"id": "uncorrected", "backend": "none", "parameters": {}}]
+    )
+    return project
+
+
+def _write_raw_fcs_contaminated(project: Path) -> None:
+    """``_write_raw_fcs``, plus a dedicated QC channel carrying the spike.
+
+    ``QCCHECK`` is ``abs(normal(2500, 700))`` per event, and the first sample's
+    ``PEACOQC_BLOCK`` is spiked to ``x * 25 + 30000`` on the raw scale -- several
+    units above the rest of the sample on any scale, which is the signal PeacoQC's
+    MAD criterion is documented to remove.  The scatter channels are untouched, so
+    the debris gate cannot have removed the block before QC sees it.
+    """
+
+    from batchdx.cyto.io.fcs import write_fcs
+    from batchdx.cyto.simulate import paired_reference_spec, simulate
+
+    # The same cell count the fixture materialised the project with: the writer and
+    # the project must describe the same samples, and 20 000 events per sample is
+    # what gives PeacoQC enough bins for stable behaviour.
+    adata, samples, _markers, _processing = simulate(
+        paired_reference_spec(seed=SEED, n_cells=PEACOQC_N_CELLS)
+    )
+    marker_ids = list(adata.var_names)
+    channel_names = ["FSC-A", "SSC-A", "FSC-H", PEACOQC_CHANNEL] + [
+        f"Ch_{m}" for m in marker_ids
+    ]
+    spike_col = channel_names.index(PEACOQC_CHANNEL)
+    first_sid = str(samples["sample_id"].iloc[0])
+
+    rng = np.random.default_rng(SEED + 1)
+    raw_dir = project / "data" / "raw"
+    raw_dir.mkdir(parents=True, exist_ok=True)
+    for sid in samples["sample_id"]:
+        sid = str(sid)
+        mask = (adata.obs["sample_id"] == sid).to_numpy()
+        panel = np.asarray(adata[mask].layers["preprocessed"], dtype=np.float64)
+        n = panel.shape[0]
+        fsc = np.abs(rng.normal(100000.0, 30000.0, size=n))
+        ssc = np.abs(rng.normal(80000.0, 20000.0, size=n))
+        fsch = fsc + rng.normal(0.0, 5000.0, size=n)
+        qccheck = np.abs(rng.normal(2500.0, 700.0, size=n))
+        events = np.column_stack([fsc, ssc, fsch, qccheck, COFACTOR * np.sinh(panel)])
+        if sid == first_sid:
+            lo, hi = PEACOQC_BLOCK
+            events[lo:hi, spike_col] = events[lo:hi, spike_col] * 25.0 + 30_000.0
+        write_fcs(
+            raw_dir / f"{sid}.fcs",
+            events,
+            channel_names,
+            channel_labels=channel_names,
+            scale="linear instrument units",
+            processing_note=(
+                "synthetic raw fixture for the real-PeacoQC stage test; the first "
+                f"sample carries a contiguous brightness spike on {PEACOQC_CHANNEL}"
+            ),
+            overwrite=True,
+        )
+
+
+def _need_peacoqc() -> None:
+    from batchdx.cyto.adapters.r_runner import r_package_version
+
+    version = r_package_version("PeacoQC", "Rscript")
+    if not version.available:
+        pytest.skip(
+            "the PeacoQC R package is not installed in this environment; run "
+            f"scripts/setup_r_env.sh, which installs bioconductor-peacoqc ({version.detail})"
+        )
+
+
+@pytest.mark.requires_r
+def test_the_stage_removes_a_known_contaminated_block_with_real_peacoqc(
+    peacoqc_r_project,
+) -> None:
+    """The stage's PeacoQC pass, executed for real, against ground truth.
+
+    The backend suite proves the adapter removes a known block when called directly.
+    What only a stage-level test can prove is that the *stage* hands PeacoQC the
+    right events -- the gate's survivors, on the transformed scale, under the
+    original event indices -- and books what comes back: the block leaves the
+    baseline, lands in the removal log under the ``peacoqc`` step with the version
+    prefix, and the summary counts it as its own step.  A plumbing test with a
+    monkeypatched runner cannot catch a stage that passes raw values, or gate
+    losers, or the wrong channel order to the real call.
+    """
+
+    _need_peacoqc()
+    project = peacoqc_r_project
+    first_sid = _sample_ids(project)[0]
+
+    cfg = yaml.safe_load(
+        (project / "config" / "config.yaml").read_text(encoding="utf-8")
+    )
+    cfg["preprocessing"]["peacoqc"] = "config/peacoqc.yaml"
+    alt = project / "config" / "config_peacoqc.yaml"
+    alt.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+
+    from batchdx.cyto.io.fcs import read_fcs
+    from batchdx.cyto.io.manifests import read_removed_events
+    from batchdx.cyto.pipeline import RunLayout, stage_preprocess
+    from batchdx.cyto.preprocess.gating import apply_gates, read_gates
+    from batchdx.cyto.preprocess.removals import STEP_QC
+
+    layout = RunLayout(project / "results" / "peacoqc_real")
+    stage_preprocess(alt, project, layout)
+
+    # Ground truth for what the gate left of the block: the same gate table applied
+    # to the same raw file, by the package's own gate code.
+    contents = read_fcs(project / "data" / "raw" / f"{first_sid}.fcs")
+    gate = read_gates(project / "config" / "gates.yaml")
+    gated = apply_gates(
+        gate, contents.events, contents.channel_names,
+        sample_ids=np.repeat(first_sid, contents.n_events),
+        original_event_index=np.arange(contents.n_events, dtype=np.int64),
+        step="prelim_gating",
+    )
+    gate_kept = set(np.arange(contents.n_events, dtype=np.int64)[gated.keep].tolist())
+    block = set(range(*PEACOQC_BLOCK))
+    block_kept_by_gate = block & gate_kept
+    assert block_kept_by_gate, "the fixture's block did not survive its own gate"
+
+    log = read_removed_events(layout.removal_log)
+    qc_rows = log[log["step"] == STEP_QC]
+    assert len(qc_rows), "the real PeacoQC pass removed nothing, and the log says so"
+    assert qc_rows["reason"].str.startswith("PeacoQC").all(), (
+        "a removal in the peacoqc step must carry the PeacoQC version prefix the "
+        "adapter writes; an unattributed row would survive any backend swap silently"
+    )
+
+    first_sample_qc = qc_rows[qc_rows["sample_id"] == first_sid]
+    removed_indices = set(first_sample_qc["original_event_index"].astype(int))
+    missed = block_kept_by_gate - removed_indices
+    assert not missed, (
+        f"{len(missed)} event(s) of the known contaminated block survived the real "
+        f"PeacoQC pass, first {sorted(missed)[:5]}; the stage and the adapter disagree "
+        "about what PeacoQC found"
+    )
+
+    # The baseline agrees with the log: no block event is in it, and its row count
+    # matches the summary.
+    import anndata as ad
+
+    summary = json.loads(layout.preprocess_summary.read_text(encoding="utf-8"))
+    baseline = ad.read_h5ad(layout.preprocess_baseline)
+    in_baseline = baseline.obs[
+        (baseline.obs["sample_id"] == first_sid)
+        & (baseline.obs["original_event_index"].isin(sorted(block_kept_by_gate)))
+    ]
+    assert in_baseline.shape[0] == 0, (
+        "the removal log and the baseline disagree: the log says the block was "
+        "removed, the baseline still carries it"
+    )
+    assert baseline.n_obs == summary["n_events_kept"]
+
+    # The summary books the QC pass as its own step, next to the gate.
+    assert summary["removals_by_step"].get("peacoqc", 0) >= len(block_kept_by_gate)
+    assert summary["removals_by_step"].get("prelim_gating", 0) > 0
+    assert summary["declared"]["peacoqc"] == "config/peacoqc.yaml"
+    qc_steps = [s for s in summary["steps"] if s["step"] == "peacoqc"]
+    assert qc_steps and any(first_sid in s["detail"] for s in qc_steps), (
+        "the summary's QC detail must name the per-sample outcomes the adapter "
+        "reported, including which criteria actually contributed"
+    )
+
+    # The work directory is the real call's, not an empty fixture: one directory per
+    # sample, each with something the R run wrote.
+    work_root = layout.baseline_dir / "peacoqc"
+    for sid in _sample_ids(project):
+        work = work_root / sid
+        assert work.exists() and any(work.iterdir()), (
+            f"the PeacoQC work directory for {sid} is empty; the real call writes its "
+            "artifacts there"
+        )
