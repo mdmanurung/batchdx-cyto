@@ -34,7 +34,7 @@ something specific.
 |---|---|
 | `sample_id` | required |
 | `batch` | every batch contrast |
-| `donor_id` | donor-matched metrics, and `n_donors` on every metric record. It does **not** buy donor-level uncertainty intervals; none are computed in this build (Stage 8 is not implemented) |
+| `donor_id` | donor-matched metrics, `n_donors` on every metric record, and the donor-paired model (with bootstrap uncertainty intervals) behind every biological-preservation record |
 | `biospecimen_id`, `aliquot_id` | recorded on `SampleRecord` and kept distinct in every emitted manifest, so the levels cannot be silently merged. Nothing in this build reads them |
 | `group`, `stimulation`, `timepoint` | protected factors and stratified contrasts |
 | `reference_id` + `reference_role` | reference-supported evidence, CytoNorm, CytoBatchFlagR |
@@ -108,10 +108,13 @@ is never accepted at a value the package does not honour.
 `preprocessing.gating` and `preprocessing.peacoqc` were in the removed category until
 2026-09-30 and are now live keys, read as **paths**: to a gate table and to a PeacoQC
 settings file, both in the shape the pinned reference implementation's own configuration
-files declare. They are read by `batchdx.cyto.preprocess`, which is **not** yet called by
-a run — preprocessing operates on raw events before a baseline exists, and wiring it into
-a pipeline stage, a rule and the report is still to be done
-([`docs/blocked.md`](blocked.md) B-009). `preprocessing.transformation` no longer offers
+files declare. They are read by `batchdx.cyto.preprocess`, which runs as the pipeline's
+first stage when FCS input is used: gates on the raw events, per-panel asinh with the
+declared cofactors, then the PeacoQC pass on the transformed values — and a sample whose
+QC pass keeps fewer than half its events is refused rather than frozen into the baseline.
+The survivors are frozen into the baseline h5ad with per-event provenance (the
+`original_event_index` chain), and the design audit reads the preprocessed manifest.
+`preprocessing.transformation` no longer offers
 `"logicle"`: this build implements no logicle, has no tested inverse for one, and the
 reference implementation contains none either.
 
@@ -284,7 +287,9 @@ machine's own text. And the dataset manifest's provenance is not rendered at all
 ## 10. Known limits
 
 Read `docs/implementation_status.md` (generated) and `docs/blocked.md` before relying on
-anything. In short: the R backends are not executable in the environment this was built
-in; biological preservation (Stage 8) is not implemented, and no candidate here has been
-shown to preserve biology; the OpenProblems metrics are deferred; there is no real-data
-example; and no clinical or unseen-batch generalisation claim is made.
+anything. In short: the R backends execute for real at their pinned versions and CI
+builds the full R environment, but they remain the least exercised paths; the
+biological-preservation metrics are implemented with donor-paired uncertainty, yet no
+candidate has been shown to preserve biology on a real cohort; the OpenProblems metrics
+are partially verified and partially deferred; there is no real-data example; and no
+clinical or unseen-batch generalisation claim is made.

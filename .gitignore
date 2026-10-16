@@ -196,3 +196,4 @@ renv/
 libR/
 .Rhistory
 .RData
+site/

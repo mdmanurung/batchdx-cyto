@@ -1,0 +1,39 @@
+name: docs
+
+# Builds the MkDocs Material site and deploys it to GitHub Pages (gh-pages branch).
+# The API reference is generated from the source docstrings by mkdocstrings, so the
+# site is rebuilt whenever the source or the docs tree changes on main.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - ".github/workflows/docs.yaml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install the package with docs dependencies
+        run: pip install '.[docs]'
+
+      - name: Build the site (strict: broken links and nav fail the build)
+        run: mkdocs build --strict --site-dir site
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        run: mkdocs gh-deploy --force --no-history
