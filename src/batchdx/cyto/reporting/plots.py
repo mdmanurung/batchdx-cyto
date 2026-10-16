@@ -68,7 +68,11 @@ def before_after(
         hi = lo + 1.0
     bins = np.linspace(lo, hi, 60)
 
-    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.4), dpi=110, sharex=True, sharey=True)
+    # The x-axis is shared (both panels histogram the same bins, so a shared scale is
+    # what makes the comparison readable); the y-axis is per-panel, because density
+    # depends on each panel's own spread and forcing one y-scale flattens whichever
+    # panel happens to be tighter.
+    fig, axes = plt.subplots(1, 2, figsize=(7.2, 2.4), dpi=110, sharex=True, sharey=False)
     for ax, data, label in zip(axes, (before, after), ("uncorrected", "candidate"), strict=True):
         for batch, values in sorted(data.items()):
             if len(values) == 0:
@@ -100,17 +104,3 @@ def frequency_bars(freq: dict[str, dict[str, float]], batch_of: dict[str, str]) 
     ax.tick_params(labelsize=7)
     ax.legend(fontsize=6, frameon=False, ncol=3)
     return _to_svg(fig, "frequency_bars")
-
-
-def drift_lines(series: dict[str, np.ndarray], title: str) -> str:
-    """Block medians against acquisition order for a handful of sample-marker pairs."""
-
-    fig, ax = plt.subplots(figsize=(4.4, 2.4), dpi=110)
-    for label, values in sorted(series.items()):
-        ax.plot(np.linspace(0, 1, len(values)), values, linewidth=1.1, label=label)
-    ax.set_title(title, fontsize=9)
-    ax.set_xlabel("acquisition order (scaled)", fontsize=8)
-    ax.set_ylabel("block median", fontsize=8)
-    ax.tick_params(labelsize=7)
-    ax.legend(fontsize=6, frameon=False)
-    return _to_svg(fig, f"drift:{title}")

@@ -374,13 +374,27 @@ def test_unflagged_assessments_are_all_present_not_a_sample_of_them(run) -> None
 def test_a_truncated_assessment_table_states_how_many_rows_it_dropped(
     own_run, monkeypatch
 ) -> None:
+    """A table longer than the cap says what was dropped, and never claims completeness.
+
+    The expected count is read from the detector's own artifact, not hardcoded: the
+    fixture's assessment counts are the data's, and a test that pinned them would
+    break on every fixture change for a reason that has nothing to do with truncation.
+    """
+
     monkeypatch.setattr(html, "ASSESSMENT_ROW_LIMIT", 5)
     html_text = _rerender(own_run)
     composition = _detector_html(html_text, "composition")
-    assert "Showing 5 of 96 rows" in composition
+    result = DetectorResult.read(own_run["layout"].detector_result("composition"))
+    # The fixture's composition detector reports its assessments without crossing
+    # thresholds (the REF2 replicate design tightened the frequency contrasts), so the
+    # truncated table on the page is the unflagged one; the flagged section renders
+    # its zero honestly.
+    truncated = [a for a in result.assessments if not a.flag]
+    assert len(truncated) > html.ASSESSMENT_ROW_LIMIT
+    assert f"Showing 5 of {len(truncated)} rows" in composition
     assert "the rest are in the artifact on disk" in composition
     # and nothing pretends the table is complete
-    assert "Showing all 96 rows" not in composition
+    assert f"Showing all {len(truncated)} rows" not in composition
 
 
 def test_a_truncated_joint_structure_table_states_how_many_rows_it_dropped(
