@@ -357,6 +357,41 @@ def test_a_panel_without_a_declared_cofactor_is_refused(fcs_project) -> None:
     assert not layout.preprocess_baseline.exists()
 
 
+def test_a_marker_without_a_panel_id_is_refused_under_a_declared_transform(
+    fcs_project,
+) -> None:
+    """A marker outside every declared panel would silently keep its raw scale.
+
+    The transform is applied per panel, so a markers.tsv row that lost its
+    ``panel_id`` -- one spreadsheet edit -- would otherwise ride into a baseline
+    whose manifest declares the whole matrix transformed. Mixed scales in one
+    matrix are exactly the silent inconsistency the fail-loud philosophy forbids,
+    so the stage refuses before anything is frozen.
+    """
+
+    from batchdx.cyto.config import ConfigError
+    from batchdx.cyto.pipeline import RunLayout, stage_preprocess
+
+    markers_path = fcs_project / "config" / "markers.tsv"
+    markers = pd.read_csv(markers_path, sep="	")
+    markers.loc[markers.index[0], "panel_id"] = ""
+    alt_markers = fcs_project / "config" / "markers_nopanel.tsv"
+    markers.to_csv(alt_markers, sep="\t", index=False)
+
+    cfg = yaml.safe_load(
+        (fcs_project / "config" / "config.yaml").read_text(encoding="utf-8")
+    )
+    cfg["input"]["markers"] = "config/markers_nopanel.tsv"
+    alt = fcs_project / "config" / "config_nopanel.yaml"
+    alt.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+
+    layout = RunLayout(fcs_project / "results" / "nopanel")
+    with pytest.raises(ConfigError, match="panel_id"):
+        stage_preprocess(alt, fcs_project, layout)
+    # The refusal happened before anything was frozen.
+    assert not layout.preprocess_baseline.exists()
+
+
 def test_a_declared_peacoqc_pass_runs_after_the_transform_and_is_logged(
     fcs_project, monkeypatch,
 ) -> None:

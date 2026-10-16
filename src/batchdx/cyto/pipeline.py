@@ -353,6 +353,14 @@ def stage_preprocess(config_path: str | Path, base_dir: str | Path, layout: RunL
     cofactors = config.preprocessing.cofactor_by_panel
     panels = sorted({m.panel_id for m in markers if m.panel_id})
     if convention is not None:
+        unpanelled = [m.feature_id for m in markers if not m.panel_id]
+        if unpanelled:
+            raise ConfigError(
+                f"marker manifest: feature(s) {unpanelled} declare no panel_id; under "
+                "the declared transformation every marker needs a panel, because a "
+                "marker outside every declared panel would silently keep its raw scale "
+                "in a baseline whose manifest says it was transformed"
+            )
         missing = [p for p in panels if p not in cofactors]
         if missing:
             raise ConfigError(
