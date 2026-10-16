@@ -1,0 +1,2686 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Batch-effect diagnosis, correction and evaluation for mass cytometry, conventional flow cytometry and spectral flow cytometry, orchestrated by Snakemake.
+">
+      
+      
+      
+        <link rel="canonical" href="https://mdmanurung.github.io/batchdx-cyto/implementation_status/">
+      
+      
+        <link rel="prev" href="../compatibility_matrix/">
+      
+      
+        <link rel="next" href="../api/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Implementation status - batchdx-cyto</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#implementation-status" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="batchdx-cyto" class="md-header__button md-logo" aria-label="batchdx-cyto" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            batchdx-cyto
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Implementation status
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/mdmanurung/batchdx-cyto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mdmanurung/batchdx-cyto
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../usage/" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../vignettes/quickstart/" class="md-tabs__link">
+          
+  
+  
+  Vignettes
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../decisions/0001-internal-data-contract/" class="md-tabs__link">
+          
+  
+  
+  Design decisions
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../validation_results/" class="md-tabs__link">
+          
+  
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  
+  API reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="batchdx-cyto" class="md-nav__button md-logo" aria-label="batchdx-cyto" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    batchdx-cyto
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/mdmanurung/batchdx-cyto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mdmanurung/batchdx-cyto
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using batchdx-cyto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignettes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Vignettes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vignettes/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignette: a first diagnosis, end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vignettes/confounded/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignette: when the honest answer is 'don't correct'
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vignettes/spectral_controls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignette: benchmarking corrections on a real spectral-cytometry control panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0001-internal-data-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — The internal data contract is AnnData plus seven typed records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0002-python-r-boundary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — R runs in subprocesses, never embedded in the Python process
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0003-cytobatchflagr-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — CytoBatchFlagR is invoked at arm's length, never vendored
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0004-dependency-isolation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Upstream R packages are pinned by commit and need a container
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0005-evaluation-partitions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Evaluation partitions are frozen once, before any candidate runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-candidate-results-and-failure-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — Success, ineligible and failed are three different things
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation_results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../compatibility_matrix/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compatibility matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation status
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#legend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-by-tier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary by tier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gate-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gate detail
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Gate detail">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-x-tier-a-cross-stage-contracts-typed-versioned-round-tripped-across-the-r-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage X (Tier A) — Cross-stage contracts (typed, versioned, round-tripped across the R boundary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-0-tier-a-audit-upstream-resources-and-establish-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 0 (Tier A) — Audit upstream resources and establish contracts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-tier-a-runnable-package-and-minimal-snakemake-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1 (Tier A) — Runnable package and minimal Snakemake workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-tier-a-ingestion-immutable-data-preprocessing-machinery-not-yet-in-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2 (Tier A) — Ingestion, immutable data, preprocessing machinery (not yet in a run)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-3-tier-a-design-audit-and-correction-eligibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 3 (Tier A) — Design audit and correction eligibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-4-tier-b-freeze-evaluation-populations-sampling-and-splits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 4 (Tier B) — Freeze evaluation populations, sampling and splits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-5-tier-a-detection-adapters-and-diagnosis-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 5 (Tier A) — Detection adapters and diagnosis report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-6-tier-a-correction-backends-and-output-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 6 (Tier A) — Correction backends and output validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7-tier-a-native-and-common-comparative-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7 (Tier A) — Native and common comparative metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-8-tier-b-biological-preservation-and-uncertainty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 8 (Tier B) — Biological preservation and uncertainty
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-9-tier-b-candidate-assessment-and-recommendation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 9 (Tier B) — Candidate assessment and recommendation rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-10-tier-a-reporting-and-safe-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 10 (Tier A) — Reporting and safe exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-11-tier-c-snakemake-execution-performance-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 11 (Tier C) — Snakemake execution, performance, deployment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-12-tier-c-scientific-validation-documentation-release-readiness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 12 (Tier C) — Scientific validation, documentation, release readiness
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-totals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report totals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline & orchestration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input / output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/preprocess/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preprocessing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Correction backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sampling & partitions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schemas & contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/simulate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation & examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#legend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Legend
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-by-tier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary by tier
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#gate-detail" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Gate detail
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Gate detail">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#stage-x-tier-a-cross-stage-contracts-typed-versioned-round-tripped-across-the-r-boundary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage X (Tier A) — Cross-stage contracts (typed, versioned, round-tripped across the R boundary)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-0-tier-a-audit-upstream-resources-and-establish-contracts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 0 (Tier A) — Audit upstream resources and establish contracts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-1-tier-a-runnable-package-and-minimal-snakemake-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 1 (Tier A) — Runnable package and minimal Snakemake workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-2-tier-a-ingestion-immutable-data-preprocessing-machinery-not-yet-in-a-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 2 (Tier A) — Ingestion, immutable data, preprocessing machinery (not yet in a run)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-3-tier-a-design-audit-and-correction-eligibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 3 (Tier A) — Design audit and correction eligibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-4-tier-b-freeze-evaluation-populations-sampling-and-splits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 4 (Tier B) — Freeze evaluation populations, sampling and splits
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-5-tier-a-detection-adapters-and-diagnosis-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 5 (Tier A) — Detection adapters and diagnosis report
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-6-tier-a-correction-backends-and-output-validation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 6 (Tier A) — Correction backends and output validation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-7-tier-a-native-and-common-comparative-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 7 (Tier A) — Native and common comparative metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-8-tier-b-biological-preservation-and-uncertainty" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 8 (Tier B) — Biological preservation and uncertainty
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-9-tier-b-candidate-assessment-and-recommendation-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 9 (Tier B) — Candidate assessment and recommendation rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-10-tier-a-reporting-and-safe-exports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 10 (Tier A) — Reporting and safe exports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-11-tier-c-snakemake-execution-performance-deployment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 11 (Tier C) — Snakemake execution, performance, deployment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#stage-12-tier-c-scientific-validation-documentation-release-readiness" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Stage 12 (Tier C) — Scientific validation, documentation, release readiness
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#report-totals" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Report totals
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="implementation-status">Implementation status<a class="headerlink" href="#implementation-status" title="Permanent link">&para;</a></h1>
+<p><strong>This file is generated. Do not edit it by hand.</strong></p>
+<p>Derived by <code>scripts/generate_status.py</code> from <code>report.json</code> on 2026-10-15 11:25 UTC.
+Every COMPLETE line below corresponds to test identifiers that were executed in
+the referenced report; a claim without an executed test cannot appear here.
+Lines marked BLOCKED or PARTIAL come from the hand-maintained gate map
+(scripts/gates.yaml) and state why the executed evidence stops where it does.</p>
+<p>Regenerate with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>pytest --json-report --json-report-file=build/report.json
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python scripts/generate_status.py --report build/report.json
+</code></pre></div>
+<h2 id="legend">Legend<a class="headerlink" href="#legend" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Badge</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>✅ PASSED</td>
+<td>every test for the gate executed and passed</td>
+</tr>
+<tr>
+<td>🟡 PARTIAL</td>
+<td>the gate is met in part; the omission is stated</td>
+</tr>
+<tr>
+<td>⛔ BLOCKED</td>
+<td>an external obstacle prevents part of the gate from being tested at all</td>
+</tr>
+<tr>
+<td>❌ FAILED</td>
+<td>at least one test for the gate failed</td>
+</tr>
+<tr>
+<td>⬜ DEFERRED</td>
+<td>not implemented in this build</td>
+</tr>
+<tr>
+<td>❔ NOT RUN</td>
+<td>a named test was not present in this report</td>
+</tr>
+</tbody>
+</table>
+<h2 id="summary-by-tier">Summary by tier<a class="headerlink" href="#summary-by-tier" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Tier</th>
+<th>Stage</th>
+<th>Title</th>
+<th>Status</th>
+<th>Tests passed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>X</td>
+<td>Cross-stage contracts (typed, versioned, round-tripped across the R boundary)</td>
+<td>✅ PASSED</td>
+<td>10/10</td>
+</tr>
+<tr>
+<td>A</td>
+<td>0</td>
+<td>Audit upstream resources and establish contracts</td>
+<td>✅ PASSED</td>
+<td>8/8</td>
+</tr>
+<tr>
+<td>A</td>
+<td>1</td>
+<td>Runnable package and minimal Snakemake workflow</td>
+<td>✅ PASSED</td>
+<td>32/32</td>
+</tr>
+<tr>
+<td>A</td>
+<td>2</td>
+<td>Ingestion, immutable data, preprocessing machinery (not yet in a run)</td>
+<td>🟡 PARTIAL</td>
+<td>64/64</td>
+</tr>
+<tr>
+<td>A</td>
+<td>3</td>
+<td>Design audit and correction eligibility</td>
+<td>✅ PASSED</td>
+<td>12/12</td>
+</tr>
+<tr>
+<td>A</td>
+<td>5</td>
+<td>Detection adapters and diagnosis report</td>
+<td>✅ PASSED</td>
+<td>19/19</td>
+</tr>
+<tr>
+<td>A</td>
+<td>6</td>
+<td>Correction backends and output validation</td>
+<td>🟡 PARTIAL</td>
+<td>33/33</td>
+</tr>
+<tr>
+<td>A</td>
+<td>7</td>
+<td>Native and common comparative metrics</td>
+<td>🟡 PARTIAL</td>
+<td>52/52</td>
+</tr>
+<tr>
+<td>A</td>
+<td>10</td>
+<td>Reporting and safe exports</td>
+<td>🟡 PARTIAL</td>
+<td>34/34</td>
+</tr>
+<tr>
+<td>B</td>
+<td>4</td>
+<td>Freeze evaluation populations, sampling and splits</td>
+<td>🟡 PARTIAL</td>
+<td>26/26</td>
+</tr>
+<tr>
+<td>B</td>
+<td>8</td>
+<td>Biological preservation and uncertainty</td>
+<td>🟡 PARTIAL</td>
+<td>18/18</td>
+</tr>
+<tr>
+<td>B</td>
+<td>9</td>
+<td>Candidate assessment and recommendation rules</td>
+<td>✅ PASSED</td>
+<td>13/13</td>
+</tr>
+<tr>
+<td>C</td>
+<td>11</td>
+<td>Snakemake execution, performance, deployment</td>
+<td>🟡 PARTIAL</td>
+<td>11/11</td>
+</tr>
+<tr>
+<td>C</td>
+<td>12</td>
+<td>Scientific validation, documentation, release readiness</td>
+<td>🟡 PARTIAL</td>
+<td>4/4</td>
+</tr>
+</tbody>
+</table>
+<h2 id="gate-detail">Gate detail<a class="headerlink" href="#gate-detail" title="Permanent link">&para;</a></h2>
+<h3 id="stage-x-tier-a-cross-stage-contracts-typed-versioned-round-tripped-across-the-r-boundary">Stage X (Tier A) — Cross-stage contracts (typed, versioned, round-tripped across the R boundary)<a class="headerlink" href="#stage-x-tier-a-cross-stage-contracts-typed-versioned-round-tripped-across-the-r-boundary" title="Permanent link">&para;</a></h3>
+<p><strong>✅ PASSED</strong> — 10 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/unit/test_contracts.py::test_all_seven_contracts_exist_and_are_versioned` — passed
+* `tests/unit/test_contracts.py::test_contracts_reject_unknown_keys` — passed
+* `tests/unit/test_contracts.py::test_contracts_round_trip_through_json` — passed
+* `tests/unit/test_contracts.py::test_metric_record_carries_every_field_the_contract_requires` — passed
+* `tests/unit/test_contracts.py::test_correction_record_distinguishes_success_ineligible_and_failed` — passed
+* `tests/unit/test_contracts.py::test_json_schemas_are_exported_for_the_r_side` — passed
+* `tests/unit/test_contracts.py::test_r_reads_every_contract_and_the_binary_matrix_format` — passed
+* `tests/unit/test_contracts.py::test_binary_matrix_rejects_a_shape_mismatch` — passed
+* `tests/unit/test_contracts.py::test_downstream_never_infers_success_from_a_directory` — passed
+* `tests/unit/test_contracts.py::test_contract_schema_version_is_stamped_on_every_record` — passed
+
+</details>
+
+<h3 id="stage-0-tier-a-audit-upstream-resources-and-establish-contracts">Stage 0 (Tier A) — Audit upstream resources and establish contracts<a class="headerlink" href="#stage-0-tier-a-audit-upstream-resources-and-establish-contracts" title="Permanent link">&para;</a></h3>
+<p><strong>✅ PASSED</strong> — 8 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/integration/test_stage0_audit.py::test_lock_lists_a_commit_licence_and_strategy_for_every_resource` — passed
+* `tests/integration/test_stage0_audit.py::test_fetch_script_pins_the_same_commits_as_the_lock` — passed
+* `tests/integration/test_stage0_audit.py::test_python_audit_runs_and_reconciles_commits_and_metrics` — passed
+* `tests/integration/test_stage0_audit.py::test_python_audit_fails_on_a_commit_mismatch` — passed
+* `tests/integration/test_stage0_audit.py::test_r_audit_runs_and_finds_every_adapter_referenced_function` — passed
+* `tests/integration/test_stage0_audit.py::test_audit_output_documents_the_facts_the_adapters_rely_on` — passed
+* `tests/integration/test_stage0_audit.py::test_cytobatchflagr_licence_forbids_vendoring_and_the_adapter_says_so` — passed
+* `tests/integration/test_stage0_audit.py::test_every_adapter_referenced_r_function_appears_in_the_lock` — passed
+
+</details>
+
+<h3 id="stage-1-tier-a-runnable-package-and-minimal-snakemake-workflow">Stage 1 (Tier A) — Runnable package and minimal Snakemake workflow<a class="headerlink" href="#stage-1-tier-a-runnable-package-and-minimal-snakemake-workflow" title="Permanent link">&para;</a></h3>
+<p><strong>✅ PASSED</strong> — 32 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/integration/test_stage1_slice.py::test_cli_module_entry_point_is_importable_and_reports_what_it_ships` — passed
+* `tests/integration/test_stage1_slice.py::test_example_initialises_every_file_it_references` — passed
+* `tests/integration/test_stage1_slice.py::test_snakemake_runs_the_slice_and_a_second_invocation_does_no_analytical_work` — passed
+* `tests/integration/test_stage1_slice.py::test_a_bad_configuration_propagates_a_useful_error_and_exit_code` — passed
+* `tests/integration/test_stage1_slice.py::test_correct_requires_an_explicitly_selected_candidate` — passed
+* `tests/integration/test_stage1_slice.py::test_packaged_workflow_is_found_from_outside_the_source_checkout` — passed
+* `tests/integration/test_stage1_slice.py::test_every_r_script_the_adapters_run_is_actually_shipped` — passed
+* `tests/unit/test_release_metadata.py::test_the_mit_licence_text_ships` — passed
+* `tests/unit/test_release_metadata.py::test_the_declared_licence_is_mit_in_all_three_places` — passed
+* `tests/unit/test_release_metadata.py::test_every_declared_licence_file_exists` — passed
+* `tests/unit/test_release_metadata.py::test_the_build_backend_floor_is_pinned` — passed
+* `tests/unit/test_release_metadata.py::test_the_version_is_the_same_in_every_place_it_is_written` — passed
+* `tests/unit/test_release_metadata.py::test_the_version_is_not_a_development_only_sentinel` — passed
+* `tests/unit/test_release_metadata.py::test_every_python_version_requires_python_allows_has_a_classifier` — passed
+* `tests/unit/test_release_metadata.py::test_r_is_declared_as_a_language_this_package_actually_uses` — passed
+* `tests/unit/test_release_metadata.py::test_the_development_status_matches_the_gate_states` — passed
+* `tests/unit/test_release_metadata.py::test_the_contract_and_config_schema_versions_are_still_declared` — passed
+* `tests/unit/test_release_metadata.py::test_the_notices_no_longer_deny_the_extracted_components` — passed
+* `tests/unit/test_release_metadata.py::test_the_notices_list_the_metrics_extra_dependencies` — passed
+* `tests/unit/test_release_metadata.py::test_every_declared_python_dependency_is_named_in_the_notices` — passed
+* `tests/unit/test_release_metadata.py::test_the_envs_readme_names_every_environment_file_next_to_it` — passed
+* `tests/unit/test_release_metadata.py::test_the_cytobatchflagr_dependency_risk_names_the_enforced_library_block` — passed
+* `tests/unit/test_release_metadata.py::test_the_cytobatchflagr_dependency_risk_does_not_claim_test_coverage` — passed
+* `tests/unit/test_release_metadata.py::test_the_cytobatchflagr_dependency_risk_enumerates_the_whole_enforced_set` — passed
+* `tests/unit/test_release_metadata.py::test_the_cytobatchflagr_dependency_risk_names_what_is_actually_missing` — passed
+* `tests/unit/test_release_metadata.py::test_the_snakefile_imports_the_error_it_raises` — passed
+* `tests/unit/test_release_metadata.py::test_the_container_base_image_is_digest_pinned` — passed
+* `tests/unit/test_release_metadata.py::test_the_container_banner_does_not_claim_it_has_been_built` — passed
+* `tests/unit/test_release_metadata.py::test_the_container_installs_everything_the_upstream_library_block_requires` — passed
+* `tests/unit/test_release_metadata.py::test_the_container_declares_no_environment_variable_the_repository_ignores` — passed
+* `tests/unit/test_release_metadata.py::test_the_compatibility_matrix_exists_and_states_its_rule` — passed
+* `tests/unit/test_release_metadata.py::test_the_compatibility_matrix_does_not_claim_an_unrun_python_version_was_run` — passed
+
+</details>
+
+<h3 id="stage-2-tier-a-ingestion-immutable-data-preprocessing-machinery-not-yet-in-a-run">Stage 2 (Tier A) — Ingestion, immutable data, preprocessing machinery (not yet in a run)<a class="headerlink" href="#stage-2-tier-a-ingestion-immutable-data-preprocessing-machinery-not-yet-in-a-run" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 64 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> 2-D gating, the per-panel asinh transform, the PeacoQC pass and a <code>removed_events</code> writer are implemented in <code>src/batchdx/cyto/preprocess/</code> and tested against the pinned reference implementation's OWN configuration files, which load unchanged; the transform is verified element-wise against <code>flowVS::transFlowVS</code>, and <code>logicle</code> was removed from the schema because nothing here implements it. NOT satisfied: none of it is wired into a run. <code>preprocess</code> operates on raw events before a baseline exists, so there is no preprocessing stage, no Snakemake rule and no report section for the removal log, and every shipped example takes the already-QCed bypass path. A run must therefore still be handed preprocessed data, which is the behaviour this package documents. See docs/blocked.md B-009.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/unit/test_stage2_io.py::test_h5ad_roundtrip_preserves_marker_and_channel_order` — passed
+* `tests/unit/test_stage2_io.py::test_cell_identity_is_stable_and_unique` — passed
+* `tests/unit/test_stage2_io.py::test_baseline_is_immutable_under_read_operations` — passed
+* `tests/unit/test_stage2_io.py::test_duplicate_sample_ids_are_rejected` — passed
+* `tests/unit/test_stage2_io.py::test_ambiguous_channel_mapping_is_rejected` — passed
+* `tests/unit/test_stage2_io.py::test_undeclared_scale_is_rejected` — passed
+* `tests/unit/test_stage2_io.py::test_double_transformation_is_rejected` — passed
+* `tests/unit/test_stage2_io.py::test_already_corrected_input_is_refused` — passed
+* `tests/unit/test_stage2_io.py::test_missing_marker_is_not_treated_as_zero` — passed
+* `tests/unit/test_stage2_io.py::test_nonfinite_values_are_rejected` — passed
+* `tests/unit/test_stage2_io.py::test_missing_expression_layer_names_what_is_available` — passed
+* `tests/unit/test_stage2_io.py::test_missing_expression_layer_with_none_alias_names_layers` — passed
+* `tests/unit/test_stage2_io.py::test_multiple_panels_must_be_run_separately` — passed
+* `tests/unit/test_stage2_io.py::test_qc_history_and_transformation_provenance_are_carried` — passed
+* `tests/unit/test_stage2_io.py::test_fcs_write_read_roundtrip_and_keyword_policy` — passed
+* `tests/unit/test_stage2_io.py::test_fcs_export_refuses_to_overwrite_a_source_file` — passed
+* `tests/unit/test_stage2_io.py::test_uninvertible_transformation_keeps_transformed_values_and_says_so` — passed
+* `tests/unit/test_preprocessing.py::test_the_reference_implementation_ships_a_polygon_and_this_build_evaluates_it` — passed
+* `tests/unit/test_preprocessing.py::test_a_polygon_is_evaluated_against_a_hand_computed_inside_and_outside_set` — passed
+* `tests/unit/test_preprocessing.py::test_a_non_convex_polygon_excludes_the_notch` — passed
+* `tests/unit/test_preprocessing.py::test_the_two_dimensional_gates_change_the_outcome_and_the_one_dimensional_one_would_not` — passed
+* `tests/unit/test_preprocessing.py::test_a_gate_type_this_build_does_not_implement_is_refused_by_name` — passed
+* `tests/unit/test_preprocessing.py::test_a_gate_defined_but_not_in_the_chain_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_a_gate_channel_the_data_lacks_is_refused_rather_than_gated_on_zero` — passed
+* `tests/unit/test_preprocessing.py::test_gates_are_chained_so_an_event_is_counted_once_at_the_gate_that_removed_it` — passed
+* `tests/unit/test_preprocessing.py::test_a_one_axis_rectangle_is_a_half_line_and_is_accepted` — passed
+* `tests/unit/test_preprocessing.py::test_a_polygon_on_one_axis_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_gates_from_config_reads_the_declared_key_and_nothing_is_inferred` — passed
+* `tests/unit/test_preprocessing.py::test_the_transform_is_the_unscaled_asinh_that_flowvs_computes` — passed
+* `tests/unit/test_preprocessing.py::test_the_exporter_inverse_is_exact_for_this_convention_and_is_the_same_function` — passed
+* `tests/unit/test_preprocessing.py::test_the_scaled_convention_is_not_what_this_build_inverts_and_breaks_badly` — passed
+* `tests/unit/test_preprocessing.py::test_the_exporter_declares_asinh_the_only_invertible_transformation` — passed
+* `tests/unit/test_preprocessing.py::test_a_non_positive_or_non_finite_cofactor_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_logicle_is_declared_unimplemented_and_says_why` — passed
+* `tests/unit/test_preprocessing.py::test_the_removal_log_declares_exactly_the_four_columns_dataset_removed_events_names` — passed
+* `tests/unit/test_preprocessing.py::test_a_removal_row_carries_typed_indices_and_a_reason_naming_the_criterion` — passed
+* `tests/unit/test_preprocessing.py::test_a_removal_without_a_reason_or_with_an_unknown_step_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_a_log_that_grew_columns_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_a_zero_row_log_file_is_refused_rather_than_read_as_nothing_was_removed` — passed
+* `tests/unit/test_preprocessing.py::test_the_removal_log_round_trips_through_a_file_with_its_dtypes_intact` — passed
+* `tests/unit/test_preprocessing.py::test_a_removal_log_suffix_that_declares_no_separator_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_summarising_an_empty_log_returns_no_rows_and_no_zero` — passed
+* `tests/unit/test_preprocessing.py::test_peacoqc_settings_are_read_from_the_file_and_the_channels_are_required` — passed
+* `tests/unit/test_preprocessing.py::test_a_peacoqc_call_with_no_criteria_this_build_knows_is_refused` — passed
+* `tests/unit/test_preprocessing.py::test_a_blank_declared_path_is_refused_rather_than_resolved_to_the_cwd` — passed
+* `tests/unit/test_preprocessing.py::test_preprocessing_time_channel_is_still_refused_and_says_why` — passed
+* `tests/unit/test_preprocessing.py::test_the_run_still_never_transforms_events_even_with_the_new_keys` — passed
+* `tests/integration/test_peacoqc_backend.py::test_a_missing_rscript_is_a_stated_unavailability_not_a_silent_zero` — passed
+* `tests/integration/test_peacoqc_backend.py::test_row_misalignment_is_refused_rather_than_silently_truncated` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_reserved_identity_channel_cannot_collide_with_an_evaluated_channel` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_r_script_exists_where_run_r_script_looks_for_it` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_verified_formals_table_records_the_differences_from_the_reference_call_site` — passed
+* `tests/integration/test_peacoqc_backend.py::test_peacoqc_is_installed_at_the_version_whose_formals_were_read` — passed
+* `tests/integration/test_peacoqc_backend.py::test_flowvs_transflowvs_agrees_with_this_build_elementwise` — passed
+* `tests/integration/test_peacoqc_backend.py::test_peacoqc_removes_the_known_contaminated_block_and_attributes_it` — passed
+* `tests/integration/test_peacoqc_backend.py::test_peacoqc_runs_the_isolation_tree_when_there_are_enough_bins` — passed
+* `tests/integration/test_peacoqc_backend.py::test_peacoqc_removal_indices_resolve_to_original_event_indices_not_row_positions` — passed
+* `tests/integration/test_peacoqc_backend.py::test_two_samples_are_qced_separately_and_the_log_names_the_sample` — passed
+* `tests/integration/test_peacoqc_backend.py::test_a_clean_sample_reports_zero_removals_and_the_log_is_empty_not_absent` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_script_result_payload_names_the_versions_that_produced_it` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_report_setting_is_honoured_and_reported_as_counted` — passed
+* `tests/integration/test_peacoqc_backend.py::test_every_r_function_this_build_calls_is_declared_in_the_upstream_lock` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_reference_qc_settings_file_loads_here_unchanged` — passed
+* `tests/integration/test_peacoqc_backend.py::test_the_reference_gate_table_loads_here_unchanged` — passed
+
+</details>
+
+<h3 id="stage-3-tier-a-design-audit-and-correction-eligibility">Stage 3 (Tier A) — Design audit and correction eligibility<a class="headerlink" href="#stage-3-tier-a-design-audit-and-correction-eligibility" title="Permanent link">&para;</a></h3>
+<p><strong>✅ PASSED</strong> — 12 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/scientific/test_stage3_design.py::test_balanced_design_with_references_is_reference_supported` — passed
+* `tests/scientific/test_stage3_design.py::test_partial_reference_overlap_is_reported_per_pair` — passed
+* `tests/scientific/test_stage3_design.py::test_perfect_confounding_is_non_identifiable_and_blocks_correction` — passed
+* `tests/scientific/test_stage3_design.py::test_two_batch_design_makes_the_cluster_detector_ineligible` — passed
+* `tests/scientific/test_stage3_design.py::test_thirty_one_batches_exceeds_the_cluster_detector_range` — passed
+* `tests/scientific/test_stage3_design.py::test_cytobatchflagr_needs_controls_in_every_batch_and_four_batches` — passed
+* `tests/scientific/test_stage3_design.py::test_iqr_fence_cannot_flag_with_three_values` — passed
+* `tests/scientific/test_stage3_design.py::test_repeated_stimulation_and_timepoints_do_not_become_technical_replicates` — passed
+* `tests/scientific/test_stage3_design.py::test_missing_donor_ids_permit_descriptive_diagnosis_only` — passed
+* `tests/scientific/test_stage3_design.py::test_population_specific_lack_of_support_is_reported` — passed
+* `tests/scientific/test_stage3_design.py::test_nested_technical_structure_is_represented_and_the_target_named` — passed
+* `tests/scientific/test_stage3_design.py::test_below_floor_is_a_configuration_value_with_a_declared_origin` — passed
+
+</details>
+
+<h3 id="stage-4-tier-b-freeze-evaluation-populations-sampling-and-splits">Stage 4 (Tier B) — Freeze evaluation populations, sampling and splits<a class="headerlink" href="#stage-4-tier-b-freeze-evaluation-populations-sampling-and-splits" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 26 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> Splits are implemented and enforced: <code>sampling/splits.py</code> partitions samples into train/tune/validate BY BIOSPECIMEN (donor, else biospecimen_id, else sample_id), the unit is recorded in the manifest rather than inferred by the reader, and <code>decisions/policy.py</code> refuses to let a contrast that only the training split can estimate support a recommendation (test_a_contrast_only_the_training_split_can_estimate_blocks_approval). NOT satisfied: the 60/20/20 proportions are uncalibrated engineering defaults with a declared origin, and they are not configurable by a user. On a design too thin to stratify the manifest is emitted with the deficiency reported as a coverage warning rather than refused, because refusing would take the detectors, metrics and report down with it; the fit-and-apply backend still refuses such a design itself.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/unit/test_stage4_partitions.py::test_sampling_manifest_is_reproducible` — passed
+* `tests/unit/test_stage4_partitions.py::test_sampling_is_balanced_at_the_sample_level_and_reports_coverage` — passed
+* `tests/unit/test_stage4_partitions.py::test_gating_labels_are_medium_confidence_and_recorded` — passed
+* `tests/unit/test_stage4_partitions.py::test_clustering_labels_are_flagged_lowest_confidence` — passed
+* `tests/unit/test_stage4_partitions.py::test_unmatched_cells_are_labelled_not_dropped` — passed
+* `tests/unit/test_stage4_partitions.py::test_rare_population_generates_a_coverage_warning` — passed
+* `tests/unit/test_stage4_partitions.py::test_candidate_order_does_not_change_labels_or_comparisons` — passed
+* `tests/unit/test_stage4_partitions.py::test_every_metric_record_carries_label_tier_and_representation` — passed
+* `tests/unit/test_stage4_partitions.py::test_non_identifiable_comparisons_are_excluded_from_the_frozen_pairs` — passed
+* `tests/unit/test_stage4_partitions.py::test_sampling_does_not_redefine_population_frequency` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_manifest_records_a_split_and_names_the_unit_it_used` — passed
+* `tests/unit/test_stage4_partitions.py::test_every_sample_of_a_biospecimen_lands_in_exactly_one_split` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_split_does_not_depend_on_candidate_order_or_sample_reading_order` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_split_is_reproducible_from_the_seed_and_moves_with_it` — passed
+* `tests/unit/test_stage4_partitions.py::test_every_split_holds_both_arms_of_the_biological_contrast` — passed
+* `tests/unit/test_stage4_partitions.py::test_a_split_that_cannot_hold_both_arms_is_refused_rather_than_emitted` — passed
+* `tests/unit/test_stage4_partitions.py::test_a_zero_share_split_is_refused_instead_of_emitted_empty` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_split_unit_is_declared_and_never_chosen_in_silence` — passed
+* `tests/unit/test_stage4_partitions.py::test_per_split_arm_and_coverage_counts_are_reported` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_validate_split_can_contrast_the_batches_a_decision_needs` — passed
+* `tests/unit/test_stage4_partitions.py::test_a_contrast_only_evaluable_on_the_training_split_cannot_support_a_recommendation` — passed
+* `tests/unit/test_stage4_partitions.py::test_a_contrast_no_split_can_estimate_is_a_coverage_failure_not_a_weak_result` — passed
+* `tests/unit/test_stage4_partitions.py::test_a_recorded_partition_that_leaks_is_refused_at_the_reader` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_manifest_round_trips_through_json_with_its_split` — passed
+* `tests/unit/test_stage4_partitions.py::test_a_design_too_thin_to_stratify_is_warned_about_rather_than_silently_split` — passed
+* `tests/unit/test_stage4_partitions.py::test_the_manifest_warns_when_the_emitted_split_is_not_arm_balanced` — passed
+
+</details>
+
+<h3 id="stage-5-tier-a-detection-adapters-and-diagnosis-report">Stage 5 (Tier A) — Detection adapters and diagnosis report<a class="headerlink" href="#stage-5-tier-a-detection-adapters-and-diagnosis-report" title="Permanent link">&para;</a></h3>
+<p><strong>✅ PASSED</strong> — 19 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/integration/test_stage5_detectors.py::test_drift_detector_finds_an_injected_within_file_trend` — passed
+* `tests/integration/test_stage5_detectors.py::test_drift_detector_is_ineligible_without_an_acquisition_order` — passed
+* `tests/integration/test_stage5_detectors.py::test_composition_detector_separates_frequency_from_intensity` — passed
+* `tests/integration/test_stage5_detectors.py::test_composition_detector_reports_insufficient_data_rather_than_a_p_value` — passed
+* `tests/integration/test_stage5_detectors.py::test_two_batch_fixture_makes_the_cluster_detector_ineligible_not_uninformative` — passed
+* `tests/integration/test_stage5_detectors.py::test_absent_r_package_yields_not_available_never_an_absence_of_batch_effects` — passed
+* `tests/integration/test_stage5_detectors.py::test_cytobatchflagr_without_a_checkout_is_not_available_with_a_stated_remedy` — passed
+* `tests/integration/test_stage5_detectors.py::test_cytobatchflagr_refuses_to_choose_thresholds_itself` — passed
+* `tests/integration/test_stage5_detectors.py::test_native_cycombine_detector_matches_a_direct_upstream_call` — passed
+* `tests/integration/test_stage5_detectors.py::test_detector_results_round_trip_through_json` — passed
+* `tests/integration/test_stage5_detectors.py::test_flag_counts_are_not_presented_as_probabilities` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_cytobatchflagr_flags_the_injected_shift_and_not_merely_a_batch` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_cytobatchflagr_clean_design_does_not_flag_the_marker_under_test` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_cytobatchflagr_pins_the_upstream_commit_and_publishes_its_table` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_cell_counts_justify_the_panel_that_was_evaluated` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_a_control_too_small_for_its_threshold_is_ineligible_not_clean` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_every_package_in_the_upstream_library_block_is_installed` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_a_missing_r_package_is_not_available_with_a_stated_remedy` — passed
+* `tests/integration/test_cytobatchflagr_backend.py::test_no_r_interpreter_is_not_available_never_an_absence_of_batch_effects` — passed
+
+</details>
+
+<h3 id="stage-6-tier-a-correction-backends-and-output-validation">Stage 6 (Tier A) — Correction backends and output validation<a class="headerlink" href="#stage-6-tier-a-correction-backends-and-output-validation" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 33 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> cyCombine and CytoNorm execute at their pinned commits in integration tests. CytoNorm fits on measured references in the training split, verifies the FCS round trip, and reports batches it could not correct. NOT satisfied: a design that lacks adequate training controls is currently reported as not_available rather than ineligible, and the shipped paired_reference example cannot fit CytoNorm because it has only one reference donor.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/integration/test_stage6_backends.py::test_identity_backend_is_numerically_unchanged` — passed
+* `tests/integration/test_stage6_backends.py::test_every_backend_declares_its_capabilities_explicitly` — passed
+* `tests/integration/test_stage6_backends.py::test_cycombine_refuses_the_count_data_route` — passed
+* `tests/integration/test_stage6_backends.py::test_the_r_script_would_refuse_a_non_combat_method` — passed
+* `tests/integration/test_stage6_backends.py::test_unsupported_arguments_are_rejected_not_ignored` — passed
+* `tests/integration/test_stage6_backends.py::test_a_requested_protected_covariate_is_never_quietly_dropped` — passed
+* `tests/integration/test_stage6_backends.py::test_a_protected_covariate_is_refused_when_the_backend_is_available` — passed
+* `tests/integration/test_stage6_backends.py::test_absent_backend_reports_not_available_with_an_actionable_reason` — passed
+* `tests/integration/test_stage6_backends.py::test_cytonorm_is_registered_as_a_fit_apply_backend` — passed
+* `tests/integration/test_stage6_backends.py::test_cytonorm_refuses_an_artificial_aggregate_control` — passed
+* `tests/integration/test_cytonorm_backend.py::test_cytonorm_is_registered_with_the_capabilities_it_now_has` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_verified_flag_cannot_be_claimed_without_the_package` — passed
+* `tests/integration/test_cytonorm_backend.py::test_cytonorm_refuses_a_declared_transform_list` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_r_script_pins_the_transform_list_to_the_identity` — passed
+* `tests/integration/test_cytonorm_backend.py::test_cytonorm_reports_not_available_with_an_actionable_reason` — passed
+* `tests/integration/test_cytonorm_backend.py::test_cytonorm_needs_a_split_it_can_fit_on` — passed
+* `tests/integration/test_cytonorm_backend.py::test_cytonorm_is_ineligible_when_the_training_split_holds_no_measured_reference` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_training_controls_are_the_training_split_measured_references` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_fcs_round_trip_this_backend_depends_on_is_exact_to_the_format_bound` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_round_trip_check_catches_a_channel_mix_up` — passed
+* `tests/integration/test_cytonorm_backend.py::test_a_reordered_corrected_file_is_refused_rather_than_matched` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_cytonorm_backend_corrects_a_held_out_split_and_verifies_event_identity` — passed
+* `tests/integration/test_cytonorm_backend.py::test_a_batch_the_split_never_fitted_is_reported_as_uncorrected_not_corrected` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_cytonorm_script_refuses_a_transform_list_the_python_side_cannot_reach` — passed
+* `tests/integration/test_cytonorm_backend.py::test_the_cytonorm_script_refuses_a_fit_on_a_single_batch` — passed
+* `tests/integration/test_cytonorm_backend.py::test_cytonorm_refuses_to_fit_on_a_partition_that_cannot_be_compared` — passed
+* `tests/integration/test_cytonorm_backend.py::test_a_single_valued_r_payload_field_does_not_degrade_into_its_characters` — passed
+* `tests/integration/test_stage6_backends.py::test_output_validation_catches_a_changed_excluded_marker` — passed
+* `tests/integration/test_stage6_backends.py::test_output_validation_catches_shape_and_finiteness_problems` — passed
+* `tests/integration/test_stage6_backends.py::test_a_runtime_failure_never_returns_unchanged_data_as_success` — passed
+* `tests/integration/test_stage6_backends.py::test_correction_magnitude_is_reported_by_marker_sample_and_population` — passed
+* `tests/integration/test_stage6_backends.py::test_candidate_identity_is_stable_under_parameter_reordering` — passed
+* `tests/integration/test_stage6_backends.py::test_cycombine_smoke_test` — passed
+
+</details>
+
+<h3 id="stage-7-tier-a-native-and-common-comparative-metrics">Stage 7 (Tier A) — Native and common comparative metrics<a class="headerlink" href="#stage-7-tier-a-native-and-common-comparative-metrics" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 52 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> The NATIVE namespace now executes: workflow/scripts/cycombine_evaluate.R calls cyCombine::evaluate_emd and cyCombine::evaluate_mad as-is and src/batchdx/cyto/metrics/native.py reports their return values, so the two specs have a producer and the "executed upstream, not reimplemented" clause is met. The external obstacle that made this gate BLOCKED (an unreachable CRAN, Bioconductor and an uninstalled cyCombine) no longer holds; see scripts/setup_r_env.sh. Six OpenProblems components are now registered in the <code>compatibility</code> namespace with upstream_verified=True, each proven by a test that imports the pinned helper from the pinned commit and compares outputs against a recorded tolerance: emd_mean_ct_horiz, emd_mean_ct_vert, ratio_consistent_peaks, average_batch_r2_ct, iLisi and cLisi. Extraction did NOT need the Nextflow runtime, which retired B-007's open question. NOT satisfied: three rows remain deferred, each with a currently-true obstacle — flowsom_mean_mapping_similarity needs FlowSOM (Bioconductor-only) plus three benchmark parameters this package does not define, and the two functional_marker_preservation rows are a retention ratio and an effect-size drift rather than the statistic Stage 8 computes, so they need two integrated splits and a significance baseline this package's one-candidate-per-frozen-partition contract does not supply. <code>openproblems.cms</code> is genuinely absent at the pinned commit and stays recorded as such. scripts/audit_upstream.py fails the build if a <code>compatibility</code> row ever appears without a recorded verification.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/scientific/test_stage7_metrics.py::test_identical_distributions_give_near_zero_emd` — passed
+* `tests/scientific/test_stage7_metrics.py::test_a_known_shift_moves_emd_by_the_size_of_the_shift` — passed
+* `tests/scientific/test_stage7_metrics.py::test_scale_change_alone_is_visible_in_dispersion_not_only_in_emd` — passed
+* `tests/scientific/test_stage7_metrics.py::test_constant_marker_yields_undefined_not_zero` — passed
+* `tests/scientific/test_stage7_metrics.py::test_rare_population_returns_insufficient_data_with_a_reason` — passed
+* `tests/scientific/test_stage7_metrics.py::test_unequal_sample_sizes_do_not_change_the_weighting` — passed
+* `tests/scientific/test_stage7_metrics.py::test_zero_denominator_makes_the_reduction_undefined_not_infinite` — passed
+* `tests/scientific/test_stage7_metrics.py::test_composition_only_change_moves_composition_and_not_within_population_emd` — passed
+* `tests/scientific/test_stage7_metrics.py::test_mad_uses_the_normal_consistency_constant` — passed
+* `tests/scientific/test_stage7_metrics.py::test_empirical_and_binned_emd_are_named_differently` — passed
+* `tests/scientific/test_stage7_metrics.py::test_no_local_metric_claims_to_be_an_upstream_component` — passed
+* `tests/scientific/test_stage7_metrics.py::test_unsupported_metrics_report_reasons_rather_than_zero_scores` — passed
+* `tests/scientific/test_stage7_metrics.py::test_missing_metrics_cannot_improve_a_candidate` — passed
+* `tests/scientific/test_stage7_metrics.py::test_sampling_manifest_round_trips_through_json` — passed
+* `tests/scientific/test_stage7_metrics.py::test_native_metrics_are_produced_by_calling_cycombine_not_by_reimplementing_it` — passed
+* `tests/scientific/test_stage7_metrics.py::test_a_native_metric_that_cannot_run_reports_a_reason_and_no_value` — passed
+* `tests/scientific/test_stage7_metrics.py::test_the_native_r_script_refuses_a_misaligned_pair_of_frames` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_every_openproblems_metric_name_is_resolved_exactly_once` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_reimplementation_is_registered_under_a_name_of_its_own` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_lock_and_the_registry_agree_on_the_nine_names` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_cms_stays_recorded_as_absent_at_the_pinned_commit` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_each_extracted_row_names_its_pinned_helper_and_claims_verification` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_each_spec_states_the_cell_minimum_the_code_actually_enforces` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_promoted_row_carries_the_evidence_instead_of_an_apology` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_every_remaining_deferred_row_names_the_obstacle_instead_of_a_tier` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_functional_marker_rows_are_not_claimed_as_local_implementations` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_bin_array_reproduces_the_extracted_one` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_compute_emd_reproduces_the_extracted_distance` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_horizontal_emd_matches_the_extracted_component` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_vertical_emd_matches_the_extracted_component` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_peak_helpers_reproduce_the_extracted_ones` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_peak_case_classifier_calls_a_flattened_marker_broken` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_triple_that_already_disagreed_is_excluded_from_the_ratio` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_triple_the_correction_flattened_is_broken_not_excluded` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_wilcoxon_helper_matches_the_local_rank_statistic` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_cohens_d_helper_matches_the_local_cohens_d` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_every_record_carries_the_frozen_partition_provenance` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_thin_comparison_reports_a_reason_and_never_a_zero` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_design_with_no_within_donor_pair_says_so_instead_of_scoring_zero` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_horizontal_component_responds_to_a_removed_batch_offset` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_vertical_component_sees_what_the_horizontal_one_cannot` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_every_extracted_component_is_produced_for_the_frozen_partition` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_removed_batch_shift_moves_the_horizontal_component` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_constant_marker_is_undefined_in_the_batch_r2_not_zero` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_batch_r2_falls_when_the_batch_offset_is_removed` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_batch_r2_helper_matches_the_extracted_component` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_batch_r2_fits_one_dummy_per_batch_and_not_a_single_contrast` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_pinned_lisi_helpers_match_the_extracted_ones` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_the_confounding_check_fires_on_the_same_groups_as_the_pinned_one` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_i_lisi_rises_when_the_batches_are_mixed_and_c_lisi_falls` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_a_single_batch_or_a_single_population_is_undefined_rather_than_zero` — passed
+* `tests/scientific/test_stage7_openproblems.py::test_too_few_cells_for_the_neighbourhood_is_insufficient_data` — passed
+
+</details>
+
+<h3 id="stage-8-tier-b-biological-preservation-and-uncertainty">Stage 8 (Tier B) — Biological preservation and uncertainty<a class="headerlink" href="#stage-8-tier-b-biological-preservation-and-uncertainty" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 18 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> Prespecified contrasts, paired and unpaired sample-level models, donor-block bootstrap and restricted permutation are implemented in src/batchdx/cyto/metrics/preservation.py and tested, and every emitted record carries uncertainty_low/uncertainty_high/uncertainty_kind. The replicate unit is the sample or the donor and never the cell, which is proven directly by test_the_replicate_unit_is_the_sample_not_the_cell. NOT satisfied: the results are established on deterministic synthetic fixtures only. Public spectral controls have been audited but no real-data workflow has run (docs/blocked.md B-008); selected checks cover five seeds but the whole scientific suite has not been rerun at every seed. The preservation evidence remains a demonstration that the machinery is correct, not a calibration for any real cohort. The OpenProblems functional-marker component remains unreconciled against its pinned implementation.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/scientific/test_stage8_preservation.py::test_a_correct_offset_removal_improves_alignment_without_distortion` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_collapsing_correction_is_rejected_despite_perfect_alignment` — passed
+* `tests/scientific/test_stage8_preservation.py::test_marginal_preserving_joint_destroying_corruption_is_detected` — passed
+* `tests/scientific/test_stage8_preservation.py::test_biology_only_differences_are_not_labelled_technical` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_correct_offset_removal_preserves_the_prespecified_contrast` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_collapsing_correction_does_not_preserve_the_contrast` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_correction_neither_manufactures_nor_erases_a_biological_difference` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_contrast_the_design_cannot_support_is_refused_with_a_reason` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_contrast_naming_a_level_that_does_not_exist_is_refused` — passed
+* `tests/scientific/test_stage8_preservation.py::test_the_contrast_chooses_the_paired_model_only_when_a_donor_spans_both_levels` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_paired_contrast_is_tested_on_the_within_donor_differences` — passed
+* `tests/scientific/test_stage8_preservation.py::test_the_donor_block_bootstrap_interval_narrows_as_the_donor_count_rises` — passed
+* `tests/scientific/test_stage8_preservation.py::test_restricted_permutation_detects_a_real_effect_and_calibrates_at_chance` — passed
+* `tests/scientific/test_stage8_preservation.py::test_every_preservation_record_carries_its_uncertainty` — passed
+* `tests/scientific/test_stage8_preservation.py::test_an_interval_is_never_reported_without_a_reachable_permutation_null` — passed
+* `tests/scientific/test_stage8_preservation.py::test_a_prespecified_contrast_is_reproducible_from_its_seed` — passed
+* `tests/scientific/test_stage8_preservation.py::test_the_contrast_level_order_is_normalised_so_a_positive_effect_means_the_same_arm` — passed
+* `tests/scientific/test_stage8_preservation.py::test_the_replicate_unit_is_the_sample_not_the_cell` — passed
+
+</details>
+
+<h3 id="stage-9-tier-b-candidate-assessment-and-recommendation-rules">Stage 9 (Tier B) — Candidate assessment and recommendation rules<a class="headerlink" href="#stage-9-tier-b-candidate-assessment-and-recommendation-rules" title="Permanent link">&para;</a></h3>
+<p><strong>✅ PASSED</strong> — 13 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/scientific/test_stage9_decisions.py::test_absent_batch_effect_yields_not_needed` — passed
+* `tests/scientific/test_stage9_decisions.py::test_successful_correction_reaches_review_but_not_automatic_approval` — passed
+* `tests/scientific/test_stage9_decisions.py::test_a_calibrated_policy_can_recommend` — passed
+* `tests/scientific/test_stage9_decisions.py::test_information_destroying_correction_is_rejected` — passed
+* `tests/scientific/test_stage9_decisions.py::test_sparse_validation_coverage_yields_insufficient_evidence` — passed
+* `tests/scientific/test_stage9_decisions.py::test_confounded_design_is_non_identifiable_for_every_candidate` — passed
+* `tests/scientific/test_stage9_decisions.py::test_below_floor_design_blocks_every_recommendation` — passed
+* `tests/scientific/test_stage9_decisions.py::test_failed_and_unavailable_backends_get_distinct_states` — passed
+* `tests/scientific/test_stage9_decisions.py::test_dropping_a_failed_metric_cannot_improve_a_recommendation` — passed
+* `tests/scientific/test_stage9_decisions.py::test_clustering_labels_alone_cannot_support_a_recommendation` — passed
+* `tests/scientific/test_stage9_decisions.py::test_policy_settings_and_threshold_origins_are_published` — passed
+* `tests/scientific/test_stage9_decisions.py::test_overrides_are_recorded_beside_the_original_assessment` — passed
+* `tests/scientific/test_stage9_decisions.py::test_a_contrast_only_the_training_split_can_estimate_blocks_approval` — passed
+
+</details>
+
+<h3 id="stage-10-tier-a-reporting-and-safe-exports">Stage 10 (Tier A) — Reporting and safe exports<a class="headerlink" href="#stage-10-tier-a-reporting-and-safe-exports" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 34 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> Minimal form, as Tier A specifies. Embeddings and independently fitted layout panels are not rendered, and the narrative summary is the rule-derived text in the template rather than a generated narrative section.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/integration/test_stage10_report.py::test_report_is_self_contained_and_offline` — passed
+* `tests/integration/test_stage10_report.py::test_every_headline_number_is_traceable_to_a_record` — passed
+* `tests/integration/test_stage10_report.py::test_failed_and_unavailable_candidates_stay_visible` — passed
+* `tests/integration/test_stage10_report.py::test_missing_preservation_evidence_is_not_presented_as_preservation` — passed
+* `tests/integration/test_stage10_report.py::test_identifiers_are_redacted_and_the_mapping_is_stored_separately` — passed
+* `tests/integration/test_stage10_report.py::test_regeneration_triggers_no_correction` — passed
+* `tests/integration/test_stage10_report.py::test_diagnosis_only_report_renders_before_any_correction` — passed
+* `tests/integration/test_stage10_report.py::test_exports_round_trip_with_preserved_ids_and_declared_scale` — passed
+* `tests/integration/test_stage10_report.py::test_status_file_reports_every_planned_unit_not_just_the_ones_that_ran` — passed
+* `tests/integration/test_stage10_report.py::test_report_settings_do_not_change_the_analytical_fingerprint` — passed
+* `tests/integration/test_report_completeness.py::test_every_detector_result_on_disk_is_rendered_with_its_status` — passed
+* `tests/integration/test_report_completeness.py::test_a_successful_native_detector_is_rendered_not_only_its_failures` — passed
+* `tests/integration/test_report_completeness.py::test_a_native_detector_that_really_ran_is_reported_wherever_it_landed` — passed
+* `tests/integration/test_report_completeness.py::test_assessments_reported_without_a_flag_are_rendered_in_their_own_table` — passed
+* `tests/integration/test_report_completeness.py::test_unflagged_assessments_are_all_present_not_a_sample_of_them` — passed
+* `tests/integration/test_report_completeness.py::test_a_truncated_assessment_table_states_how_many_rows_it_dropped` — passed
+* `tests/integration/test_report_completeness.py::test_a_truncated_joint_structure_table_states_how_many_rows_it_dropped` — passed
+* `tests/integration/test_report_completeness.py::test_the_marker_explorer_declares_what_it_omits` — passed
+* `tests/integration/test_report_completeness.py::test_the_markers_shown_do_not_depend_on_the_row_order_of_markers_tsv` — passed
+* `tests/integration/test_report_completeness.py::test_the_metric_row_projection_takes_no_redactor_parameter` — passed
+* `tests/integration/test_report_completeness.py::test_a_sample_identifier_is_redacted_in_the_diagnostics_table_too` — passed
+* `tests/integration/test_report_completeness.py::test_an_absolute_path_in_the_resolved_configuration_is_rewritten` — passed
+* `tests/integration/test_report_completeness.py::test_a_detectors_own_per_cell_payload_is_pseudonymised_and_declared` — passed
+* `tests/integration/test_report_completeness.py::test_a_metric_reason_that_names_a_sample_is_pseudonymised` — passed
+* `tests/integration/test_report_completeness.py::test_n_donors_is_reported_on_every_metric_family_that_has_donors` — passed
+* `tests/integration/test_report_completeness.py::test_a_family_with_no_declared_donor_reports_missing_not_zero` — passed
+* `tests/integration/test_report_completeness.py::test_an_ineligible_backend_is_refused_and_records_no_override` — passed
+* `tests/integration/test_report_completeness.py::test_an_exploratory_override_is_recorded_in_the_audit_trail_and_the_report` — passed
+* `tests/integration/test_report_completeness.py::test_re_running_correct_does_not_duplicate_the_override_record` — passed
+* `tests/integration/test_report_completeness.py::test_the_interval_and_its_method_reach_the_table_and_the_csv` — passed
+* `tests/integration/test_report_completeness.py::test_a_record_without_an_interval_reports_an_empty_cell_not_a_zero_width_one` — passed
+* `tests/integration/test_report_completeness.py::test_the_report_is_still_one_offline_self_contained_file` — passed
+* `tests/integration/test_report_completeness.py::test_the_rendered_page_never_prints_a_bare_json_decode_error` — passed
+* `tests/integration/test_report_completeness.py::test_decision_candidates_all_appear_on_the_page` — passed
+
+</details>
+
+<h3 id="stage-11-tier-c-snakemake-execution-performance-deployment">Stage 11 (Tier C) — Snakemake execution, performance, deployment<a class="headerlink" href="#stage-11-tier-c-snakemake-execution-performance-deployment" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 11 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> Deferred as Tier C, with the execution behaviour the Tier A slice depends on implemented and tested. NOT done: interruption-recovery testing, checkpoint-driven data-dependent branches (none are needed, because expansion is static), a built and digest-pinned Apptainer image, environment prefetching for offline nodes, and any cluster execution. The SLURM profile is shipped labelled UNTESTED.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/integration/test_stage11_workflow.py::test_clean_execution_then_a_no_op_rerun` — passed
+* `tests/integration/test_stage11_workflow.py::test_deleting_a_real_artifact_forces_recomputation` — passed
+* `tests/integration/test_stage11_workflow.py::test_changing_the_configuration_invalidates_downstream_results` — passed
+* `tests/integration/test_stage11_workflow.py::test_diagnose_mode_stops_before_any_correction` — passed
+* `tests/integration/test_stage11_workflow.py::test_correct_mode_runs_only_the_selected_candidate` — passed
+* `tests/integration/test_stage11_workflow.py::test_correct_mode_without_a_candidate_fails_at_parse_time` — passed
+* `tests/integration/test_stage11_workflow.py::test_an_unavailable_method_produces_a_partial_report_not_a_failed_run` — passed
+* `tests/integration/test_stage11_workflow.py::test_no_rule_hides_a_failure_behind_true_or_blanket_suppression` — passed
+* `tests/integration/test_stage11_workflow.py::test_rules_declare_logs_threads_resources_and_benchmarks` — passed
+* `tests/integration/test_stage11_workflow.py::test_the_candidate_roster_comes_from_the_configuration_not_the_results_tree` — passed
+* `tests/integration/test_stage11_workflow.py::test_slurm_profile_is_present_but_labelled_untested` — passed
+
+</details>
+
+<h3 id="stage-12-tier-c-scientific-validation-documentation-release-readiness">Stage 12 (Tier C) — Scientific validation, documentation, release readiness<a class="headerlink" href="#stage-12-tier-c-scientific-validation-documentation-release-readiness" title="Permanent link">&para;</a></h3>
+<p><strong>🟡 PARTIAL</strong> — 4 passed, 0 failed, 0 skipped, 0 not executed.</p>
+<blockquote>
+<p><strong>Partial:</strong> Release metadata, compatibility documentation, synthetic scientific fixtures and selected multi-seed checks execute. The separate R exchange suite passed locally and in draft-PR CI, but is not a pytest gate. NOT satisfied: real-cohort validation, calibrated thresholds, suite-wide multi-seed coverage, a built container, or cluster execution. This release remains Alpha.</p>
+</blockquote>
+<details><summary>All test identifiers for this gate</summary>
+
+* `tests/unit/test_release_metadata.py::test_the_mit_licence_text_ships` — passed
+* `tests/unit/test_release_metadata.py::test_the_version_is_the_same_in_every_place_it_is_written` — passed
+* `tests/unit/test_release_metadata.py::test_the_compatibility_matrix_exists_and_states_its_rule` — passed
+* `tests/scientific/test_multiseed.py::test_the_seed_has_exactly_one_default` — passed
+
+</details>
+
+<h2 id="report-totals">Report totals<a class="headerlink" href="#report-totals" title="Permanent link">&para;</a></h2>
+<p>The referenced report's raw counts are environment-dependent (a test that skips in one environment runs in another), so they are not reproduced here; the gate table above is the environment-independent statement.</p>
+<p>Tests outside the gate lists (helpers and additional checks) are counted in the
+totals but do not decide a gate.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

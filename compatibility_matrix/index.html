@@ -1,0 +1,2707 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Batch-effect diagnosis, correction and evaluation for mass cytometry, conventional flow cytometry and spectral flow cytometry, orchestrated by Snakemake.
+">
+      
+      
+      
+        <link rel="canonical" href="https://mdmanurung.github.io/batchdx-cyto/compatibility_matrix/">
+      
+      
+        <link rel="prev" href="../validation_results/">
+      
+      
+        <link rel="next" href="../implementation_status/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Compatibility matrix - batchdx-cyto</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#compatibility-matrix" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="batchdx-cyto" class="md-header__button md-logo" aria-label="batchdx-cyto" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            batchdx-cyto
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Compatibility matrix
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/mdmanurung/batchdx-cyto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mdmanurung/batchdx-cyto
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../usage/" class="md-tabs__link">
+          
+  
+  
+  User guide
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../vignettes/quickstart/" class="md-tabs__link">
+          
+  
+  
+  Vignettes
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../decisions/0001-internal-data-contract/" class="md-tabs__link">
+          
+  
+  
+  Design decisions
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../validation_results/" class="md-tabs__link">
+          
+  
+  
+  Validation
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../api/" class="md-tabs__link">
+          
+  
+  
+  API reference
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="batchdx-cyto" class="md-nav__button md-logo" aria-label="batchdx-cyto" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    batchdx-cyto
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/mdmanurung/batchdx-cyto" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    mdmanurung/batchdx-cyto
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    User guide
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    User guide
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../usage/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Using batchdx-cyto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignettes
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Vignettes
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vignettes/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignette: a first diagnosis, end to end
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vignettes/confounded/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignette: when the honest answer is 'don't correct'
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../vignettes/spectral_controls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Vignette: benchmarking corrections on a real spectral-cytometry control panel
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design decisions
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Design decisions
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0001-internal-data-contract/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0001 — The internal data contract is AnnData plus seven typed records
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0002-python-r-boundary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0002 — R runs in subprocesses, never embedded in the Python process
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0003-cytobatchflagr-integration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0003 — CytoBatchFlagR is invoked at arm's length, never vendored
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0004-dependency-isolation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0004 — Upstream R packages are pinned by commit and need a container
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0005-evaluation-partitions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0005 — Evaluation partitions are frozen once, before any candidate runs
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../decisions/0006-candidate-results-and-failure-handling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    0006 — Success, ineligible and failed are three different things
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_5" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Validation
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../validation_results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Validation results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compatibility matrix
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Compatibility matrix
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tested-versus-declared-reconciled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tested versus declared, reconciled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-dependency-versions-that-were-resolved-and-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core dependency versions that were resolved and run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependency-bounds-lower-bounds-only-and-what-that-costs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency bounds: lower bounds only, and what that costs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="R">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r-side-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-side test coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#native-r-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native R backends
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Native R backends">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cytobatchflagr-execution-and-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CytoBatchFlagR execution and limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#openproblems-compatibility-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenProblems compatibility components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpenProblems compatibility components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-three-that-are-not-verified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three that are not verified
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-this-package-ships-no-real-cytometry-data-and-that-is-the-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data: this package ships no real cytometry data, and that is the design
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-verified-here-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not verified here, and why
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../implementation_status/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Implementation status
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Pipeline & orchestration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/cli/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Command line
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/config/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/io/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Input / output
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/preprocess/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Preprocessing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/design/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Design audit
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/diagnostics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Diagnostics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/adapters/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Correction backends
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/sampling/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Sampling & partitions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/decisions/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Decisions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/reporting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reporting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/schemas/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schemas & contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api/simulate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Simulation & examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#python" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Python
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Python">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#tested-versus-declared-reconciled" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tested versus declared, reconciled
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#core-dependency-versions-that-were-resolved-and-run" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core dependency versions that were resolved and run
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dependency-bounds-lower-bounds-only-and-what-that-costs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dependency bounds: lower bounds only, and what that costs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#build-backend" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build backend
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#r" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="R">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#r-side-test-coverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        R-side test coverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#native-r-backends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Native R backends
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Native R backends">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#cytobatchflagr-execution-and-limits" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        CytoBatchFlagR execution and limits
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#openproblems-compatibility-components" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OpenProblems compatibility components
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="OpenProblems compatibility components">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-three-that-are-not-verified" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The three that are not verified
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#data-this-package-ships-no-real-cytometry-data-and-that-is-the-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Data: this package ships no real cytometry data, and that is the design
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#not-verified-here-and-why" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Not verified here, and why
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="compatibility-matrix">Compatibility matrix<a class="headerlink" href="#compatibility-matrix" title="Permanent link">&para;</a></h1>
+<p>What is actually known about the versions and backends this package runs on, and — for
+every row — the command that establishes it.</p>
+<p><strong>The rule this file follows.</strong> A cell says <code>verified</code> only if a command was run on this
+checkout and produced the stated result. It says <code>declared-only</code> when a tracked file
+asserts it but nothing here executed it. It says <code>untested</code> when there is neither. No row
+is <code>verified</code> because a version number looks plausible. Where a number was resolved from a
+remote index over the network, that is stated in the row, because "resolved" and "ran"
+are different claims.</p>
+<p>Measured on 2026-09-30 at commit <code>9850c33</code> plus uncommitted work in the tree.</p>
+<p><strong>Environment of record.</strong> Python 3.12.13, R 4.4.3 (<code>renv/bin/R</code>), <code>.venv</code> for Python and
+<code>renv/lib/R/library</code> for R. Every <code>verified</code> cell below was measured here.</p>
+<hr />
+<h2 id="python">Python<a class="headerlink" href="#python" title="Permanent link">&para;</a></h2>
+<h3 id="tested-versus-declared-reconciled">Tested versus declared, reconciled<a class="headerlink" href="#tested-versus-declared-reconciled" title="Permanent link">&para;</a></h3>
+<p>Four tracked files made four different statements about which Python this package runs
+on, and the disagreement was itself the defect:</p>
+<table>
+<thead>
+<tr>
+<th>Source</th>
+<th>Said</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pyproject.toml</code> <code>requires-python</code></td>
+<td><code>&gt;=3.10</code> — a floor, i.e. everything at or above 3.10 is <em>permitted</em></td>
+</tr>
+<tr>
+<td><code>pyproject.toml</code> classifiers</td>
+<td>3.10, 3.11, 3.12, 3.13 — four versions <em>advertised</em></td>
+</tr>
+<tr>
+<td><code>.github/workflows/batchdx-cyto-tests.yaml:29</code></td>
+<td><code>python-version: "3.12"</code> — configured for CI, with no completed runner job yet</td>
+</tr>
+<tr>
+<td><code>workflow/envs/python.yaml:29</code></td>
+<td><code>python=3.12</code> — one version <em>pinned for the workflow</em></td>
+</tr>
+</tbody>
+</table>
+<p>A floor, a classifier list, a CI pin and an environment pin are four different claims,
+and only two of them are ever executed. The reconciliation is deliberately boring:
+<strong>3.12 is the tested version; the other three are declared.</strong> Nothing is widened to make
+the table look better, and no version is marked <code>verified</code> because a number next to it
+looks plausible.</p>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Status</th>
+<th>What was actually run</th>
+<th>How to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>3.12</strong></td>
+<td><code>verified</code></td>
+<td>the suite in two runs: <code>.venv/bin/python -V</code> → <code>Python 3.12.13</code>; <code>pytest -q tests/unit</code> → 123 passed in 25s; <code>pytest -q tests/scientific</code> → 95 passed / 1 skipped in 1m47s; together 243 passed / 1 skipped in 2m13s, of which 25 are <code>tests/scientific/test_multiseed.py</code></td>
+<td><code>python -V</code>; <code>.venv/bin/pytest -q tests/unit tests/scientific</code></td>
+</tr>
+<tr>
+<td>3.11</td>
+<td><code>declared-only</code></td>
+<td><strong>nothing.</strong> No environment was built and no test was run. A grammar-level parse of all 85 <code>.py</code> files under 3.11 succeeds, which rules out a syntax regression and establishes nothing else</td>
+<td><code>python3.11 -m venv .venv311 &amp;&amp; .venv311/bin/pip install -e '.[dev]' &amp;&amp; .venv311/bin/pytest -q</code></td>
+</tr>
+<tr>
+<td>3.10</td>
+<td><code>declared-only</code></td>
+<td><strong>nothing.</strong> Same as 3.11: grammar-level parse only. This is the <code>requires-python</code> floor, so a 3.10 incompatibility is a <em>packaging</em> bug, not an untested feature</td>
+<td>as above, with <code>python3.10</code></td>
+</tr>
+<tr>
+<td>3.13</td>
+<td><code>declared-only</code></td>
+<td><strong>nothing.</strong> Grammar-level parse only. A trove classifier with no environment behind it is a claim; it is labelled as one</td>
+<td>as above, with <code>python3.13</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>The grammar-level check, and exactly what it is.</strong> All 85 <code>.py</code> files under <code>src/</code>,
+<code>tests/</code> and <code>scripts/</code> were parsed with <code>ast.parse(..., feature_version=(3, N))</code> for
+N in 10, 11, 12, 13; all 85 parse under all four. That establishes that the source uses
+no syntax newer than 3.10, which is a real constraint on the <code>requires-python</code> floor and
+is the only thing about 3.10 that can be checked without installing a stack. It
+establishes <strong>nothing</strong> about the standard library surface, C-extension ABI, or
+dependency resolution, all of which differ across these versions.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>python<span class="w"> </span>-<span class="w"> </span><span class="s">&lt;&lt;'PY'</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="s">import ast, pathlib</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="s">files = list(pathlib.Path("src").rglob("*.py")) + list(pathlib.Path("tests").rglob("*.py"))</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="s">for minor in (10, 11, 12, 13):</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="s">    for p in files:</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="s">        ast.parse(p.read_text(), filename=str(p), feature_version=(3, minor))</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="s">print("all", len(files), "files parse under 3.10-3.13")</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="s">PY</span>
+</code></pre></div>
+<p><strong>There is no CI matrix across versions.</strong> The workflow names Python 3.12, matching the
+workflow environment. Three of the four rows above remain claims, not measurements,
+until a matrix runs. The Python 3.12 draft-PR job reached the complete suite on a
+GitHub runner in <a href="https://github.com/mdmanurung/batchdx-cyto/actions/runs/37102250467">run 37102250467</a>:
+375 passed, 2 skipped and 2 interrupted-run byte comparisons failed. This is executed
+3.12 evidence, not yet a green compatibility result.</p>
+<h3 id="core-dependency-versions-that-were-resolved-and-run">Core dependency versions that were resolved and run<a class="headerlink" href="#core-dependency-versions-that-were-resolved-and-run" title="Permanent link">&para;</a></h3>
+<p>These are the versions in <code>.venv</code>, and they are exactly the pins in
+<code>workflow/envs/python.yaml</code>, so the environment used here is the one that file describes.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Version</th>
+<th>How to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>numpy</td>
+<td>2.5.3</td>
+<td><code>python -c "import importlib.metadata as m; print(m.version('numpy'))"</code></td>
+</tr>
+<tr>
+<td>pandas</td>
+<td>3.0.6</td>
+<td>as above, <code>pandas</code></td>
+</tr>
+<tr>
+<td>scipy</td>
+<td>1.18.1</td>
+<td>as above, <code>scipy</code></td>
+</tr>
+<tr>
+<td>anndata</td>
+<td>0.13.4</td>
+<td>as above, <code>anndata</code></td>
+</tr>
+<tr>
+<td>h5py</td>
+<td>3.16.0</td>
+<td>as above, <code>h5py</code></td>
+</tr>
+<tr>
+<td>pydantic</td>
+<td>2.13.5</td>
+<td>as above, <code>pydantic</code></td>
+</tr>
+<tr>
+<td>typer</td>
+<td>0.27.2</td>
+<td>as above, <code>typer</code></td>
+</tr>
+<tr>
+<td>jinja2</td>
+<td>3.1.6</td>
+<td>as above, <code>jinja2</code></td>
+</tr>
+<tr>
+<td>PyYAML</td>
+<td>6.0.3</td>
+<td>as above, <code>PyYAML</code></td>
+</tr>
+<tr>
+<td>flowio</td>
+<td>1.4.0</td>
+<td>as above, <code>flowio</code></td>
+</tr>
+<tr>
+<td>pyarrow</td>
+<td>25.0.1</td>
+<td>as above, <code>pyarrow</code></td>
+</tr>
+<tr>
+<td>matplotlib</td>
+<td>3.11.2</td>
+<td>as above, <code>matplotlib</code></td>
+</tr>
+<tr>
+<td>snakemake</td>
+<td>9.27.0</td>
+<td>as above, <code>snakemake</code></td>
+</tr>
+<tr>
+<td>scikit-learn (<code>metrics</code> extra)</td>
+<td>1.9.1</td>
+<td>as above, <code>scikit-learn</code></td>
+</tr>
+<tr>
+<td>scib-metrics (<code>metrics</code> extra)</td>
+<td>0.6.1</td>
+<td>as above, <code>scib-metrics</code></td>
+</tr>
+<tr>
+<td>umap-learn (<code>metrics</code> extra)</td>
+<td>0.5.12</td>
+<td>as above, <code>umap-learn</code></td>
+</tr>
+</tbody>
+</table>
+<p>The floors in <code>pyproject.toml</code> are deliberately much wider than this table, and
+<strong>every one of those lower bounds is untested</strong> — see the next section, which is the
+honest reading of that gap rather than a defence of it.</p>
+<h3 id="dependency-bounds-lower-bounds-only-and-what-that-costs">Dependency bounds: lower bounds only, and what that costs<a class="headerlink" href="#dependency-bounds-lower-bounds-only-and-what-that-costs" title="Permanent link">&para;</a></h3>
+<p>All twelve core dependencies and all three <code>metrics</code>-extra dependencies carry a lower
+bound and no upper bound. That is a real gap, not a stylistic one, and the
+<code>anndata&gt;=0.10</code> line has already produced a user-visible failure:</p>
+<ul>
+<li><strong>What happened.</strong> anndata 0.13 added a <code>None</code> key to <code>.layers</code> that aliases <code>.X</code>. Any
+  code that iterates or sorts the layer view hits it. <code>io/dataset.py:361-364</code> filters
+  <code>if name is not None</code> and is correct; <strong><code>io/dataset.py:255</code> does not</strong>, and still does
+  <code>sorted(adata.layers)</code> in an error message. With anndata 0.13.4 a file carrying both a
+  <code>None</code> key and a named layer raises
+  <code>TypeError: '&lt;' not supported between instances of 'str' and 'NoneType'</code> where the
+  intended <code>DatasetValidationError</code> should name the available layers. Reproduce it with:
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="kn">import</span><span class="w"> </span><span class="nn">anndata</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ad</span><span class="o">,</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">a</span> <span class="o">=</span> <span class="n">ad</span><span class="o">.</span><span class="n">AnnData</span><span class="p">(</span><span class="n">X</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="s2">"float32"</span><span class="p">));</span> <span class="n">a</span><span class="o">.</span><span class="n">layers</span><span class="p">[</span><span class="s2">"preprocessed"</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="mi">3</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nb">sorted</span><span class="p">(</span><span class="n">a</span><span class="o">.</span><span class="n">layers</span><span class="p">)</span>   <span class="c1"># TypeError</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nb">sorted</span><span class="p">(</span><span class="n">n</span> <span class="k">for</span> <span class="n">n</span> <span class="ow">in</span> <span class="n">a</span><span class="o">.</span><span class="n">layers</span> <span class="k">if</span> <span class="n">n</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">)</span>   <span class="c1"># the fix already applied at :361-364</span>
+</code></pre></div>
+  A <code>TypeError</code> from a library's error path is the worst of both: the message is
+  unreadable <em>and</em> the validation it was written to perform never runs.</li>
+<li><strong>Why one fix does not close the class.</strong> A lower bound cannot express "and not the
+  version that changed this". Only an upper bound, or a version matrix, stops the next
+  one. <code>pandas 3.0</code> and <code>numpy 2.x</code> are the same shape of risk and have not yet broken
+  anything here, which is luck rather than a bound.</li>
+</ul>
+<p><strong>Recommended bounds.</strong> These are recommendations, not edits — <code>pyproject.toml</code> is not
+this tranche's to change. Each ceiling is the next major version above the one row in
+the table above that was actually executed, so the bound is "everything up to and
+including what we ran", which is the most that can honestly be promised.</p>
+<table>
+<thead>
+<tr>
+<th>Package</th>
+<th>Now</th>
+<th>Recommended</th>
+<th>Ceiling rationale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>numpy</td>
+<td><code>&gt;=1.24</code></td>
+<td><code>&gt;=1.24,&lt;3</code></td>
+<td>2.x changed the ABI and scalar promotion; 3 is untested</td>
+</tr>
+<tr>
+<td>pandas</td>
+<td><code>&gt;=2.0</code></td>
+<td><code>&gt;=2.0,&lt;4</code></td>
+<td>3.0 is a major release (copy-on-write, removals); 4 is untested</td>
+</tr>
+<tr>
+<td>scipy</td>
+<td><code>&gt;=1.10</code></td>
+<td><code>&gt;=1.10,&lt;2</code></td>
+<td>1.x is tested; 2 is untested</td>
+</tr>
+<tr>
+<td>anndata</td>
+<td><code>&gt;=0.10</code></td>
+<td><code>&gt;=0.10,&lt;0.14</code></td>
+<td><strong>the live one</strong>: 0.13 changed <code>.layers</code> semantics</td>
+</tr>
+<tr>
+<td>h5py</td>
+<td><code>&gt;=3.8</code></td>
+<td><code>&gt;=3.8,&lt;4</code></td>
+<td>3.x is tested; 4 is untested</td>
+</tr>
+<tr>
+<td>pydantic</td>
+<td><code>&gt;=2.5</code></td>
+<td><code>&gt;=2.5,&lt;3</code></td>
+<td>2.x is tested; 3 is untested</td>
+</tr>
+<tr>
+<td>typer</td>
+<td><code>&gt;=0.9</code></td>
+<td><code>&gt;=0.9,&lt;1</code></td>
+<td>pre-1.0: the ceiling is 1.0, not 0.28</td>
+</tr>
+<tr>
+<td>jinja2</td>
+<td><code>&gt;=3.1</code></td>
+<td><code>&gt;=3.1,&lt;4</code></td>
+<td>3.x is tested; 4 is untested</td>
+</tr>
+<tr>
+<td>pyyaml</td>
+<td><code>&gt;=6.0</code></td>
+<td><code>&gt;=6.0,&lt;7</code></td>
+<td>6.x is tested; 7 is untested</td>
+</tr>
+<tr>
+<td>flowio</td>
+<td><code>&gt;=1.2</code></td>
+<td><code>&gt;=1.2,&lt;2</code></td>
+<td>1.x is tested; 2 is untested</td>
+</tr>
+<tr>
+<td>pyarrow</td>
+<td><code>&gt;=14.0</code></td>
+<td><code>&gt;=14.0,&lt;26</code></td>
+<td>25.0.1 is tested; 26 is untested</td>
+</tr>
+<tr>
+<td>matplotlib</td>
+<td><code>&gt;=3.7</code></td>
+<td><code>&gt;=3.7,&lt;4</code></td>
+<td>3.x is tested; 4 is untested</td>
+</tr>
+<tr>
+<td>snakemake (<code>workflow</code>)</td>
+<td><code>&gt;=8.0</code></td>
+<td><code>&gt;=8.0,&lt;10</code></td>
+<td>9.27.0 is tested; the 8→9 jump moved APIs</td>
+</tr>
+<tr>
+<td>scikit-learn (<code>metrics</code>)</td>
+<td><code>&gt;=1.3</code></td>
+<td><code>&gt;=1.3,&lt;2</code></td>
+<td>1.9.1 is tested; 2 is untested</td>
+</tr>
+<tr>
+<td>scib-metrics (<code>metrics</code>)</td>
+<td><code>&gt;=0.5</code></td>
+<td><code>&gt;=0.5,&lt;0.7</code></td>
+<td>0.6.1 is tested; pre-1.0 ceiling is the minor</td>
+</tr>
+<tr>
+<td>umap-learn (<code>metrics</code>)</td>
+<td><code>&gt;=0.5</code></td>
+<td><code>&gt;=0.5,&lt;0.6</code></td>
+<td>0.5.12 is tested; pre-1.0 ceiling is the minor</td>
+</tr>
+</tbody>
+</table>
+<p><strong>The lower bounds are the larger half of the problem and ceilings do not touch them.</strong>
+<code>numpy&gt;=1.24</code> permits 1.24, which has never been run here; <code>pandas&gt;=2.0</code> permits 2.0;
+and so on down the table. A ceiling stops the <em>next</em> breaking release; only a
+lowest-supported-dependency job — a second CI job that resolves every dependency to its
+floor and runs the suite — turns those promises into measurements. Neither exists today,
+and no row in this file claims otherwise.</p>
+<h3 id="build-backend">Build backend<a class="headerlink" href="#build-backend" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Status</th>
+<th>Evidence</th>
+<th>How to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>hatchling</code> &gt;= 1.27 required</td>
+<td><code>verified</code></td>
+<td>built with 1.26.3 and with 1.27.0. 1.27.0 emits <code>License-Expression: MIT</code> + <code>License-File: LICENSE</code>; 1.26.3 succeeds but silently emits the deprecated <code>License: MIT</code> and drops <code>License-File</code></td>
+<td><code>python -m build --no-isolation</code> against each version; compare <code>METADATA</code> in the wheel</td>
+</tr>
+</tbody>
+</table>
+<p><code>hatchling</code> is a build-time requirement only and is <strong>not</strong> installed in <code>.venv</code>, so
+nothing in the test suite pins it. <code>requires = ["hatchling&gt;=1.27"]</code> is what stops a build
+silently degrading to the old metadata field.</p>
+<hr />
+<h2 id="r">R<a class="headerlink" href="#r" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Status</th>
+<th>Evidence</th>
+<th>How to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4.4.3</td>
+<td><code>verified</code></td>
+<td><code>renv/bin/R</code>; all 12 R-marked tests pass under it</td>
+<td><code>R --version</code>; <code>pytest -m "requires_r or requires_cycombine or requires_cytonorm"</code></td>
+</tr>
+<tr>
+<td>4.4.1</td>
+<td><code>declared-only</code>, and <strong>never built</strong></td>
+<td>the container base image. No docker, podman, apptainer, singularity, skopeo or crane exists on this node</td>
+<td>build <code>containers/Dockerfile.r-backends</code> somewhere with a runtime</td>
+</tr>
+<tr>
+<td>any other 4.x</td>
+<td><code>untested</code></td>
+<td>nothing declares or runs one</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>R 4.4 is what makes Bioconductor 3.20 the relevant release; that is the release the
+container's <code>BiocManager::install()</code> will resolve against.</p>
+<h3 id="r-side-test-coverage">R-side test coverage<a class="headerlink" href="#r-side-test-coverage" title="Permanent link">&para;</a></h3>
+<p>R is not an optional garnish here: <strong>eight</strong> R files under <code>scripts/</code> and
+<code>workflow/scripts/</code> do work that <code>batchdx.cyto.pipeline</code> drives, which is why
+<code>Programming Language :: R</code> is declared in <code>pyproject.toml</code>. Until this tranche, one of
+them (<code>scripts/audit_upstream.R</code>) was the only one CI executed.</p>
+<table>
+<thead>
+<tr>
+<th>R file</th>
+<th>Unit tests</th>
+<th>Driven end to end by pytest</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>workflow/scripts/lib/binmat.R</code></td>
+<td><strong>yes</strong> — <code>tests/testthat/test-binmat.R</code>, 101 assertions</td>
+<td>yes, <code>tests/unit/test_contracts.py:124-165</code></td>
+</tr>
+<tr>
+<td><code>workflow/scripts/cycombine_correct.R</code></td>
+<td>no</td>
+<td>yes — cyCombine correction runs at its pinned commit</td>
+</tr>
+<tr>
+<td><code>workflow/scripts/cycombine_detect.R</code></td>
+<td>no</td>
+<td>yes — Stage 5 native-detector comparison</td>
+</tr>
+<tr>
+<td><code>workflow/scripts/cytobatchflagr_detect.R</code></td>
+<td>no</td>
+<td><strong>no — never executed</strong>, see B-006 below</td>
+</tr>
+<tr>
+<td><code>workflow/scripts/cycombine_evaluate.R</code></td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr>
+<td><code>workflow/scripts/cytonorm_correct.R</code></td>
+<td>no</td>
+<td>yes — CytoNorm backend, 4/4</td>
+</tr>
+<tr>
+<td><code>workflow/scripts/peacoqc_qc.R</code></td>
+<td>no</td>
+<td>yes — <code>tests/integration/test_peacoqc_backend.py</code></td>
+</tr>
+<tr>
+<td><code>scripts/audit_upstream.R</code></td>
+<td>no</td>
+<td>yes — CI, and the Stage 0 gate</td>
+</tr>
+</tbody>
+</table>
+<p><code>binmat.R</code> is the one covered directly, and it is covered directly on purpose: its own
+header calls it a hand-mirror of <code>io/binary.py</code>, and it is the only file in the
+package where a byte-order or row-major/column-major divergence would be silent <em>and</em>
+would corrupt every adapter. <code>tests/testthat/test-binmat.R</code> holds both implementations to
+a contract stated by neither of them — the expected bytes are produced by base R
+<code>writeBin</code> against a <code>raw()</code> connection — so a divergence cannot hide behind a matching
+divergence. The suite currently reports <strong>94 passing and 7 failing</strong>, all 7 from one
+defect in <code>binmat.R:49</code> (<code>auto_unbox = TRUE</code> collapses a length-1 <code>row_ids</code>/<code>col_names</code>
+to a JSON scalar, which Python's <code>list(...)</code> then iterates character by character). See
+the tranche report for the one-line fix and the verified blast radius.</p>
+<p>Run the R suite with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>Rscript<span class="w"> </span>--vanilla<span class="w"> </span>tests/run_r_tests.R<span class="w">          </span><span class="c1"># exits non-zero on any failure</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nv">BATCHDX_PYTHON</span><span class="o">=</span>.venv/bin/python<span class="w"> </span>Rscript<span class="w"> </span>--vanilla<span class="w"> </span>tests/run_r_tests.R<span class="w">   </span><span class="c1"># force cross-language</span>
+</code></pre></div>
+<hr />
+<h2 id="native-r-backends">Native R backends<a class="headerlink" href="#native-r-backends" title="Permanent link">&para;</a></h2>
+<p>R is not an optional garnish here: eight tracked R files
+(<code>scripts/audit_upstream.R</code>, <code>workflow/scripts/{cycombine_correct,cycombine_detect,cytobatchflagr_detect,cycombine_evaluate,cytonorm_correct,peacoqc_qc}.R</code>,
+<code>workflow/scripts/lib/binmat.R</code>) do work that <code>batchdx.cyto.pipeline</code> drives, which is why
+<code>Programming Language :: R</code> is declared in <code>pyproject.toml</code>. Per-file unit-test coverage is
+tabulated under <em>R-side test coverage</em> above.</p>
+<table>
+<thead>
+<tr>
+<th>Backend</th>
+<th>Pinned commit</th>
+<th>Library status</th>
+<th>Status</th>
+<th>How to verify</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cyCombine</td>
+<td><code>fcd42dbb</code></td>
+<td>0.3.0 installed, loads</td>
+<td><code>verified</code> — <strong>executed</strong>: 12 R-marked tests pass, none skipped</td>
+<td><code>pytest -m requires_cycombine</code>; <code>Rscript --vanilla -e 'library(cyCombine)'</code></td>
+</tr>
+<tr>
+<td>CytoNorm</td>
+<td><code>278f352d</code></td>
+<td>2.0.12 installed, loads</td>
+<td><code>verified</code> — <strong>executed</strong>: <code>tests/integration/test_cytonorm_backend.py</code> passes 4/4</td>
+<td><code>pytest tests/integration/test_cytonorm_backend.py</code>; <code>Rscript --vanilla -e 'library(CytoNorm)'</code></td>
+</tr>
+<tr>
+<td>CytoBatchFlagR</td>
+<td><code>ad21e3b1</code></td>
+<td>all 29 packages in its unconditional <code>library()</code> block installed</td>
+<td><code>verified</code> — detector executes on shifted and unshifted four-batch fixtures</td>
+<td><code>pytest tests/integration/test_cytobatchflagr_backend.py</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="cytobatchflagr-execution-and-limits">CytoBatchFlagR execution and limits<a class="headerlink" href="#cytobatchflagr-execution-and-limits" title="Permanent link">&para;</a></h3>
+<p>The enforced dependency set is the 29 unconditional <code>library()</code> calls at
+<code>.upstream/CytoBatchFlagR/R/CytoBatchFlagR_functions.R:6-34</code>. All 29 load in the
+isolated R environment. The integration test calls the pinned source, observes the
+injected flag, and checks the unshifted design. The earlier tests that stopped at an
+eligibility guard remain useful refusal-path tests; the new integration tests reach R.</p>
+<p>The 1.5-IQR fence has a high per-test false-positive rate at realistic batch counts,
+so <code>flag=True</code> is an uncalibrated finding. The adapter also requires at least 100 cells
+per control and marker to avoid treating a dropped control as a clean result. See
+<code>docs/blocked.md</code> B-006 for the measured specificity limitation and rationale.</p>
+<p>Check the executed path with:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>.venv/bin/pytest<span class="w"> </span>-q<span class="w"> </span>tests/integration/test_cytobatchflagr_backend.py
+</code></pre></div>
+<hr />
+<h2 id="openproblems-compatibility-components">OpenProblems compatibility components<a class="headerlink" href="#openproblems-compatibility-components" title="Permanent link">&para;</a></h2>
+<p>Seven of the nine OpenProblems metric names are registered in this package's
+<code>compatibility</code> namespace with <code>upstream_verified=True</code>. "Verified" here has one specific
+meaning: a test imports the <strong>pinned</strong> Viash helper from the pinned checkout and compares
+its output against ours under the tolerance below. Six were executed on 2026-09-30 and
+passed; the FlowSOM component was executed on 2026-10-16 and passed.</p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Pinned helper</th>
+<th>Tolerance asserted by the test</th>
+<th>Status</th>
+<th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>emd_mean_ct_horiz</code></td>
+<td><code>emd/helper.py</code></td>
+<td><code>rel=1e-9</code></td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_horizontal_emd_matches_the_extracted_component</code></td>
+</tr>
+<tr>
+<td><code>emd_mean_ct_vert</code></td>
+<td><code>emd/helper.py</code></td>
+<td><code>rel=1e-9</code></td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_vertical_emd_matches_the_extracted_component</code></td>
+</tr>
+<tr>
+<td><code>ratio_consistent_peaks</code></td>
+<td><code>ratio_consistent_peaks/helper.py</code></td>
+<td><code>rtol=0, atol=1e-12</code> on density; exact array equality on the counts</td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_peak_helpers_reproduce_the_extracted_ones</code></td>
+</tr>
+<tr>
+<td><code>average_batch_r2_ct</code></td>
+<td><code>average_batch_r2/helper.py</code></td>
+<td><code>rel=1e-9, abs=1e-12</code> per marker and on the aggregate</td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_batch_r2_helper_matches_the_extracted_component</code></td>
+</tr>
+<tr>
+<td><code>iLisi</code></td>
+<td><code>lisi/helper.py</code></td>
+<td><code>rtol=0, atol=0</code> per cell; <code>rel=1e-12, abs=1e-15</code> on the normalisation</td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_lisi_helpers_match_the_extracted_ones</code></td>
+</tr>
+<tr>
+<td><code>cLisi</code></td>
+<td><code>lisi/helper.py</code></td>
+<td><code>rtol=0, atol=0</code> per cell; <code>rel=1e-12, abs=1e-15</code> on the normalisation</td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_lisi_helpers_match_the_extracted_ones</code></td>
+</tr>
+<tr>
+<td><code>flowsom_mean_mapping_similarity</code></td>
+<td><code>flowsom_mapping_similarity/helper.R</code></td>
+<td><code>abs=1e-8</code> on the similarity, the percentage tables and the weights, the pinned R functions run on shared assignment vectors</td>
+<td><code>verified</code></td>
+<td><code>test_the_pinned_flowsom_helper_matches_the_local_pipeline</code></td>
+</tr>
+</tbody>
+</table>
+<p>All seven node IDs above are in <code>tests/scientific/test_stage7_openproblems.py</code>. Three
+supporting helpers are verified the same way and are worth knowing about because they are
+what the deferred rows would build on: <code>test_the_pinned_bin_array_reproduces_the_extracted_one</code>,
+<code>test_the_pinned_compute_emd_reproduces_the_extracted_distance</code>,
+<code>test_the_pinned_wilcoxon_helper_matches_the_local_rank_statistic</code> and
+<code>test_the_pinned_cohens_d_helper_matches_the_local_cohens_d</code>.</p>
+<p>The FlowSOM component is a named adaptation, not a copy of the pinned assembly. The
+pinned <code>script.R</code> reads its three parameters from the unintegrated file's <code>.uns</code>
+(<code>parameter_num_clusters</code>, <code>parameter_som_xdim</code>, <code>parameter_som_ydim</code>) and builds one
+tree per donor per split, mapping each split through the other; this package has no such
+file and one candidate per frozen partition, so the three parameters are declared
+constants on the metric spec (<code>num_clusters=15</code>, <code>som_xdim=10</code>, <code>som_ydim=10</code>, with the
+pinned <code>seed=42</code>), one tree is built on the reference batch -- the batch holding the most
+evaluation cells, ties broken lexicographically -- and every other batch is mapped into
+it with <code>FlowSOM::NewData</code>. What is <em>not</em> adapted is the arithmetic: the pinned
+<code>compute_clust_pct</code>, <code>compute_clust_weights</code> and the weighted-difference formula are
+executed in R on the same assignment vectors the local implementation receives, and the
+two must agree to 1e-8.</p>
+<h3 id="the-three-that-are-not-verified">The three that are <em>not</em> verified<a class="headerlink" href="#the-three-that-are-not-verified" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Status</th>
+<th>Obstacle</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>functional_marker_preservation_wilcoxon</code></td>
+<td><code>untested</code></td>
+<td>upstream reports a retention <em>ratio</em>, not the statistic this package computes; needs two integrated splits and an uncorrected baseline</td>
+<td>as above</td>
+</tr>
+<tr>
+<td><code>functional_marker_preservation_cohens_d</code></td>
+<td><code>untested</code></td>
+<td>upstream reports effect-size <em>drift</em> against an uncorrected baseline, not a per-pair d</td>
+<td>as above</td>
+</tr>
+<tr>
+<td><code>cms</code></td>
+<td><code>not present upstream</code></td>
+<td>named in the CHANGELOG, but <code>src/metrics/cms</code> does not exist at the pinned commit</td>
+<td><code>test_cms_stays_recorded_as_absent_at_the_pinned_commit</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="data-this-package-ships-no-real-cytometry-data-and-that-is-the-design">Data: this package ships no real cytometry data, and that is the design<a class="headerlink" href="#data-this-package-ships-no-real-cytometry-data-and-that-is-the-design" title="Permanent link">&para;</a></h2>
+<p><strong>Stated on the face of the documentation, not only in <code>docs/blocked.md</code>.</strong> This package
+ships <strong>no real cytometry data and no real-data example</strong>, because none is obtainable
+under the current egress policy. That is a scope decision, taken deliberately, not a gap
+waiting to be filled: no gate depends on real data, and no claim in this package is
+about real data.</p>
+<p>The consequence is a hard limit on everything above. Every <code>verified</code> row in this file
+was measured against deterministic synthetic fixtures from <code>batchdx.cyto.simulate</code>. A
+version being exercised here means <em>this code ran on this input</em>; it does not mean the
+code has been exercised on anything a flow cytometrist would recognise. The specific
+things real data would test and these fixtures do not are heavy tails, multimodality,
+marker dropout, instrument artefacts and genuine spillover compensation.</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Real data included</td>
+<td><strong>none</strong></td>
+</tr>
+<tr>
+<td>Real-data example included</td>
+<td><strong>none</strong></td>
+</tr>
+<tr>
+<td>Origin of every fixture</td>
+<td><code>batchdx.cyto.simulate</code> — five populations, declared marker means, a shared within-population latent factor, and separately controllable <code>batch_shift</code> / <code>batch_spread</code> / <code>group_shift</code> / <code>drift</code> / frequency knobs</td>
+</tr>
+<tr>
+<td>Obstruction</td>
+<td>egress policy; no permissibly usable dataset with reference or replicate structure was obtainable, and none was written from memory</td>
+</tr>
+<tr>
+<td>Where it is stated</td>
+<td><code>docs/blocked.md</code> B-008, <code>docs/validation_results.md</code> §4, <code>examples/README.md</code>, the <code>README.md</code> scope note, and here</td>
+</tr>
+<tr>
+<td>What would change it</td>
+<td>one permissibly licensed dataset with provenance and checksums, plus a run over it. Not a code change</td>
+</tr>
+</tbody>
+</table>
+<p>Anyone reading a <code>verified</code> cell above should read this section with it. The
+compatibility of a <em>library version</em> is a real, transferable fact; the compatibility of
+this package's <em>scientific conclusions</em> is a statement about synthetic fixtures only.</p>
+<h2 id="not-verified-here-and-why">Not verified here, and why<a class="headerlink" href="#not-verified-here-and-why" title="Permanent link">&para;</a></h2>
+<p>Naming these is part of the matrix. Each one is a claim someone could otherwise make by
+omission.</p>
+<ul>
+<li><strong>The container.</strong> <code>containers/Dockerfile.r-backends</code> has never been built, run or
+  pulled. Its base image digest was resolved over the Docker Hub registry HTTP API on
+  2026-09-30 — twice, same answer — and that is the only thing established about it. It is
+  the digest of the multi-platform OCI <em>index</em>, not of any single platform image. Which
+  repository each R package belongs to was checked against the live CRAN index and
+  Bioconductor 3.20; whether the installs succeed was not.</li>
+<li><strong>CI.</strong> Draft PR #2 has executed both Python and R suites. The first complete Python
+  report has two resilience failures; R exchange tests, Ruff, Snakemake lint and both
+  upstream audits passed. A corrected complete run is pending.</li>
+<li><strong>Python 3.10, 3.11 and 3.13.</strong> Declared; the source parses under their grammars and
+  nothing else about them was run.</li>
+<li><strong>Any R version other than 4.4.3.</strong></li>
+<li><strong>Real cytometry data.</strong> See the section above: this is a stated scope boundary, and
+  every scientific result in this package rests on synthetic fixtures.</li>
+<li><strong>The R-side test suite against every R script.</strong> <code>tests/testthat/test-binmat.R</code> covers
+  <code>workflow/scripts/lib/binmat.R</code>, the exchange library every adapter loads. The adapter
+  scripts are covered by Python integration tests that drive them end to end; the R
+  exchange suite is now configured in CI, but has not run on a GitHub runner.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.sections", "navigation.top", "content.code.copy", "content.tabs.link"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
