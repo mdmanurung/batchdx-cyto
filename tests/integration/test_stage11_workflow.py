@@ -63,6 +63,21 @@ def _snakemake(project: Path, outdir: Path, mode: str = "benchmark",
                           check=False, env=env)
 
 
+def test_every_r_script_the_metrics_invoke_is_shipped(repo_root: Path) -> None:
+    """A metric that names an R script must ship it in ``workflow/scripts``.
+
+    The FlowSOM component's clustering runs upstream's FlowSOM through
+    ``flowsom_clusters.R``; a spec whose script is missing would report
+    ``not_available`` with an interpreter reason that names nothing the reader could
+    fix, so the file's presence is pinned here.
+    """
+
+    from batchdx.cyto.metrics.openproblems import FLOWSOM_SCRIPT
+    from batchdx.cyto.paths import workflow_root
+
+    assert (workflow_root() / "scripts" / FLOWSOM_SCRIPT).exists()
+
+
 def test_clean_execution_then_a_no_op_rerun(project: Path) -> None:
     outdir = project / "results" / "clean"
     first = _snakemake(project, outdir)

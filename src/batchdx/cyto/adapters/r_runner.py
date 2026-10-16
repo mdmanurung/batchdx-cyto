@@ -22,6 +22,7 @@ PROBE_TIMEOUT = 30
 RESULT_LIST_FIELDS = (
     "warnings", "confounded_nodes", "fitted_labels", "unfitted_labels",
     "missing_packages", "metaclusters", "outputs",
+    "clusters_reference", "clusters_mapped",
 )
 
 

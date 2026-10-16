@@ -8,7 +8,7 @@ Nextflow runtime "was not attempted".  It is: the metric arithmetic lives in the
 with ordinary imports.  No Nextflow, no Viash and no container are involved in reading
 or running them.
 
-Six components are extracted, in the ``compatibility`` namespace, because their pinned
+Seven components are extracted, in the ``compatibility`` namespace, because their pinned
 helper is importable here and can therefore be *run* and compared against:
 
 ``emd_mean_ct_horiz`` / ``emd_mean_ct_vert``
@@ -23,6 +23,11 @@ helper is importable here and can therefore be *run* and compared against:
     calls are ``scib_metrics.nearest_neighbors.pynndescent`` and
     ``scib_metrics.lisi_knn``, both of which still exist in scib_metrics 0.6.1 with the
     same signatures, so the pinned helper runs unmodified against it.
+``flowsom_mean_mapping_similarity``
+    ``src/metrics/flowsom_mapping_similarity/helper.R``; the clustering is upstream's
+    FlowSOM run through ``workflow/scripts/flowsom_clusters.R`` and the similarity
+    arithmetic is the pinned helper's, verified against the pinned R functions on
+    shared assignments.
 
 What is verified is the arithmetic.  ``tests/scientific/test_stage7_openproblems.py``
 imports the pinned helper file itself, runs it on a shared fixture, runs the code below
@@ -52,12 +57,16 @@ and no uncertainty, and an interval invented here would not be the pinned compon
 
 from __future__ import annotations
 
+import tempfile
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from scipy.signal import find_peaks
 from scipy.stats import gaussian_kde, wasserstein_distance
 
+from batchdx.cyto.adapters.r_runner import RScriptFailed, r_available, run_r_script
+from batchdx.cyto.io.binary import write_matrix
 from batchdx.cyto.io.dataset import CELL_ID, SAMPLE_ID, Dataset
 from batchdx.cyto.metrics.records import metric_record as _record
 from batchdx.cyto.metrics.registry import (
@@ -65,6 +74,7 @@ from batchdx.cyto.metrics.registry import (
     C_LISI,
     EMD_MEAN_CT_HORIZ,
     EMD_MEAN_CT_VERT,
+    FLOWSOM_MEAN_MAPPING_SIMILARITY,
     I_LISI,
     RATIO_CONSISTENT_PEAKS,
 )
@@ -360,12 +370,16 @@ def compute_openproblems_metrics(
     *,
     run_id: str,
     candidate_id: str,
+    rscript: str = "Rscript",
+    work_dir: Path | None = None,
 ) -> MetricResult:
     """The extracted OpenProblems components, on the frozen common partition.
 
     ``design`` is accepted for signature parity with :func:`compute_common_metrics`.  The
     extracted components group by donor, sample and batch and never by a declared batch
-    pair, so nothing here reads it.
+    pair, so nothing here reads it.  ``rscript`` and ``work_dir`` are the FlowSOM
+    component's R side: the interpreter to call and where the binary matrices and logs
+    for the (reference, mapped) pairs go.
     """
 
     if not sampling.evaluation_markers:
@@ -384,6 +398,10 @@ def compute_openproblems_metrics(
     records += _residual_batch_r2(panel, candidate, sampling, run_id, candidate_id)
     records += _ilisi(panel, candidate, sampling, run_id, candidate_id)
     records += _clisi(panel, candidate, sampling, run_id, candidate_id)
+    records += _flowsom_records(
+        panel, candidate, sampling, run_id, candidate_id,
+        rscript=rscript, work_dir=work_dir,
+    )
 
     n_failed = sum(1 for r in records if r.status is MetricStatus.FAILED)
     return MetricResult(
@@ -1087,3 +1105,262 @@ def _clisi(
             "mixed"
         ),
     )]
+
+
+# --------------------------------------------------------------------------------------
+# flowsom_mean_mapping_similarity
+# --------------------------------------------------------------------------------------
+
+#: The three FlowSOM parameters the pinned script reads from the unintegrated file's
+#: ``.uns`` (``parameter_num_clusters``, ``parameter_som_xdim``, ``parameter_som_ydim``).
+#: This package has no such file, so they are declared here, named on the metric spec,
+#: and passed to the R script -- an adaptation, not a silent default.
+FLOWSOM_NUM_CLUSTERS = 15
+FLOWSOM_SOM_XDIM = 10
+FLOWSOM_SOM_YDIM = 10
+#: The pinned script's ``seed = 42`` on every FlowSOM call.  The SOM is seeded
+#: stochastically, so the seed is part of the metric rather than an implementation detail.
+FLOWSOM_SEED = 42
+#: Cells required on each side of a (reference, mapped) batch pair, matching the pinned
+#: ``emd`` component's per-side minimum -- the same order of magnitude, declared rather
+#: than inherited silently.
+FLOWSOM_MIN_CELLS_PER_SIDE = 50
+#: The clustering route, run once per (reference, mapped) batch pair.
+FLOWSOM_SCRIPT = "flowsom_clusters.R"
+
+
+def flowsom_cluster_proportions(
+    assignments: list[str], populations: list[str],
+    cluster_ids: list[str], population_ids: list[str],
+) -> np.ndarray:
+    """The pinned ``compute_clust_pct``: population percentages within each cluster.
+
+    Row ``k`` is cluster ``k``, column ``c`` the percentage of that cluster's cells in
+    population ``c``, rounded to 2 dp exactly as the pinned helper rounds.  A cluster
+    that holds no cells on this side is a row of zeros -- the pinned ``prop.table``
+    yields ``NaN`` there and the helper replaces it with zero, and this is the same
+    table with the empty rows already in place.
+    """
+
+    row = {c: i for i, c in enumerate(cluster_ids)}
+    col = {p: i for i, p in enumerate(population_ids)}
+    counts = np.zeros((len(cluster_ids), len(population_ids)), dtype=float)
+    for a, p in zip(assignments, populations, strict=True):
+        counts[row[a], col[p]] += 1.0
+    totals = counts.sum(axis=1, keepdims=True)
+    safe = np.where(totals > 0, totals, 1.0)
+    pct = np.where(totals > 0, counts / safe * 100.0, 0.0)
+    return np.round(pct, 2)
+
+
+def flowsom_cluster_weights(a: list[str], b: list[str]) -> tuple[np.ndarray, np.ndarray]:
+    """The pinned ``compute_clust_weights``: each cluster's share of both sides combined.
+
+    Returns the cluster ids and their proportions over the concatenation of the two
+    sides' assignments, in sorted-id order.  A cluster empty on both sides cannot
+    appear; a cluster empty on one side gets its weight from the other side alone,
+    which is the pinned behaviour (``proportions`` over the pooled table).
+    """
+
+    combined = np.concatenate([np.asarray(a, dtype=str), np.asarray(b, dtype=str)])
+    ids, counts = np.unique(combined, return_counts=True)
+    return ids, counts / counts.sum()
+
+
+def flowsom_similarity_from_assignments(
+    ref_assignments: list[str], ref_populations: list[str],
+    mapped_assignments: list[str], mapped_populations: list[str],
+) -> float:
+    """The pinned ``compute_fs_mapping_similarity`` arithmetic, on two assignment vectors.
+
+    Both sides are labelled by clusters of one tree -- upstream by mapping each split
+    through the other split's tree, here by mapping each batch through the reference
+    batch's tree -- so their compositions are comparable cluster by cluster.  The
+    dissimilarity is the cluster-weighted sum of absolute per-cluster population
+    percentage differences; the similarity is 100 minus it.  No rounding beyond the
+    pinned helper's own 2 dp on the percentage tables, so the parity tests can hold the
+    local value against the pinned R computation to 1e-8.
+    """
+
+    cluster_ids = sorted({*ref_assignments, *mapped_assignments}, key=int)
+    population_ids = sorted({*ref_populations, *mapped_populations})
+    p_ref = flowsom_cluster_proportions(
+        ref_assignments, ref_populations, cluster_ids, population_ids,
+    )
+    p_map = flowsom_cluster_proportions(
+        mapped_assignments, mapped_populations, cluster_ids, population_ids,
+    )
+    ids, weights = flowsom_cluster_weights(ref_assignments, mapped_assignments)
+    order = np.array([int(np.where(ids == c)[0][0]) for c in cluster_ids])
+    dissimilarity = float(np.sum(weights[order] * np.abs(p_map - p_ref).sum(axis=1)))
+    return 100.0 - dissimilarity
+
+
+def _flowsom_r_obstacle(rscript: str) -> str | None:
+    """Why the FlowSOM clustering cannot run here, or ``None`` when it can.
+
+    Only the interpreter is checked here; the script itself reports a missing FlowSOM
+    package as a ``not_available`` payload, which the caller turns into the record's
+    status.  The division of labour is the r_runner's: the interpreter is a Python-side
+    fact, the package an R-side one.
+    """
+
+    if r_available(rscript):
+        return None
+    return (
+        f"{rscript!r} is not on PATH; the FlowSOM mapping similarity needs an R "
+        "interpreter with the FlowSOM and flowCore packages (docs/blocked.md B-007 "
+        "records where the pinned versions come from)"
+    )
+
+
+def _flowsom_pair_assignments(
+    reference: np.ndarray, mapped: np.ndarray, markers: list[str],
+    rscript: str, work_dir: Path, tag: str,
+) -> tuple[list[str], list[str], dict]:
+    """Run the pinned clustering route for one (reference, mapped) pair.
+
+    The tree is built on the reference side only -- the mapped side must be labelled by
+    a tree it did not contribute to, or the comparison is circular.  Returns the two
+    assignment vectors (as strings, the r_runner payload's type) and the script's
+    payload.  Raises ``RScriptFailed`` on a failed R call; a ``not_available`` payload
+    (FlowSOM absent from the R environment) is returned, not raised, because it is a
+    fact about the environment rather than a defect.
+    """
+
+    pair_dir = work_dir / f"flowsom_{tag}"
+    reference_path = pair_dir / "reference.binmat"
+    mapped_path = pair_dir / "mapped.binmat"
+    write_matrix(reference_path, reference, row_ids=[str(i) for i in range(reference.shape[0])],
+                 col_names=markers)
+    write_matrix(mapped_path, mapped, row_ids=[str(i) for i in range(mapped.shape[0])],
+                 col_names=markers)
+    params = {
+        "reference_matrix": str(reference_path),
+        "mapped_matrix": str(mapped_path),
+        "reference_labels": [str(i) for i in range(reference.shape[0])],
+        "mapped_labels": [str(i) for i in range(mapped.shape[0])],
+        "num_clusters": FLOWSOM_NUM_CLUSTERS,
+        "som_xdim": FLOWSOM_SOM_XDIM,
+        "som_ydim": FLOWSOM_SOM_YDIM,
+        "seed": FLOWSOM_SEED,
+    }
+    result = run_r_script(
+        FLOWSOM_SCRIPT, params, pair_dir, rscript=rscript,
+        log_path=pair_dir / "flowsom_clusters.log",
+    )
+    payload = result.payload
+    if payload.get("status") == "not_available":
+        return [], [], payload
+    return (
+        [str(c) for c in payload["clusters_reference"]],
+        [str(c) for c in payload["clusters_mapped"]],
+        payload,
+    )
+
+
+def _flowsom_records(
+    cells: _Panel, candidate: _Panel, sampling: SamplingManifest,
+    run_id: str, candidate_id: str,
+    rscript: str = "Rscript", work_dir: Path | None = None,
+) -> list[MetricRecord]:
+    """``flowsom_mean_mapping_similarity``, extracted from the pinned helper.R.
+
+    One tree per the reference batch, every other batch mapped through it, one
+    similarity per batch pair, the mean over pairs as the aggregate.  The reference
+    batch is the one holding the most evaluation cells (ties broken lexicographically),
+    which is an adaptation the spec names: upstream builds one tree per donor per split,
+    and the frozen partition has neither two splits nor donors that span them.
+    """
+
+    spec = FLOWSOM_MEAN_MAPPING_SIMILARITY
+
+    def record(value: float | None, status: MetricStatus, reason: str,
+               comparison_id: str | None, n_cells: int | None = None) -> MetricRecord:
+        return _record(
+            spec, sampling, run_id=run_id, candidate_id=candidate_id, value=value,
+            status=status, reason=reason, comparison_id=comparison_id,
+            n_samples=len(set(cells.sample)), n_donors=len(set(cells.donor)),
+            n_cells=n_cells if n_cells is not None else cells.n_cells(),
+            aggregation_weight=1.0,
+        )
+
+    obstacle = _flowsom_r_obstacle(rscript)
+    batches = sorted(set(cells.batch))
+    if obstacle is not None:
+        return [record(None, MetricStatus.NOT_IMPLEMENTED, obstacle, None)]
+    if len(batches) < 2:
+        return [record(
+            None, MetricStatus.INSUFFICIENT_DATA,
+            f"the frozen partition holds {len(batches)} batch; a mapping similarity "
+            "needs a reference batch and at least one batch to map into it", None,
+        )]
+
+    counts = {b: int(np.sum(cells.batch == b)) for b in batches}
+    reference_batch = max(batches, key=lambda b: (counts[b], b))
+    work = work_dir if work_dir is not None else Path(tempfile.mkdtemp(prefix="flowsom_"))
+    values: list[float] = []
+    records: list[MetricRecord] = []
+    for mapped_batch in [b for b in batches if b != reference_batch]:
+        ref_mask = cells.batch == reference_batch
+        map_mask = cells.batch == mapped_batch
+        n_ref, n_map = int(ref_mask.sum()), int(map_mask.sum())
+        comparison_id = f"batch:{reference_batch}-vs-{mapped_batch}"
+        if min(n_ref, n_map) < FLOWSOM_MIN_CELLS_PER_SIDE:
+            records.append(record(
+                None, MetricStatus.INSUFFICIENT_DATA,
+                f"{FLOWSOM_MIN_CELLS_PER_SIDE} cells are required on each side; this "
+                f"pair has reference={n_ref}, mapped={n_map}",
+                comparison_id, n_cells=n_ref + n_map,
+            ))
+            continue
+        try:
+            ref_clusters, map_clusters, payload = _flowsom_pair_assignments(
+                candidate.expression[ref_mask], candidate.expression[map_mask],
+                cells.markers, rscript, work, comparison_id.replace(":", "_"),
+            )
+        except RScriptFailed as exc:
+            records.append(record(
+                None, MetricStatus.FAILED,
+                f"the FlowSOM clustering failed: {exc}: {exc.log[-1500:]}",
+                comparison_id, n_cells=n_ref + n_map,
+            ))
+            continue
+        if not ref_clusters:
+            reason = str(payload.get("reason") or "the FlowSOM clustering did not run")
+            records.append(record(
+                None, MetricStatus.NOT_AVAILABLE, reason, comparison_id,
+                n_cells=n_ref + n_map,
+            ))
+            continue
+        value = flowsom_similarity_from_assignments(
+            ref_clusters, [str(p) for p in cells.population[ref_mask]],
+            map_clusters, [str(p) for p in cells.population[map_mask]],
+        )
+        values.append(value)
+        records.append(record(
+            value, MetricStatus.OK,
+            f"FlowSOM tree on batch {reference_batch!r} "
+            f"({FLOWSOM_NUM_CLUSTERS} clusters, SOM grid {FLOWSOM_SOM_XDIM}x"
+            f"{FLOWSOM_SOM_YDIM}, seed {FLOWSOM_SEED}), batch {mapped_batch!r} mapped "
+            f"through it; {n_ref} reference and {n_map} mapped cells",
+            comparison_id, n_cells=n_ref + n_map,
+        ))
+
+    if values:
+        reason = (
+            f"mean over {len(values)} batch pair(s), each a tree built on the reference "
+            f"batch {reference_batch!r} with the mapped batch labelled through it"
+        )
+    else:
+        reason = (
+            "no batch pair produced a similarity: " + "; ".join(
+                f"{r.comparison_id}: {r.status.value}" for r in records
+            ) if records else "no batch pair met the cell minimum"
+        )
+    records.append(record(
+        float(np.mean(values)) if values else None,
+        MetricStatus.OK if values else MetricStatus.INSUFFICIENT_DATA,
+        reason, None,
+    ))
+    return records

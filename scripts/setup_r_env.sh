@@ -119,6 +119,7 @@ else
     bioconductor-peacoqc bioconductor-flowvs \
     r-kohonen r-emdist r-outliers r-remotes r-pbmcapply \
     r-tibble r-readxl r-readr r-stringr r-dplyr r-magrittr r-jsonlite r-matrixstats r-testthat \
+    r-anndata \
     r-ggridges r-ggplot2 r-cowplot r-matrix r-rcolorbrewer r-viridis r-plyr r-tidyr \
     r-uwot r-pheatmap r-ggpubr r-gridextra
 fi

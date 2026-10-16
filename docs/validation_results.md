@@ -116,18 +116,20 @@ Stated plainly, because the absence of a test is not evidence of correctness:
    multiple tests, so a flag is not a validated false-positive-controlled decision.
    CytoNorm only normalises batches with a fitted control; the result reports the
    samples it left unchanged. See `docs/blocked.md` B-005 and B-006.
-3. **Six upstream metric components are verified; three metric names are not.** Six of
+3. **Seven upstream metric components are verified; two metric names are not.** Seven of
    the OpenProblems components at commit `37151479` are registered in the
    `compatibility` namespace with `upstream_verified=True`, each proven by a test that
    imports the **pinned helper file** and compares outputs on a shared fixture at the
    tolerances tabulated below: `emd_mean_ct_horiz`, `emd_mean_ct_vert`,
-   `ratio_consistent_peaks`, `average_batch_r2_ct`, `iLisi` and `cLisi`. Extraction did
-   not need the Nextflow runtime. What is **not** verified is the case-assembly loop in
-   the components' `script.py` files, which read `.h5ad` resources the pinned checkout
-   does not carry; those loops are documented transcriptions with the classifier tested
-   directly. The remaining three names are in `DEFERRED_METRICS` with a currently-true
-   obstacle, and `openproblems.cms` is recorded as genuinely absent at the pinned
-   commit. The audit script fails the build if anything claims `compatibility` without
+   `ratio_consistent_peaks`, `average_batch_r2_ct`, `iLisi`, `cLisi` and
+   `flowsom_mean_mapping_similarity`. Extraction did not need the Nextflow runtime. What
+   is **not** verified is the case-assembly loop in the components' `script.py` /
+   `script.R` files, which read `.h5ad` resources the pinned checkout does not carry;
+   those loops are documented transcriptions with the classifier tested directly, and
+   for the FlowSOM component the three benchmark parameters the pinned script reads
+   from the data are declared constants on the spec instead. The remaining two names
+   are in `DEFERRED_METRICS` with a currently-true obstacle, and `openproblems.cms` is
+   recorded as genuinely absent at the pinned commit. The audit script fails the build if anything claims `compatibility` without
    verification.
 4. **No real-data validation yet.** Behaviour on heavy
    tails, multimodality, marker dropout, instrument artefacts and genuine spillover is

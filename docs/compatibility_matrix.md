@@ -253,11 +253,11 @@ Check the executed path with:
 
 ## OpenProblems compatibility components
 
-Six of the nine OpenProblems metric names are registered in this package's
+Seven of the nine OpenProblems metric names are registered in this package's
 `compatibility` namespace with `upstream_verified=True`. "Verified" here has one specific
 meaning: a test imports the **pinned** Viash helper from the pinned checkout and compares
-its output against ours under the tolerance below. Each of the six was executed on
-2026-09-30 and passed.
+its output against ours under the tolerance below. Six were executed on 2026-09-30 and
+passed; the FlowSOM component was executed on 2026-10-16 and passed.
 
 | Component | Pinned helper | Tolerance asserted by the test | Status | Test |
 |---|---|---|---|---|
@@ -267,19 +267,32 @@ its output against ours under the tolerance below. Each of the six was executed 
 | `average_batch_r2_ct` | `average_batch_r2/helper.py` | `rel=1e-9, abs=1e-12` per marker and on the aggregate | `verified` | `test_the_pinned_batch_r2_helper_matches_the_extracted_component` |
 | `iLisi` | `lisi/helper.py` | `rtol=0, atol=0` per cell; `rel=1e-12, abs=1e-15` on the normalisation | `verified` | `test_the_pinned_lisi_helpers_match_the_extracted_ones` |
 | `cLisi` | `lisi/helper.py` | `rtol=0, atol=0` per cell; `rel=1e-12, abs=1e-15` on the normalisation | `verified` | `test_the_pinned_lisi_helpers_match_the_extracted_ones` |
+| `flowsom_mean_mapping_similarity` | `flowsom_mapping_similarity/helper.R` | `abs=1e-8` on the similarity, the percentage tables and the weights, the pinned R functions run on shared assignment vectors | `verified` | `test_the_pinned_flowsom_helper_matches_the_local_pipeline` |
 
-All six node IDs above are in `tests/scientific/test_stage7_openproblems.py`. Three
+All seven node IDs above are in `tests/scientific/test_stage7_openproblems.py`. Three
 supporting helpers are verified the same way and are worth knowing about because they are
 what the deferred rows would build on: `test_the_pinned_bin_array_reproduces_the_extracted_one`,
 `test_the_pinned_compute_emd_reproduces_the_extracted_distance`,
 `test_the_pinned_wilcoxon_helper_matches_the_local_rank_statistic` and
 `test_the_pinned_cohens_d_helper_matches_the_local_cohens_d`.
 
+The FlowSOM component is a named adaptation, not a copy of the pinned assembly. The
+pinned `script.R` reads its three parameters from the unintegrated file's `.uns`
+(`parameter_num_clusters`, `parameter_som_xdim`, `parameter_som_ydim`) and builds one
+tree per donor per split, mapping each split through the other; this package has no such
+file and one candidate per frozen partition, so the three parameters are declared
+constants on the metric spec (`num_clusters=15`, `som_xdim=10`, `som_ydim=10`, with the
+pinned `seed=42`), one tree is built on the reference batch -- the batch holding the most
+evaluation cells, ties broken lexicographically -- and every other batch is mapped into
+it with `FlowSOM::NewData`. What is *not* adapted is the arithmetic: the pinned
+`compute_clust_pct`, `compute_clust_weights` and the weighted-difference formula are
+executed in R on the same assignment vectors the local implementation receives, and the
+two must agree to 1e-8.
+
 ### The three that are *not* verified
 
 | Component | Status | Obstacle | Where |
 |---|---|---|---|
-| `flowsom_mean_mapping_similarity` | `untested` | FlowSOM is Bioconductor-only and absent from `renv/`; the metric also needs three `uns['parameter_*']` benchmark keys this package does not define | `DEFERRED_METRICS` in `src/batchdx/cyto/metrics/registry.py`; `docs/blocked.md` B-007 |
 | `functional_marker_preservation_wilcoxon` | `untested` | upstream reports a retention *ratio*, not the statistic this package computes; needs two integrated splits and an uncorrected baseline | as above |
 | `functional_marker_preservation_cohens_d` | `untested` | upstream reports effect-size *drift* against an uncorrected baseline, not a per-pair d | as above |
 | `cms` | `not present upstream` | named in the CHANGELOG, but `src/metrics/cms` does not exist at the pinned commit | `test_cms_stays_recorded_as_absent_at_the_pinned_commit` |

@@ -15,6 +15,9 @@ provenance -- runs either way, so the reconciliation cannot quietly become untes
 from __future__ import annotations
 
 import importlib.util
+import json
+import shutil
+import subprocess
 from dataclasses import replace
 from pathlib import Path
 from types import ModuleType
@@ -30,6 +33,7 @@ from batchdx.cyto.metrics import openproblems
 from batchdx.cyto.metrics.openproblems import (
     CLISI_SEED,
     EMD_MIN_CELLS_PER_SIDE,
+    FLOWSOM_MIN_CELLS_PER_SIDE,
     ILISI_SEED,
     LISI_NEIGHBOURS,
     PEAK_MIN_CELLS_PER_SIDE,
@@ -41,6 +45,9 @@ from batchdx.cyto.metrics.openproblems import (
     binned_emd,
     compute_openproblems_metrics,
     count_peaks,
+    flowsom_cluster_proportions,
+    flowsom_cluster_weights,
+    flowsom_similarity_from_assignments,
     kde_density,
     standardise_marker_expression,
 )
@@ -66,6 +73,7 @@ EXTRACTED = {
     "cLisi": "lisi/helper.py",
     "emd_mean_ct_horiz": "emd/helper.py",
     "emd_mean_ct_vert": "emd/helper.py",
+    "flowsom_mean_mapping_similarity": "flowsom_mapping_similarity/helper.R",
     "iLisi": "lisi/helper.py",
     "ratio_consistent_peaks": "ratio_consistent_peaks/helper.py",
 }
@@ -241,6 +249,7 @@ def test_each_spec_states_the_cell_minimum_the_code_actually_enforces() -> None:
         "cLisi": LISI_NEIGHBOURS + 1,
         "emd_mean_ct_horiz": EMD_MIN_CELLS_PER_SIDE,
         "emd_mean_ct_vert": EMD_MIN_CELLS_PER_SIDE,
+        "flowsom_mean_mapping_similarity": FLOWSOM_MIN_CELLS_PER_SIDE,
         "iLisi": LISI_NEIGHBOURS + 1,
         "ratio_consistent_peaks": PEAK_MIN_CELLS_PER_SIDE,
     }
@@ -277,7 +286,6 @@ def test_every_remaining_deferred_row_names_the_obstacle_instead_of_a_tier() -> 
     """
 
     expected = {
-        "openproblems.flowsom_mean_mapping_similarity": "FlowSOM",
         "openproblems.functional_marker_preservation_wilcoxon": "retention ratio",
         "openproblems.functional_marker_preservation_cohens_d": "drift",
     }
@@ -748,6 +756,7 @@ def test_a_thin_comparison_reports_a_reason_and_never_a_zero(frozen) -> None:
         "cLisi": LISI_NEIGHBOURS + 1,
         "emd_mean_ct_horiz": EMD_MIN_CELLS_PER_SIDE,
         "emd_mean_ct_vert": EMD_MIN_CELLS_PER_SIDE,
+        "flowsom_mean_mapping_similarity": FLOWSOM_MIN_CELLS_PER_SIDE,
         "iLisi": LISI_NEIGHBOURS + 1,
         "ratio_consistent_peaks": PEAK_MIN_CELLS_PER_SIDE,
     }
@@ -896,7 +905,7 @@ def test_every_extracted_component_is_produced_for_the_frozen_partition(frozen) 
     }
     assert aggregates == {
         "average_batch_r2_ct", "cLisi", "emd_mean_ct_horiz", "emd_mean_ct_vert",
-        "iLisi", "ratio_consistent_peaks",
+        "flowsom_mean_mapping_similarity", "iLisi", "ratio_consistent_peaks",
     }
     assert result.status == "ok"
     assert not any(r.status is MetricStatus.FAILED for r in result.records)
@@ -1303,3 +1312,153 @@ def test_too_few_cells_for_the_neighbourhood_is_insufficient_data() -> None:
     assert record.status is MetricStatus.INSUFFICIENT_DATA
     assert record.value is None
     assert str(LISI_NEIGHBOURS) in record.reason
+
+
+# --------------------------------------------------------------------------------------
+# Parity with the pinned flowsom_mapping_similarity/helper.R
+# --------------------------------------------------------------------------------------
+
+
+def _flowsom_r_fixture(seed: int = 7, n_s1: int = 300, n_s2: int = 250) -> dict[str, list]:
+    """Deterministic assignment and population vectors for both sides of a pair.
+
+    Cluster ids deliberately span two digits, so an implementation that ordered
+    clusters as strings ("1", "10", "2") and one that ordered them as integers would
+    produce differently-ordered tables and the comparison would catch it.
+    """
+
+    rng = np.random.default_rng(seed)
+    cluster_ids = [str(c) for c in range(1, 13)]
+    populations = ["B", "Mono", "T"]
+
+    def side(n: int) -> tuple[list[str], list[str]]:
+        clusters = rng.choice(cluster_ids, size=n, p=np.arange(1, 13) / 78.0)
+        pops = rng.choice(populations, size=n, p=[0.3, 0.2, 0.5])
+        return [str(c) for c in clusters], [str(p) for p in pops]
+
+    s1_clusters, s1_pops = side(n_s1)
+    s2_clusters, s2_pops = side(n_s2)
+    return {
+        "clust_s1": s1_clusters, "pop_s1": s1_pops,
+        "clust_s2": s2_clusters, "pop_s2": s2_pops,
+    }
+
+
+def _run_pinned_flowsom_helper(upstream_dir: Path, tmp_path: Path, vectors: dict) -> dict:
+    """Run the pinned helper.R's own functions on the shared vectors, via Rscript.
+
+    ``compute_fs_mapping_similarity`` itself takes FlowSOM tree objects, whose only
+    role in the arithmetic is ``GetClusters``; the test holds the assignment vectors
+    and drives the pinned sub-helpers -- ``compute_clust_pct``,
+    ``compute_clust_weights`` and the weighted-difference formula -- exactly as the
+    pinned function assembles them, with the factor levels the pinned script.R builds.
+    """
+
+    helper = upstream_dir / UPSTREAM_METRICS / "flowsom_mapping_similarity" / "helper.R"
+    if not helper.exists():
+        pytest.skip(
+            f"the pinned OpenProblems checkout is absent ({helper}); "
+            "run scripts/fetch_upstream.sh"
+        )
+    rscript = shutil.which("Rscript")
+    if rscript is None:
+        pytest.skip("no Rscript on PATH; the pinned helper.R cannot run")
+
+    params = tmp_path / "vectors.json"
+    out = tmp_path / "pinned_result.json"
+    params.write_text(json.dumps(vectors), encoding="utf-8")
+    script = tmp_path / "pinned_flowsom.R"
+    script.write_text(
+        "suppressPackageStartupMessages(library(jsonlite))\n"
+        f"source({json.dumps(str(helper))})\n"
+        f"input <- fromJSON({json.dumps(str(params))})\n"
+        "clust_levels <- levels(as.factor(c(input$clust_s1, input$clust_s2)))\n"
+        'clust_s1 <- factor(paste0("clust ", input$clust_s1), levels = paste0("clust ", clust_levels))\n'
+        'clust_s2 <- factor(paste0("clust ", input$clust_s2), levels = paste0("clust ", clust_levels))\n'
+        "weights <- compute_clust_weights(clust_s1, clust_s2)\n"
+        "pct_s1 <- compute_clust_pct(clust_s1, input$pop_s1)\n"
+        "pct_s2 <- compute_clust_pct(clust_s2, input$pop_s2)\n"
+        "differences <- rowSums(abs(pct_s2 - pct_s1))\n"
+        "similarity <- 100 - sum(weights * differences)\n"
+        # unclass() strips the table class, which jsonlite has no asJSON method for,
+        # and the matrices are re-shaped into named rows explicitly: jsonlite would
+        # serialise a dimnamed matrix as a positional array of rows, losing the keys.
+        "to_rows <- function(m) {\n"
+        "  out <- lapply(seq_len(nrow(m)), function(i) as.list(m[i, ]))\n"
+        "  names(out) <- rownames(m)\n"
+        "  out\n"
+        "}\n"
+        "result <- list(\n"
+        "  similarity = similarity,\n"
+        "  weights = as.list(unclass(weights)),\n"
+        "  pct_s1 = to_rows(unclass(pct_s1)),\n"
+        "  pct_s2 = to_rows(unclass(pct_s2)),\n"
+        "  differences = unclass(differences)\n"
+        ")\n"
+        f"write(toJSON(result, auto_unbox = TRUE, digits = NA), {json.dumps(str(out))})\n",
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        [rscript, "--vanilla", str(script)], capture_output=True, text=True, timeout=300,
+    )
+    if proc.returncode != 0:
+        pytest.fail(f"the pinned helper.R failed:\n{proc.stdout}\n{proc.stderr}")
+    return json.loads(out.read_text(encoding="utf-8"))
+
+
+def test_the_pinned_flowsom_proportion_helpers_match_the_local_ones(
+    upstream_dir: Path, tmp_path: Path,
+) -> None:
+    """``compute_clust_pct`` and ``compute_clust_weights``, run in R, agree with here.
+
+    The percentage table is the pinned helper's own rounding (2 dp, NaN as zero), and
+    the weights are its own proportions over the pooled assignments.  Compared keyed by
+    cluster id and population name, so the two implementations may order rows however
+    they like and only the values are asserted.
+    """
+
+    vectors = _flowsom_r_fixture()
+    pinned = _run_pinned_flowsom_helper(upstream_dir, tmp_path, vectors)
+
+    cluster_ids = sorted({*vectors["clust_s1"], *vectors["clust_s2"]}, key=int)
+    population_ids = sorted({*vectors["pop_s1"], *vectors["pop_s2"]})
+    local_s1 = flowsom_cluster_proportions(
+        vectors["clust_s1"], vectors["pop_s1"], cluster_ids, population_ids,
+    )
+    local_s2 = flowsom_cluster_proportions(
+        vectors["clust_s2"], vectors["pop_s2"], cluster_ids, population_ids,
+    )
+    local = {"pct_s1": local_s1, "pct_s2": local_s2}
+    for side in ("pct_s1", "pct_s2"):
+        for cluster, row in pinned[side].items():
+            k = cluster.replace("clust ", "")
+            for population, value in row.items():
+                assert value == pytest.approx(
+                    local[side][cluster_ids.index(k), population_ids.index(population)],
+                    abs=1e-8,
+                ), (side, cluster, population)
+
+    ids, weights = flowsom_cluster_weights(vectors["clust_s1"], vectors["clust_s2"])
+    pinned_weights = pinned["weights"]
+    for cluster, weight in pinned_weights.items():
+        k = cluster.replace("clust ", "")
+        assert weight == pytest.approx(weights[list(ids).index(k)], abs=1e-8), cluster
+
+
+def test_the_pinned_flowsom_helper_matches_the_local_pipeline(
+    upstream_dir: Path, tmp_path: Path,
+) -> None:
+    """The full pinned formula, run in R, equals the local similarity to 1e-8.
+
+    This is the evidence behind the row's ``upstream_verified=True``: the pinned
+    helper's weighted-difference arithmetic and the local
+    :func:`flowsom_similarity_from_assignments` are fed the same assignment vectors and
+    must return the same number.
+    """
+
+    vectors = _flowsom_r_fixture()
+    pinned = _run_pinned_flowsom_helper(upstream_dir, tmp_path, vectors)
+    local = flowsom_similarity_from_assignments(
+        vectors["clust_s1"], vectors["pop_s1"], vectors["clust_s2"], vectors["pop_s2"],
+    )
+    assert local == pytest.approx(pinned["similarity"], abs=1e-8)

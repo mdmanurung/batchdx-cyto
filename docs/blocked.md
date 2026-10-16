@@ -246,7 +246,7 @@ component's `helper.py` / `helper.R` is an ordinary module with plain imports; o
 `script.py` / `script.R` assembly layers read `resources_test/…` `.h5ad` files the
 checkout does not carry, and those loops are transcribed and tested directly.
 
-Six components are now registered in the `compatibility` namespace with
+Seven components are now registered in the `compatibility` namespace with
 `upstream_verified=True`, each proven by a test that **imports the pinned helper from the
 pinned commit and compares outputs** against a recorded tolerance:
 
@@ -258,6 +258,7 @@ pinned commit and compares outputs** against a recorded tolerance:
 | `average_batch_r2_ct` | `rel=1e-9, abs=1e-12` | 2e-16 |
 | `iLisi` | `rtol=0, atol=0` per cell; `rel=1e-12` on the normalisation | exact |
 | `cLisi` | same, at the pinned seed 0 | exact |
+| `flowsom_mean_mapping_similarity` | `abs=1e-8`, the pinned helper.R run on shared assignments | exact |
 
 `scripts/audit_upstream.py` still fails the build if a `compatibility` row ever appears
 without a recorded verification, so the claim cannot be made loosely.
@@ -270,10 +271,6 @@ single-contrast fit is more than 0.05 away, so the two cannot be confused again.
 
 **Still deferred, each with a currently-true obstacle:**
 
-* `flowsom_mean_mapping_similarity` — FlowSOM is Bioconductor-only and absent from
-  `renv/`, and the metric additionally needs three benchmark parameters
-  (`uns['parameter_num_clusters'|'parameter_som_xdim'|'parameter_som_ydim']`) that this
-  package does not define.
 * `functional_marker_preservation_wilcoxon` / `_cohens_d` — the previous deferral
   reasons were **wrong**: upstream reports a *retention ratio* and an effect-size
   *drift*, not the statistic Stage 8 computes. Both need two integrated splits, an

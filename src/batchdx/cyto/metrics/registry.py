@@ -631,6 +631,51 @@ C_LISI = register_metric(MetricSpec(
     ),
 ))
 
+FLOWSOM_MEAN_MAPPING_SIMILARITY = register_metric(MetricSpec(
+    name="flowsom_mean_mapping_similarity",
+    namespace="compatibility",
+    version="37151479",
+    stage="clustering_consistency",
+    grouping="one record per (reference, mapped) batch pair, plus the mean over pairs",
+    formula=(
+        "100 - sum_k w_k * sum_c |P_ref(k, c) - P_map(k, c)|, where P_ref and P_map are "
+        "the per-cluster population percentages (rounded to 2 dp, the pinned "
+        "compute_clust_pct) of the reference and mapped sides, and w_k is each cluster's "
+        "share of both sides' cells combined (the pinned compute_clust_weights)"
+    ),
+    implementation=(
+        "extracted from src/metrics/flowsom_mapping_similarity/helper.R at the pinned "
+        "commit: the clustering runs upstream's FlowSOM itself -- one tree built on the "
+        "reference batch's cells, every other batch mapped through it with NewData, via "
+        "workflow/scripts/flowsom_clusters.R -- and the similarity arithmetic is the "
+        "pinned helper's, compared against it on shared assignments"
+    ),
+    direction=MetricDirection.HIGHER_IS_BETTER,
+    scale="0 to 100; 100 = identical population composition within every cluster",
+    eligible_population=(
+        "all frozen evaluation cells; at least 50 of them on each side of a "
+        "(reference, mapped) batch pair, and at least two batches"
+    ),
+    aggregation="one value per candidate: the mean over batch pairs",
+    requirements=("frozen evaluation labels", "FlowSOM (R)", "flowCore (R)"),
+    upstream_verified=True,
+    notes=(
+        "ADAPTATION, not a copy, in three named ways. (1) The pinned script reads its "
+        "three parameters from the unintegrated file's .uns "
+        "(parameter_num_clusters, parameter_som_xdim, parameter_som_ydim); this package "
+        "has no such file, so they are declared constants -- num_clusters=15, "
+        "som_xdim=10, som_ydim=10 -- passed to the R script and named here. (2) Upstream "
+        "builds one tree per donor per split and averages over donors and both map "
+        "directions; the frozen partition has one candidate and donors that do not span "
+        "splits, so one tree is built on the reference batch -- the batch holding the "
+        "most evaluation cells, ties broken lexicographically -- and every other batch "
+        "is mapped into it, one direction per pair. (3) Upstream's two sides are two "
+        "integrated splits; here they are the candidate's reference and mapped batches. "
+        "The arithmetic that turns assignments into a score is the pinned helper's "
+        "unmodified, and the parity tests run the pinned helper.R itself."
+    ),
+))
+
 #: Metric names that exist in the OpenProblems task at the pinned commit 37151479.  The
 #: nine are reconciled one by one: each is either registered here, reimplemented under a
 #: name of its own, or carries a row in :data:`DEFERRED_METRICS` saying why not.  A name
@@ -684,22 +729,6 @@ DEFERRED_METRICS: dict[str, str] = {
         "per-pair statistic is not the drift. The missing inputs are the same as for the "
         "Wilcoxon row: two integrated splits and an uncorrected baseline significance "
         "set. Reporting the statistic as the metric would have hidden the difference.",
-    "openproblems.flowsom_mean_mapping_similarity":
-        "BLOCKED IN renv/, AND NOT COMPUTABLE FROM THE PINNED SOURCE ALONE. Two separate "
-        "obstacles, both still true. (1) FlowSOM is not installable in renv/: it is not "
-        "on CRAN (available.packages() has no FlowSOM row), it is Bioconductor-only, "
-        "renv/ has no BiocManager, and its flowCore dependency is likewise "
-        "Bioconductor-only; adding Bioconductor repositories to the isolated renv "
-        "library is a central environment change, not a metrics change. (2) Even with "
-        "FlowSOM installed, the metric needs three benchmark parameters read from the "
-        "unintegrated file (uns['parameter_num_clusters'], uns['parameter_som_xdim'], "
-        "uns['parameter_som_ydim']) and two FlowSOM trees per donor with cells mapped "
-        "between them; this package's frozen partition has one candidate and no benchmark "
-        "parameter, so there is no honest way to produce the number without inventing "
-        "those three values. The dissimilarity arithmetic in helper.R (weighted sum of "
-        "absolute cell-type proportion differences between two clusterings) is portable, "
-        "but it consumes a FlowSOM clustering this package cannot produce, so porting it "
-        "would be code with no caller.",
     "cytobatchflagr.flag_resolution":
         "Tier B; requires two CytoBatchFlagR runs, which need a working upstream checkout",
 }

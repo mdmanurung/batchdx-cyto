@@ -8,7 +8,7 @@ was once wrong in a way nothing caught:
   the suite;
 * three files carried the version independently and had drifted apart before;
 * ``THIRD_PARTY_NOTICES.md`` asserted that no OpenProblems implementation had been
-  extracted, which was false: six components are registered ``compatibility`` /
+  extracted, which was false: seven components are registered ``compatibility`` /
   ``upstream_verified=True``;
 * ``workflow/envs/README.md`` said one environment file lived in the directory it
   describes, and two did;
@@ -235,7 +235,7 @@ def test_the_contract_and_config_schema_versions_are_still_declared(repo_root: P
 
 
 def test_the_notices_no_longer_deny_the_extracted_components(repo_root: Path) -> None:
-    """Six components are registered `compatibility` / `upstream_verified=True`."""
+    """Seven components are registered `compatibility` / `upstream_verified=True`."""
     notices = (repo_root / "THIRD_PARTY_NOTICES.md").read_text()
     assert "no implementation was extracted" not in notices, (
         "the notices still deny an extraction that happened; see docs/blocked.md B-007, "
@@ -248,6 +248,7 @@ def test_the_notices_no_longer_deny_the_extracted_components(repo_root: Path) ->
         "average_batch_r2_ct",
         "iLisi",
         "cLisi",
+        "flowsom_mean_mapping_similarity",
     ):
         assert component in notices, f"the notices omit the verified component {component}"
 
