@@ -73,6 +73,26 @@ def test_every_headline_number_is_traceable_to_a_record(completed_run) -> None:
     assert records > 0
     assert html.count("emd_within_population") >= 2
 
+    # The narrative is built from the records, so its numbers are traceable too: the
+    # metric-record count on the page is the count in the artifacts -- the per-candidate
+    # results plus the reduction records, which is exactly what the page's table renders.
+    page_records = records + sum(
+        len(json.loads(path.read_text())["records"])
+        for path in [layout.reductions] if path.exists()
+    )
+    assert f"{page_records} metric record" in html
+    detector_assessments = sum(
+        len(json.loads(path.read_text())["assessments"])
+        for path in layout.root.glob("diagnostics/*/detector_result.json")
+    )
+    assert f"The detectors produced {detector_assessments} assessments" in html
+
+    # The embedding panels state what they project: a deterministic PCA over the
+    # evaluation markers, one point per sample, and whether a UMAP exists.
+    assert "Sample embeddings" in html
+    assert "deterministic PCA (full SVD)" in html
+    assert "umap package is not installed" in html or "UMAP panel is drawn" in html
+
 
 def test_failed_and_unavailable_candidates_stay_visible(completed_run) -> None:
     _, _, layout = completed_run

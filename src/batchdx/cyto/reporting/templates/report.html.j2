@@ -72,6 +72,10 @@
 </header>
 
 <h2 id="decision">Decision summary</h2>
+<div class="panel" id="narrative">
+  <strong>What this run found.</strong>
+  <ul>{% for s in narrative %}<li>{{ s }}</li>{% endfor %}</ul>
+</div>
 {% if decision %}
   <div class="panel">
     <strong>Policy:</strong> {{ decision.policy }}.
@@ -378,6 +382,20 @@
 <ul class="reasons">{% for w in sampling.population_coverage_warnings %}<li>{{ w }}</li>{% endfor %}</ul>
 {% endif %}
 {% else %}<p class="sub">No frozen partition is available.</p>{% endif %}
+
+<h2 id="embeddings">Sample embeddings</h2>
+{% if embedding_section %}
+<p class="sub">One point per sample: a deterministic PCA (full SVD) of per-sample medians
+  over the {{ embedding_section.n_markers }} evaluation marker(s). Points far from their
+  batch mates, or batches that separate along a component, are what a batch effect looks
+  like here; a candidate that removes it pulls the batches together without collapsing
+  the biology. {{ embedding_section.umap_note }}</p>
+<div class="grid">
+  {% for f in embedding_section.panels %}
+  <figure>{{ f.svg|safe }}<figcaption>{{ f.label }}</figcaption></figure>
+  {% endfor %}
+</div>
+{% endif %}
 
 <h2 id="comparison">Method comparison</h2>
 {% if correction_rows %}

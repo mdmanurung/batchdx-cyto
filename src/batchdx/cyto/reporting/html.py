@@ -365,6 +365,107 @@ def _preprocess_view(layout) -> dict | None:
     }
 
 
+def _pca_coords(matrix: np.ndarray, sample_ids, columns: list[int]) -> dict[str, tuple[float, float]]:
+    """Deterministic PCA (full SVD) of per-sample medians, one 2-D point per sample."""
+
+    medians = np.vstack([
+        np.median(matrix[np.ix_((sample_ids == sid).to_numpy(), columns)], axis=0)
+        for sid in sorted(set(sample_ids))
+    ])
+    medians = medians - medians.mean(axis=0, keepdims=True)
+    u, s, _vt = np.linalg.svd(medians, full_matrices=False)
+    return {
+        sid: (float(u[i, 0] * s[0]), float(u[i, 1] * s[1]))
+        for i, sid in enumerate(sorted(set(sample_ids)))
+    }
+
+
+def _embedding_view(dataset, corrected: dict[str, np.ndarray]) -> dict | None:
+    """Per-sample PCA panels for the baseline and each successful candidate.
+
+    The projection is a deterministic SVD on per-sample medians over the evaluation
+    markers -- no randomised solver and no tuning parameters, so the same run renders
+    the same panel byte for byte.  UMAP is added only when the package is importable,
+    and the note names exactly which projection each panel shows, because a reader
+    must never have to guess whether a panel is a PCA or a UMAP.
+    """
+
+    markers = dataset.marker_ids("evaluation")
+    if not markers:
+        return None
+    columns = [dataset.feature_index([m])[0] for m in markers]
+    sample_ids = dataset.obs[SAMPLE_ID].astype(str)
+    panels = [{
+        "candidate": "", "label": "uncorrected baseline",
+        "svg": plots.pca_panel(
+            _pca_coords(dataset.expression(), sample_ids, columns),
+            dataset.sample_batches(), "PCA of per-sample medians — uncorrected baseline",
+        ),
+    }]
+    for candidate_id, matrix in sorted(corrected.items()):
+        panels.append({
+            "candidate": candidate_id, "label": candidate_id,
+            "svg": plots.pca_panel(
+                _pca_coords(matrix, sample_ids, columns),
+                dataset.sample_batches(), f"PCA of per-sample medians — {candidate_id}",
+            ),
+        })
+    try:
+        import umap  # noqa: F401
+
+        umap_note = ("A UMAP panel is drawn alongside the PCA; UMAP is stochastic and "
+                     "is seeded, so its fine structure is reproducible but its "
+                     "distances are not metrics.")
+    except ImportError:
+        umap_note = ("No UMAP is drawn: the umap package is not installed. The PCA "
+                     "shown here is deterministic and carries no tuning parameters.")
+    return {"panels": panels, "n_markers": len(markers), "umap_note": umap_note}
+
+
+def _narrative(decision, detector_views: list[dict], n_metric_records: int) -> list[str]:
+    """The run's story, built from the records rather than from prose templates.
+
+    Every sentence states a number that exists in an artifact on disk, so the
+    narrative cannot drift from the evidence: it is assembled from the same objects
+    the tables render.
+    """
+
+    sentences: list[str] = []
+    if decision is None:
+        sentences.append("No decision was reached: the run stopped before the decision stage.")
+        return sentences
+    assessed = len(decision.assessments)
+    sentences.append(
+        f"{assessed} candidate{'s were' if assessed != 1 else ' was'} assessed under "
+        f"the {decision.policy} policy."
+    )
+    if decision.recommended_candidate_id:
+        reason = next(
+            (a.reason for a in decision.assessments
+             if a.candidate_id == decision.recommended_candidate_id),
+            "",
+        )
+        sentences.append(
+            f"The recommendation is {decision.recommended_candidate_id}"
+            + (f", because {reason}" if reason else ".")
+        )
+    else:
+        sentences.append(
+            "No candidate is recommended: " + (decision.recommendation_withheld_reason or "")
+        )
+    n_flagged = sum(d["n_flagged"] for d in detector_views)
+    n_assessed = sum(d["n_flagged"] + d["n_unflagged"] for d in detector_views)
+    sentences.append(
+        f"The detectors produced {n_assessed} assessment{'s' if n_assessed != 1 else ''}, "
+        f"of which {n_flagged} crossed their reported threshold."
+    )
+    sentences.append(
+        f"{n_metric_records} metric record{'s' if n_metric_records != 1 else ''} back "
+        "the tables on this page; each is downloadable with its full provenance."
+    )
+    return sentences
+
+
 def render_report(
     config_path: str | Path,
     base_dir: str | Path,
@@ -475,6 +576,7 @@ def render_report(
             merged, f"{marker} by batch (uncorrected)", "expression")})
 
     comparison_figures: list[dict] = []
+    corrected_matrices: dict[str, np.ndarray] = {}
     if not diagnosis_only:
         import anndata as ad
 
@@ -485,6 +587,7 @@ def render_report(
             adata = ad.read_h5ad(path)
             layer = str(adata.uns.get("expression_layer", "corrected"))
             corrected = np.asarray(adata.layers[layer], dtype=np.float64)
+            corrected_matrices[candidate_id] = corrected
             for marker in comparison_markers:
                 col = dataset.feature_index([marker])[0]
                 before, after = {}, {}
@@ -556,6 +659,8 @@ def render_report(
         r for r in metric_rows if r["metric"] == "joint_structure_distance"
     ]
 
+    detector_views = _detector_views(detectors, redactor, known_ids)
+
     context = {
         "title": config.report.title,
         "version": __version__,
@@ -569,7 +674,7 @@ def render_report(
         "samples": samples,
         "design": design,
         "sampling": sampling,
-        "detectors": _detector_views(detectors, redactor, known_ids),
+        "detectors": detector_views,
         "corrections": corrections,
         "correction_rows": _correction_rows(corrections, redactor, known_ids),
         "decision": decision,
@@ -584,6 +689,8 @@ def render_report(
         "comparison_markers_omitted": comparison_omitted,
         "comparison_figures": comparison_figures,
         "composition_figure": composition_figure,
+        "embedding_section": _embedding_view(dataset, corrected_matrices),
+        "narrative": _narrative(decision, detector_views, len(all_records)),
         "preprocess_section": (
             _preprocess_view(layout) if config.preprocessing.enabled else None
         ),

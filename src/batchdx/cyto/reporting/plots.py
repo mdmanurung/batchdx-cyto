@@ -104,3 +104,27 @@ def frequency_bars(freq: dict[str, dict[str, float]], batch_of: dict[str, str]) 
     ax.tick_params(labelsize=7)
     ax.legend(fontsize=6, frameon=False, ncol=3)
     return _to_svg(fig, "frequency_bars")
+
+
+def pca_panel(
+    coords: dict[str, np.ndarray], batch_of: dict[str, str], title: str
+) -> str:
+    """One point per sample on the first two principal components, coloured by batch.
+
+    ``coords`` maps sample id to its ``(pc1, pc2)`` point; the projection itself is
+    computed by the caller, so this function draws exactly what it is given and
+    nothing recomputes it.
+    """
+
+    fig, ax = plt.subplots(figsize=(3.4, 2.8), dpi=110)
+    batches = sorted({batch_of.get(s, "") or "—" for s in coords})
+    palette = plt.get_cmap("tab10")
+    for i, batch in enumerate(batches):
+        points = np.array([coords[s] for s in sorted(coords) if (batch_of.get(s, "") or "—") == batch])
+        ax.scatter(points[:, 0], points[:, 1], s=22, color=palette(i % 10), label=batch)
+    ax.set_title(title, fontsize=9)
+    ax.set_xlabel("PC 1", fontsize=8)
+    ax.set_ylabel("PC 2", fontsize=8)
+    ax.tick_params(labelsize=7)
+    ax.legend(fontsize=6, frameon=False, ncol=2)
+    return _to_svg(fig, f"pca:{title}")
