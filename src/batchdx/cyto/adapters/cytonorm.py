@@ -42,6 +42,7 @@ from batchdx.cyto.adapters.base import (
     BackendCapabilities,
     BackendContext,
     BackendError,
+    BackendIneligible,
     BackendNotAvailable,
     make_spec,
     register_backend,
@@ -120,27 +121,27 @@ def _as_list(value: Any) -> list[str]:
     return [str(v) for v in value]
 
 
-def _unavailable_here(reason: str) -> BackendNotAvailable:
-    """Type a design-coverage refusal as *not available*, not as a failure.
+def _ineligible_here(reason: str) -> BackendIneligible:
+    """Type a design-coverage refusal as *ineligible*, not as *not available*.
 
-    These refusals are not defects: the algorithm is fine, the data simply does not
-    contain the layout this backend declares it needs
-    (``reference_layouts = measured_reference_in_every_batch``) inside the split it must
-    fit on.  ``docs/decisions/0006-candidate-results-and-failure-handling.md`` requires
-    "this method did not run here" to stay distinguishable from "this method ran and
-    broke", and recording a coverage limitation as ``failed`` would tell a reader of a
-    report that CytoNorm is broken on designs where it simply has nothing to fit on.
+    These refusals are not defects and not environment gaps: the algorithm is fine and
+    the package is installed, but the data does not contain the layout this backend
+    declares it needs (``reference_layouts = measured_reference_in_every_batch``) inside
+    the split it must fit on.  ``docs/decisions/0006-candidate-results-and-failure-
+    handling.md`` requires "this method did not run here" to stay distinguishable from
+    "this method ran and broke" -- and, on the same principle, a coverage limitation is
+    a statement about the data, so it is typed :class:`BackendIneligible` and recorded
+    as ``ineligible`` rather than as ``not_available``.  A reader of the report can act
+    on an ineligible reason (declare more reference aliquots, rebalance the split) in a
+    way they cannot act on a missing package.
 
-    ``BackendNotAvailable`` is used for that, with a reason that names the coverage
-    property and not a missing package, so nothing here claims a package is absent when
-    it is present.  ``pipeline.py`` has no third branch for an ineligibility exception
-    type, so adding one is a required central change; until then this is the closest
-    honest status the pipeline can record.
+    The package-presence check in :meth:`CytoNormBackend.run` keeps raising
+    ``BackendNotAvailable``: that one is about the installation, and installing
+    CytoNorm resolves it.
     """
 
-    return BackendNotAvailable(
-        "the layout this backend requires is not available in the split it must fit on: "
-        + reason
+    return BackendIneligible(
+        "the layout this backend requires is not available in the split it must fit on: " + reason
     )
 
 
@@ -211,7 +212,7 @@ class CytoNormBackend:
         self, dataset: Dataset, context: BackendContext
     ) -> tuple[dict[str, list[str]], str | None]:
         if context.sampling is None or not context.sampling.splits:
-            raise _unavailable_here(
+            raise _ineligible_here(
                 "CytoNorm is a fit-and-apply backend and needs a train/tune/validate "
                 "partition to fit on, but no SamplingManifest with splits was supplied. "
                 "Fit and apply cannot be separated without one"
@@ -229,7 +230,7 @@ class CytoNormBackend:
         # exist inside the held-out data.
         gaps = missing_arms(splits, dataset.samples)
         if gaps:
-            raise _unavailable_here(
+            raise _ineligible_here(
                 "the frozen train/tune/validate partition is not arm-balanced: "
                 + "; ".join(f"split {name!r} lacks arm(s) {arms}" for name, arms in gaps.items())
                 + ". CytoNorm may not fit on a partition whose validation split cannot hold "
@@ -255,7 +256,7 @@ class CytoNormBackend:
             if sid in train and rec.reference_role in _MEASURED_REFERENCE_ROLES
         }
         if not controls:
-            raise _unavailable_here(
+            raise _ineligible_here(
                 "no measured technical reference falls in the training split, so there is "
                 "nothing for CytoNorm to fit on. CytoNorm learns per-batch quantiles from "
                 "control aliquots; fitting on validation or tuning samples would make the "
@@ -267,7 +268,7 @@ class CytoNormBackend:
             str(dataset.samples[sid].batch) for sid in controls if dataset.samples[sid].batch
         })
         if len(batches) < 2:
-            raise _unavailable_here(
+            raise _ineligible_here(
                 f"the training split holds a measured reference in {len(batches)} batch(es) "
                 f"({batches}); CytoNorm fits a per-batch quantile goal and needs at least "
                 "two. This is a coverage failure of the split, not a defect in CytoNorm, and "
@@ -285,7 +286,7 @@ class CytoNormBackend:
                 if str(getattr(dataset.samples[sid], unit_field, "") or "") in donors
             )
             if leaked:
-                raise _unavailable_here(
+                raise _ineligible_here(
                     f"the training split's reference aliquot(s) {sorted(controls)} share a "
                     f"{unit_field} with validation-split sample(s) {leaked}; fitting on them "
                     "would put held-out biospecimens into the model. The split is keyed on "

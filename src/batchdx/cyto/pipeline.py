@@ -21,6 +21,7 @@ from batchdx.cyto._version import __version__
 from batchdx.cyto.adapters import (
     BackendContext,
     BackendError,
+    BackendIneligible,
     BackendNotAvailable,
     CorrectionBackend,
     OutputValidationError,
@@ -417,6 +418,19 @@ def stage_correct(
         return _write_failure_candidate(
             dataset, layout, candidate_id, _record_for_exc(exc),
             CorrectionStatus.NOT_AVAILABLE, str(exc), context, backend,
+            extra_warnings=[override_note] if override_note else None,
+        )
+    except BackendIneligible as exc:
+        # A design-coverage refusal is a statement about the data, recorded as
+        # INELIGIBLE rather than NOT_AVAILABLE: the package is installed, the split
+        # simply cannot support the fit.  The branch precedes the generic
+        # candidate_errors branch, which would otherwise file the same refusal as
+        # FAILED because BackendIneligible is a BackendError.
+        with log_path.open("a", encoding="utf-8") as log:
+            log.write(traceback.format_exc())
+        return _write_failure_candidate(
+            dataset, layout, candidate_id, _record_for_exc(exc),
+            CorrectionStatus.INELIGIBLE, str(exc), context, backend,
             extra_warnings=[override_note] if override_note else None,
         )
     except candidate_errors as exc:

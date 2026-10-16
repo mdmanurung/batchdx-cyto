@@ -31,6 +31,7 @@ import yaml
 from batchdx.cyto.adapters import (
     BackendContext,
     BackendError,
+    BackendIneligible,
     BackendNotAvailable,
     available_backends,
     get_backend,
@@ -745,7 +746,7 @@ def test_cytonorm_refuses_to_fit_on_a_partition_that_cannot_be_compared(tmp_path
     assert "may not fit on a partition" in message
     # It is typed as not-available, not as a failure: the algorithm is fine, the data
     # is not.
-    assert isinstance(excinfo.value, BackendNotAvailable)
+    assert isinstance(excinfo.value, BackendIneligible)
 
 
 def test_a_single_valued_r_payload_field_does_not_degrade_into_its_characters() -> None:
@@ -767,3 +768,96 @@ def test_a_single_valued_r_payload_field_does_not_degrade_into_its_characters() 
     assert _as_list([]) == []
     # The exact shape jsonlite produces for a length-one vector.
     assert _as_list(json.loads('{"x": "B3"}')["x"]) == ["B3"]
+
+
+# --------------------------------------------------------------------------------------
+# Ineligible, not unavailable — the data/installation distinction end to end
+# --------------------------------------------------------------------------------------
+
+
+def test_a_design_coverage_refusal_is_ineligible_through_stage_correct(tmp_path) -> None:
+    """stage_correct records INELIGIBLE when the design cannot support a fit.
+
+    A missing R package is ``not_available``; a partition whose validation split
+    cannot hold both arms is a statement about the DATA.  The two must be
+    distinguishable in the record, because the remedies are different: install the
+    package versus collect more samples.  The refusal happens before any R process
+    starts, so this runs without CytoNorm.  The declared output is still written
+    (the unmodified baseline), so downstream stages never face a missing file.
+    """
+
+    from batchdx.cyto import pipeline
+    from batchdx.cyto.schemas.contracts import CorrectionResult
+
+    project = _materialise(tmp_path / "proj")
+    config_path = project["path"] / "config" / "config.yaml"
+    dataset, sampling = project["dataset"], project["sampling"]
+
+    # The config names the repository's pinned upstream lock; a declared lock is a
+    # validated input, so the project ships it the same way materialise_example does.
+    repo_lock = Path(__file__).resolve().parents[2] / "config" / "upstream_lock.yaml"
+    (project["path"] / "config" / "upstream_lock.yaml").write_text(
+        repo_lock.read_text(encoding="utf-8"), encoding="utf-8"
+    )
+
+    layout = pipeline.RunLayout(tmp_path / "run")
+    pipeline.stage_validate(config_path, project["path"], layout)
+    pipeline.stage_design(config_path, project["path"], layout)
+    pipeline.stage_partition(config_path, project["path"], layout)
+
+    # A partition that drops one arm from the validation split, as a design too thin
+    # to stratify would produce — the same shape the backend-level test uses.
+    members = split_members(sampling.splits)
+    unbalanced = {
+        "split_unit": [split_unit_field(sampling.splits) or "donor_id"],
+        "train": members["train"],
+        "tune": members["tune"],
+        "validate": [
+            s for s in members["validate"] if dataset.samples[s].group == "case"
+        ],
+    }
+    assert missing_arms(unbalanced, dataset.samples), "the fixture must defeat the check"
+    # stage_correct reads the manifest from the layout, so the thinned partition is
+    # written where the partition stage left the frozen one.
+    sampling.model_copy(update={"splits": unbalanced}).write(layout.sampling_manifest)
+
+    pipeline.stage_correct("cytonorm_reference", config_path, project["path"], layout)
+
+    result = CorrectionResult.read(layout.correction_result("cytonorm_reference"))
+    assert result.status is CorrectionStatus.INELIGIBLE
+    assert "not arm-balanced" in result.reason
+    assert "may not fit on a partition" in result.reason
+    # The Snakemake rule declares corrected.h5ad as an output; a refusal still writes
+    # the unmodified baseline in its place, exactly as a failure does.
+    assert layout.corrected_h5ad("cytonorm_reference").exists()
+    log = (layout.root / "logs" / "correct_cytonorm_reference.log").read_text()
+    assert "BackendIneligible" in log
+
+
+@pytest.mark.requires_cytonorm
+def test_the_paired_reference_example_fits_cytonorm_end_to_end(tmp_path) -> None:
+    """The shipped paired-reference example gives CytoNorm a fit it can accept.
+
+    The example's second reference donor per batch exists so that a donor-keyed
+    split leaves a measured control in the training split of every batch; this walks
+    the real stage, not the backend directly, so the refusal-or-fit decision is
+    exercised through the same path the workflow uses.
+    """
+
+    from batchdx.cyto import pipeline
+    from batchdx.cyto.examples import materialise_example
+    from batchdx.cyto.schemas.contracts import CorrectionResult
+
+    _requires_cytonorm()
+    paths = materialise_example("paired_reference", tmp_path, cells_per_sample=400)
+    config_path = paths["config"]
+
+    layout = pipeline.RunLayout(tmp_path / "run")
+    pipeline.stage_validate(config_path, tmp_path, layout)
+    pipeline.stage_design(config_path, tmp_path, layout)
+    pipeline.stage_partition(config_path, tmp_path, layout)
+    pipeline.stage_correct("cytonorm_reference", config_path, tmp_path, layout)
+
+    result = CorrectionResult.read(layout.correction_result("cytonorm_reference"))
+    assert result.status is CorrectionStatus.SUCCESS, result.reason
+    assert layout.corrected_h5ad("cytonorm_reference").exists()

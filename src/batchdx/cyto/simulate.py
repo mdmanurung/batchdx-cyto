@@ -233,10 +233,12 @@ def paired_reference_spec(seed: int = DEFAULT_SEED, n_cells: int = 1500) -> Simu
 
     samples: list[SampleSpec] = []
     for b_i, batch in enumerate(["B1", "B2", "B3"]):
-        samples.append(SampleSpec(
-            sample_id=f"ref_{batch}", donor_id="REFDONOR", batch=batch, group="reference",
-            reference_id="REF1", reference_role="technical_replicate", n_cells=n_cells,
-        ))
+        for ref in (("ref", "REFDONOR", "REF1"), ("ref2", "REFDONOR2", "REF2")):
+            sid, donor, ref_id = ref
+            samples.append(SampleSpec(
+                sample_id=f"{sid}_{batch}", donor_id=donor, batch=batch, group="reference",
+                reference_id=ref_id, reference_role="technical_replicate", n_cells=n_cells,
+            ))
         for k in range(2):
             for group, tag in (("case", "CA"), ("control", "CO")):
                 donor = f"D{b_i}{k}{tag}"

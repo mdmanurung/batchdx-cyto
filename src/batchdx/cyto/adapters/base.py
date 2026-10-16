@@ -48,6 +48,23 @@ class BackendNotAvailable(BackendError):
     """
 
 
+class BackendIneligible(BackendError):
+    """The backend is installed and works, but this design cannot support a fit.
+
+    A design-coverage refusal is a statement about the DATA, not about the
+    installation: "no measured reference falls in the training split" and "the frozen
+    partition is not arm-balanced" are properties of the dataset and the split, and
+    they resolve by declaring more biospecimens or re-partitioning -- never by
+    installing a package.  A missing R package is :class:`BackendNotAvailable`, an
+    environment fact that resolves by installing it.
+
+    The two are distinct exception types, not message conventions, because substring
+    matching on the message cannot make the distinction: any real failure whose text
+    happens to mention a training split would be recorded as a coverage gap, which is
+    how a genuine defect gets recorded as a data limitation.
+    """
+
+
 @dataclass(frozen=True)
 class BackendCapabilities:
     """What a backend needs and what it promises."""
