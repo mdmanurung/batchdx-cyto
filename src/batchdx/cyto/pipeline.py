@@ -252,6 +252,13 @@ def stage_validate(config_path: str | Path, base_dir: str | Path, layout: RunLay
 #: derived configuration below, so the layer is never re-typed at a call site.
 BASELINE_LAYER = "preprocessed"
 
+#: A PeacoQC pass that removes more than this fraction of a sample is refused rather
+#: than passed downstream: near-total removal almost always means the QC channel's
+#: distribution defeated peak detection (for example a large negative tail on the
+#: transformed scale), not that the sample was that contaminated, and a baseline built
+#: from the survivors would misrepresent the sample.  Uncalibrated engineering default.
+PEACOQC_MIN_KEPT_FRACTION = 0.5
+
 
 def _baseline_config(config: Config, layout: RunLayout) -> Config:
     """The configuration that reads the frozen baseline instead of the raw input.
@@ -314,7 +321,11 @@ def stage_preprocess(config_path: str | Path, base_dir: str | Path, layout: RunL
         write_removed_events,
     )
     from batchdx.cyto.preprocess.gating import apply_gates, gates_from_config
-    from batchdx.cyto.preprocess.peacoqc import run_peacoqc, settings_from_config
+    from batchdx.cyto.preprocess.peacoqc import (
+        PeacoQCError,
+        run_peacoqc,
+        settings_from_config,
+    )
     from batchdx.cyto.preprocess.removals import STEP_GATE, STEP_QC, empty_removal_log
     from batchdx.cyto.preprocess.transform import asinh_transform, resolve_convention
 
@@ -432,6 +443,21 @@ def stage_preprocess(config_path: str | Path, base_dir: str | Path, layout: RunL
                 removed_here = qc.removed["original_event_index"].to_numpy(np.int64)
                 alive = ~np.isin(kept_index, removed_here)
                 kept, kept_index = kept[alive], kept_index[alive]
+            for o in qc.samples:
+                if o.n_input <= 0:
+                    continue
+                kept_fraction = (o.n_input - o.n_removed) / o.n_input
+                if kept_fraction < PEACOQC_MIN_KEPT_FRACTION:
+                    raise PeacoQCError(
+                        f"sample {o.sample_id}: the PeacoQC pass kept "
+                        f"{o.n_input - o.n_removed} of {o.n_input} events "
+                        f"({kept_fraction:.1%}), below the "
+                        f"{PEACOQC_MIN_KEPT_FRACTION:.0%} floor; a near-total removal "
+                        "usually means the QC channel's distribution defeated peak "
+                        "detection rather than that the sample was that contaminated, "
+                        "and a baseline built from the survivors would misrepresent "
+                        "the sample"
+                    )
             qc_records.extend({
                 "step": STEP_QC, "detail": (
                     f"sample {o.sample_id}: kept {o.n_input - o.n_removed} of "

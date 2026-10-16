@@ -468,6 +468,65 @@ def test_a_declared_peacoqc_pass_runs_after_the_transform_and_is_logged(
     assert [d.name for d in sorted(work_dirs)] == sorted(ids)
 
 
+def test_a_peacoqc_pass_that_removes_almost_everything_is_refused(
+    fcs_project, monkeypatch,
+) -> None:
+    """A near-total removal is a QC-channel pathology, not a clean sample.
+
+    A real PeacoQC run can empty a sample when the QC channel's distribution
+    defeats peak detection -- a large negative tail on the transformed scale does
+    exactly this.  The survivors would freeze into a baseline that misrepresents
+    the sample, so the stage refuses, naming the sample and the fraction.
+    """
+
+    from batchdx.cyto.pipeline import RunLayout, stage_preprocess
+    from batchdx.cyto.preprocess import peacoqc as peacoqc_module
+    from batchdx.cyto.preprocess.peacoqc import (
+        PeacoQCError,
+        PeacoQCResult,
+        SampleQCOutcome,
+    )
+    from batchdx.cyto.preprocess.removals import STEP_QC, removal_frame
+
+    cfg = yaml.safe_load(
+        (fcs_project / "config" / "config.yaml").read_text(encoding="utf-8")
+    )
+    cfg["preprocessing"]["peacoqc"] = "config/peacoqc.yaml"
+    alt = fcs_project / "config" / "config_peacoqc_nearempty.yaml"
+    alt.write_text(yaml.safe_dump(cfg, sort_keys=False), encoding="utf-8")
+
+    def fake_run(values, channels, *, sample_ids, original_event_index, settings,
+                 work_dir, rscript="Rscript"):
+        # Remove 95% of every sample: the survivors are 5%, below the floor.
+        rows, outcomes = [], []
+        for sid in pd.unique(sample_ids):
+            m = sample_ids == sid
+            idx = np.asarray(original_event_index)[m]
+            n_keep = max(1, len(idx) // 20)
+            rows.extend((str(sid), int(i)) for i in idx[:-n_keep])
+            outcomes.append(SampleQCOutcome(
+                sample_id=str(sid), n_input=len(idx), n_removed=len(idx) - n_keep,
+                removed_fraction=(len(idx) - n_keep) / len(idx), it_fraction=None,
+                mad_fraction=None, criteria_applied=("it",), it_available=True,
+                it_reason=None,
+            ))
+        removed = removal_frame(
+            sample_id=[r[0] for r in rows],
+            original_event_index=[r[1] for r in rows],
+            step=STEP_QC,
+            reason="test fixture: 95% of every sample fails the criteria",
+        )
+        return PeacoQCResult(removed=removed, samples=tuple(outcomes))
+
+    monkeypatch.setattr(peacoqc_module, "run_peacoqc", fake_run)
+
+    layout = RunLayout(fcs_project / "results" / "peacoqc_nearempty")
+    with pytest.raises(PeacoQCError, match="below the 50% floor"):
+        stage_preprocess(alt, fcs_project, layout)
+    # The refusal happened before anything was frozen.
+    assert not layout.preprocess_baseline.exists()
+
+
 # --------------------------------------------------------------------------------------
 # The workflow and the report
 # --------------------------------------------------------------------------------------
